@@ -4,6 +4,7 @@ import { Product, Store as StoreType, ShoppingList } from '../types';
 import { ViewMode } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface DashboardProps {
   products: Product[];
@@ -13,6 +14,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, onViewChange }) => {
+  const { settings } = useSettings();
   const totalProducts = products.length;
   const totalStores = stores.length;
   const totalShoppingListItems = shoppingLists.reduce((sum, list) => sum + list.items.length, 0);
@@ -23,6 +25,26 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
     product.variants.some(variant => variant.prices && variant.prices.length > 0)
   ).length;
   const storesWithDelivery = stores.filter(store => store.hasDelivery).length;
+  
+  // Calculate potential savings by comparing highest vs lowest prices
+  const calculatePotentialSavings = () => {
+    let totalSavings = 0;
+    products.forEach(product => {
+      product.variants.forEach(variant => {
+        if (variant.prices && variant.prices.length > 1) {
+          const prices = variant.prices.filter(p => p.isAvailable).map(p => p.price);
+          if (prices.length > 1) {
+            const highest = Math.max(...prices);
+            const lowest = Math.min(...prices);
+            totalSavings += (highest - lowest);
+          }
+        }
+      });
+    });
+    return totalSavings;
+  };
+  
+  const potentialSavings = calculatePotentialSavings();
   
   const stats = [
     {
@@ -50,11 +72,11 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       changeType: 'neutral'
     },
     {
-      name: 'Products with Prices',
-      value: productsWithPrices,
+      name: 'Potential Savings',
+      value: formatPrice(potentialSavings, settings.currency),
       icon: DollarSign,
-      color: 'bg-orange-500',
-      change: `${totalProducts - productsWithPrices} need prices`,
+      color: 'bg-yellow-500',
+      change: `${productsWithPrices} products tracked`,
       changeType: 'neutral'
     }
   ];

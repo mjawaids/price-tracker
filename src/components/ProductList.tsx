@@ -4,6 +4,7 @@ import { Product, Store } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import EditProduct from './EditProduct';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface ProductListProps {
   products: Product[];
@@ -13,6 +14,7 @@ interface ProductListProps {
 }
 
 const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeleteProduct, onUpdateProduct }) => {
+  const { settings } = useSettings();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -113,7 +115,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeletePro
                           {cheapestPrice ? (
                             <div>
                               <div className="text-lg font-semibold text-green-600">
-                                {formatPrice(cheapestPrice.price.price, 'USD')}
+                                {formatPrice(cheapestPrice.price.price, settings.currency)}
                               </div>
                               <div className="text-sm text-gray-500">
                                 at {cheapestPrice.store?.name}

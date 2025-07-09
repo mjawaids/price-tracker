@@ -228,7 +228,7 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
                         <div className="flex items-center space-x-4">
                           <div className="text-right">
                             <div className="text-lg font-semibold text-gray-900">
-                              {formatPrice(price.price, 'USD')}
+                              {formatPrice(price.price, settings.currency)}
                             </div>
                             {price.discountPercentage && (
                               <div className="text-sm text-green-600">

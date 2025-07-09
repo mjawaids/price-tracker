@@ -3,6 +3,7 @@ import { Plus, Minus, ShoppingCart, Trash2, DollarSign, CheckCircle } from 'luci
 import { Product, Store, ShoppingListItem } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface ShoppingListProps {
   products: Product[];
@@ -23,6 +24,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
   onRemoveFromList,
   onClearList,
 }) => {
+  const { settings } = useSettings();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedVariant, setSelectedVariant] = useState('');
@@ -136,7 +138,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-green-900">
-                    ${calculateTotal().toFixed(2)}
+                    {formatPrice(calculateTotal(), settings.currency)}
                   </div>
                   <div className="text-sm text-green-700">Best prices selected</div>
                 </div>
@@ -155,7 +157,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                       </div>
                       <div className="text-right">
                         <div className="font-medium text-gray-900">
-                          ${group.items.reduce((sum, item) => sum + item.price.price * item.quantity, 0).toFixed(2)}
+                          {formatPrice(group.items.reduce((sum, item) => sum + item.price.price * item.quantity, 0), settings.currency)}
                         </div>
                         <div className="text-sm text-gray-500">
                           {group.items.length} item{group.items.length !== 1 ? 's' : ''}
@@ -201,10 +203,10 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                             
                             <div className="text-right">
                               <div className="font-medium text-gray-900">
-                                ${(item.price.price * item.quantity).toFixed(2)}
+                                {formatPrice(item.price.price * item.quantity, settings.currency)}
                               </div>
                               <div className="text-sm text-gray-500">
-                                ${item.price.price.toFixed(2)} each
+                                {formatPrice(item.price.price, settings.currency)} each
                               </div>
                             </div>
                             
