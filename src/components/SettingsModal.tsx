@@ -33,10 +33,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
-  // Render modal at body level using portal
-  return createPortal(
   const handleReset = () => {
     if (confirm('Are you sure you want to reset all settings to default?')) {
       resetSettings();
@@ -49,6 +45,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  if (!isOpen) return null;
+
+  // Render modal at body level using portal
+  return createPortal(
     <div 
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fade-in"
       onClick={handleBackdropClick}
