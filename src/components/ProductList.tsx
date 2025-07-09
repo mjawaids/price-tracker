@@ -156,9 +156,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                         <p className="text-sm text-gray-500 capitalize">{group.store.type}</p>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-gray-900">
-                    className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors duration-200"
-                        </div>
+                        <div className="font-medium text-gray-900"></div>
                         <div className="text-sm text-gray-500">
                           {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                         </div>
@@ -172,13 +170,12 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <h4 className="font-medium text-gray-900">{item.product.name}</h4>
-                    <div key={variant.id} className="bg-gray-50 dark:bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                             <div className="flex items-center space-x-2 mt-1">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          <h4 className="font-medium text-gray-900 dark:text-white">{variant.name}</h4>
+                                item.priority === 'high' ? 'bg-red-100 text-red-800' :
                                 item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                                 'bg-green-100 text-green-800'
-                              <span key={key} className="text-xs bg-gray-200 dark:bg-white/20 text-gray-700 dark:text-white/80 px-2 py-1 rounded backdrop-blur-sm">
+                              }`}>
                                 {item.priority} priority
                               </span>
                             </div>
@@ -206,7 +203,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                                 {formatPrice(item.price.price * item.quantity, settings.currency)}
                               </div>
                               <div className="text-sm text-gray-500">
-                                <span className="text-gray-500 dark:text-white/60">at {cheapestPrice.store?.name}</span>
+                                {formatPrice(item.price.price, settings.currency)} each
                               </div>
                             </div>
                             
@@ -215,18 +212,17 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                               className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
                             >
                               <Trash2 className="h-4 w-4" />
-                            <div className="text-sm text-gray-500 dark:text-white/60">No prices available</div>
+                            </button>
                           </div>
                         </div>
                       </div>
                     ))}
-              <Package className="h-12 w-12 text-gray-400 dark:text-white/40 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No products found</h3>
-              <p className="text-gray-500 dark:text-white/60">Get started by adding your first product to track prices.</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
-        </div>
       </div>
 
       {/* Add Item Modal */}
