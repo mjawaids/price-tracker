@@ -39,7 +39,6 @@ const UserMenu: React.FC = () => {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute right-0 mt-2 w-56 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 z-20 animate-scale-in">
-          <div className="absolute right-0 mt-2 w-56 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 z-[100] animate-scale-in">
             <div className="py-1">
               <div className="px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
