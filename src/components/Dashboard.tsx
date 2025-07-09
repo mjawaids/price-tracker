@@ -89,7 +89,12 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl overflow-hidden shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <div key={index} className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl overflow-hidden shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 group">
+            {/* Gradient Border */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+            <div className="absolute inset-[1px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl"></div>
+            {/* Content */}
+            <div className="relative z-10">
             <div className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -115,13 +120,19 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
               </div>
             </div>
           </div>
+          </div>
         ))}
       </div>
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Recent Products */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+        <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300">
+          {/* Gradient Border */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl opacity-0 group-hover:opacity-75 transition-opacity duration-300 blur-sm"></div>
+          <div className="absolute inset-[1px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl"></div>
+          {/* Content */}
+          <div className="relative z-10">
           <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Products</h3>
           </div>
@@ -146,9 +157,15 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
             )}
           </div>
         </div>
+        </div>
 
         {/* Recent Stores */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+        <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300">
+          {/* Gradient Border */}
+          <div className="absolute inset-0 bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-75 transition-opacity duration-300 blur-sm"></div>
+          <div className="absolute inset-[1px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl"></div>
+          {/* Content */}
+          <div className="relative z-10">
           <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Stores</h3>
           </div>
@@ -182,10 +199,16 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+      <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300">
+        {/* Gradient Border */}
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 rounded-2xl opacity-0 group-hover:opacity-75 transition-opacity duration-300 blur-sm"></div>
+        <div className="absolute inset-[1px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl"></div>
+        {/* Content */}
+        <div className="relative z-10">
         <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
         </div>
@@ -217,6 +240,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
