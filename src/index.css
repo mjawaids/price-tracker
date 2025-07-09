@@ -4,7 +4,7 @@
 
 /* Custom gradient background - consistent, no animation */
 body {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #7c2d12 75%, #1f2937 100%);
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
   min-height: 100vh;
 }
 
@@ -50,11 +50,11 @@ body {
   }
 
   .static-gradient {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #7c2d12 75%, #1f2937 100%);
+    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
   }
 }
 
-/* Dark mode styles */
+/* Dark mode styles - ensure consistent dark background */
 .dark body {
   background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
 }

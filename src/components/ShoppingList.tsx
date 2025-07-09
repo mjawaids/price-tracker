@@ -96,14 +96,16 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="relative gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover overflow-hidden">
+        {/* Content */}
+        <div className="relative z-10 bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-white/20">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-900">Shopping List</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Shopping List</h2>
             <div className="flex space-x-2">
               <button
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
               >
                 <Plus className="h-4 w-4" />
                 <span>Add Item</span>
@@ -111,7 +113,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
               {shoppingList.length > 0 && (
                 <button
                   onClick={onClearList}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Clear List</span>
@@ -123,24 +125,24 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
         
         {shoppingList.length === 0 ? (
           <div className="p-12 text-center">
-            <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Your shopping list is empty</h3>
-            <p className="text-gray-500">Add items to start comparing prices and planning your shopping trip.</p>
+            <ShoppingCart className="h-12 w-12 text-gray-400 dark:text-white/40 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Your shopping list is empty</h3>
+            <p className="text-gray-500 dark:text-white/60">Add items to start comparing prices and planning your shopping trip.</p>
           </div>
         ) : (
           <div className="p-6">
             {/* Summary */}
-            <div className="bg-green-50 rounded-lg p-4 mb-6">
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 mb-6 border border-green-200 dark:border-green-800/30">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-medium text-green-900">Total Estimated Cost</h3>
-                  <p className="text-sm text-green-700">{shoppingList.length} items</p>
+                  <h3 className="text-lg font-medium text-green-900 dark:text-green-300">Total Estimated Cost</h3>
+                  <p className="text-sm text-green-700 dark:text-green-400">{shoppingList.length} items</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-green-900">
+                  <div className="text-2xl font-bold text-green-900 dark:text-green-300">
                     {formatPrice(calculateTotal(), settings.currency)}
                   </div>
-                  <div className="text-sm text-green-700">Best prices selected</div>
+                  <div className="text-sm text-green-700 dark:text-green-400">Best prices selected</div>
                 </div>
               </div>
             </div>
@@ -148,36 +150,36 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
             {/* Store Groups */}
             <div className="space-y-6">
               {Object.entries(storeGroups).map(([storeId, group]) => (
-                <div key={storeId} className="border border-gray-200 rounded-lg">
-                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 rounded-t-lg">
+                <div key={storeId} className="border border-gray-200 dark:border-white/20 rounded-lg">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 border-b border-gray-200 dark:border-white/20 rounded-t-lg">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-medium text-gray-900">{group.store.name}</h3>
-                        <p className="text-sm text-gray-500 capitalize">{group.store.type}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{group.store.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-white/60 capitalize">{group.store.type}</p>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 dark:text-white">
                           {formatPrice(group.items.reduce((sum, item) => sum + item.price.price * item.quantity, 0), settings.currency)}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500 dark:text-white/60">
                           {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-white/10">
                     {group.items.map((item) => (
                       <div key={item.id} className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{item.product.name}</h4>
-                            <p className="text-sm text-gray-500">{item.variant.name}</p>
+                            <h4 className="font-medium text-gray-900 dark:text-white">{item.product.name}</h4>
+                            <p className="text-sm text-gray-500 dark:text-white/60">{item.variant.name}</p>
                             <div className="flex items-center space-x-2 mt-1">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                item.priority === 'high' ? 'bg-red-100 text-red-800' :
-                                item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
+                                item.priority === 'high' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
+                                item.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
+                                'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300'
                               }`}>
                                 {item.priority} priority
                               </span>
@@ -188,31 +190,31 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                                className="p-1 text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/80 transition-colors duration-200"
                               >
                                 <Minus className="h-4 w-4" />
                               </button>
-                              <span className="w-8 text-center">{item.quantity}</span>
+                              <span className="w-8 text-center text-gray-900 dark:text-white">{item.quantity}</span>
                               <button
                                 onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                                className="p-1 text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/80 transition-colors duration-200"
                               >
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
                             
                             <div className="text-right">
-                              <div className="font-medium text-gray-900">
+                              <div className="font-medium text-gray-900 dark:text-white">
                                 {formatPrice(item.price.price * item.quantity, settings.currency)}
                               </div>
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-gray-500 dark:text-white/60">
                                 {formatPrice(item.price.price, settings.currency)} each
                               </div>
                             </div>
                             
                             <button
                               onClick={() => onRemoveFromList(item.id)}
-                              className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
+                              className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors duration-200"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -226,19 +228,20 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Add Item Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Add Item to Shopping List</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl max-w-md w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+            <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Add Item to Shopping List</h3>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Product
                 </label>
                 <select
@@ -247,7 +250,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                     setSelectedProduct(e.target.value);
                     setSelectedVariant('');
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                   <option value="">Select a product</option>
                   {products.map(product => (
@@ -260,13 +263,13 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
               
               {selectedProduct && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Variant
                   </label>
                   <select
                     value={selectedVariant}
                     onChange={(e) => setSelectedVariant(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   >
                     <option value="">Select a variant</option>
                     {products.find(p => p.id === selectedProduct)?.variants.map(variant => (
@@ -279,7 +282,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Quantity
                 </label>
                 <input
@@ -287,18 +290,18 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                   min="1"
                   value={quantity}
                   onChange={(e) => setQuantity(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Priority
                 </label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -307,17 +310,17 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-2">
+            <div className="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-700/50 rounded-b-2xl flex justify-end space-x-2">
               <button
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors duration-200"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddToList}
                 disabled={!selectedProduct || !selectedVariant}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 Add to List
               </button>
