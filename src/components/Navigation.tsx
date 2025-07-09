@@ -32,7 +32,7 @@ const Navigation: React.FC<NavigationProps> = ({
   return (
     <>
       {/* Glass Navigation Bar */}
-      <nav className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+      <nav className="sticky top-0 z-40 glass-card border-b border-white/20 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -41,7 +41,7 @@ const Navigation: React.FC<NavigationProps> = ({
                 <ShoppingCart className="h-5 w-5 text-white" />
               </div>
               <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                PriceTracker
+                <span className="text-white">PriceTracker</span>
               </span>
             </div>
             
@@ -53,8 +53,8 @@ const Navigation: React.FC<NavigationProps> = ({
                   onClick={() => onViewChange(item.id)}
                   className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     currentView === item.id
-                      ? 'bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-md backdrop-blur-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50 backdrop-blur-sm'
+                      ? 'bg-white/20 text-white shadow-md backdrop-blur-sm'
+                      : 'text-white/70 hover:text-white hover:bg-white/10 backdrop-blur-sm'
                   }`}
                 >
                   <div className="flex items-center space-x-2">
@@ -62,7 +62,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     <span>{item.label}</span>
                   </div>
                   {item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse shadow-lg">
                       {item.badge}
                     </span>
                   )}
@@ -77,14 +77,14 @@ const Navigation: React.FC<NavigationProps> = ({
                   <div className="flex space-x-2">
                     <button
                       onClick={() => onViewChange('add-product')}
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
                     >
                       <Plus className="h-4 w-4" />
                       <span>Product</span>
                     </button>
                     <button
                       onClick={() => onViewChange('add-store')}
-                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
                     >
                       <Plus className="h-4 w-4" />
                       <span>Store</span>
@@ -95,7 +95,7 @@ const Navigation: React.FC<NavigationProps> = ({
               ) : (
                 <button
                   onClick={onShowAuth}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
                 >
                   Sign In
                 </button>
@@ -106,7 +106,7 @@ const Navigation: React.FC<NavigationProps> = ({
             <div className="md:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-all duration-200"
+                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
               >
                 {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
@@ -122,7 +122,7 @@ const Navigation: React.FC<NavigationProps> = ({
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="fixed top-16 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-2xl animate-slide-up">
+          <div className="fixed top-16 left-0 right-0 glass-card border-b border-white/20 shadow-2xl animate-slide-up">
             <div className="px-4 py-6 space-y-4">
               {/* Mobile Navigation Items */}
               {navItems.map((item) => (
@@ -134,8 +134,8 @@ const Navigation: React.FC<NavigationProps> = ({
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     currentView === item.id
-                      ? 'bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-md'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
+                      ? 'bg-white/20 text-white shadow-md'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -143,7 +143,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     <span className="font-medium">{item.label}</span>
                   </div>
                   {item.badge && item.badge > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
+                    <span className="bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse shadow-lg">
                       {item.badge}
                     </span>
                   )}
@@ -151,7 +151,7 @@ const Navigation: React.FC<NavigationProps> = ({
               ))}
 
               {/* Mobile Actions */}
-              <div className="pt-4 border-t border-gray-200/50 dark:border-gray-700/50 space-y-3">
+              <div className="pt-4 border-t border-white/20 space-y-3">
                 {user ? (
                   <>
                     <button
@@ -159,7 +159,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         onViewChange('add-product');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg"
+                      className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20"
                     >
                       <Plus className="h-4 w-4" />
                       <span>Add Product</span>
@@ -169,7 +169,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         onViewChange('add-store');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg"
+                      className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20"
                     >
                       <Plus className="h-4 w-4" />
                       <span>Add Store</span>
@@ -181,7 +181,7 @@ const Navigation: React.FC<NavigationProps> = ({
                       onShowAuth();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white/20"
                   >
                     Sign In
                   </button>
@@ -193,16 +193,16 @@ const Navigation: React.FC<NavigationProps> = ({
       )}
       
       {/* Credits Bar */}
-      <div className="bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/80 dark:to-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
+      <div className="glass-card border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-2 text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-xs">
+            <p className="text-white/60 text-xs">
               Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
               <a 
                 href="https://jawaid.dev" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 hover:underline"
+                className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
               >
                 Jawaid.dev
               </a>
