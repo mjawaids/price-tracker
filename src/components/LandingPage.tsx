@@ -248,7 +248,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
           <h2 className="text-4xl font-bold text-white mb-4">
             Ready to Start Saving?
           </h2>
-          <p className="text-xl text-blue-100 mb-8">
           <p className="text-xl text-white/80 mb-8">
             Join thousands of smart shoppers who save money every day with PriceTracker
           </p>
@@ -271,7 +270,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
               </div>
               <span className="ml-2 text-xl font-bold">PriceTracker</span>
             </div>
-            <div className="text-gray-400 text-sm">
             <div className="text-white/60 text-sm">
               © 2024 PriceTracker. All rights reserved.
             </div>
