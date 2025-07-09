@@ -1,18 +1,24 @@
 import React from 'react';
 import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List } from 'lucide-react';
 import { ViewMode } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import UserMenu from './UserMenu';
 
 interface NavigationProps {
   currentView: ViewMode;
   onViewChange: (view: ViewMode) => void;
   shoppingListCount: number;
+  onShowAuth: () => void;
 }
 
 const Navigation: React.FC<NavigationProps> = ({
   currentView,
   onViewChange,
   shoppingListCount,
+  onShowAuth,
 }) => {
+  const { user } = useAuth();
+
   const navItems = [
     { id: 'dashboard' as ViewMode, icon: Home, label: 'Dashboard' },
     { id: 'products' as ViewMode, icon: Package, label: 'Products' },
@@ -59,21 +65,35 @@ const Navigation: React.FC<NavigationProps> = ({
             ))}
           </div>
           
-          <div className="flex space-x-2">
-            <button
-              onClick={() => onViewChange('add-product')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add Product</span>
-            </button>
-            <button
-              onClick={() => onViewChange('add-store')}
-              className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add Store</span>
-            </button>
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => onViewChange('add-product')}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Add Product</span>
+                  </button>
+                  <button
+                    onClick={() => onViewChange('add-store')}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Add Store</span>
+                  </button>
+                </div>
+                <UserMenu />
+              </>
+            ) : (
+              <button
+                onClick={onShowAuth}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200"
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </div>

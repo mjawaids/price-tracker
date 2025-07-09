@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Navigation from './components/Navigation';
+import AuthModal from './components/AuthModal';
 import Dashboard from './components/Dashboard';
 import ProductList from './components/ProductList';
 import StoreList from './components/StoreList';
@@ -11,12 +13,23 @@ import AddStore from './components/AddStore';
 import { Product, Store, ShoppingList as ShoppingListType, ShoppingListItem, ViewMode } from './types';
 import { storage } from './utils/storage';
 
-function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [shoppingLists, setShoppingLists] = useState<ShoppingListType[]>([]);
   const [currentShoppingList, setCurrentShoppingList] = useState<ShoppingListItem[]>([]);
+
+  // Show auth modal if user tries to access protected features
+  const handleViewChange = (view: ViewMode) => {
+    if (!user && ['products', 'stores', 'price-manager', 'shopping-list', 'shopping-lists', 'add-product', 'add-store'].includes(view)) {
+      setShowAuthModal(true);
+      return;
+    }
+    setCurrentView(view);
+  };
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -260,18 +273,55 @@ function App() {
     }
   };
 
+  // Show loading screen while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navigation
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={handleViewChange}
         shoppingListCount={currentShoppingList.length}
+        onShowAuth={() => setShowAuthModal(true)}
+      />
+      
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderCurrentView()}
+        {user || currentView === 'dashboard' ? renderCurrentView() : (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to PriceTracker</h2>
+            <p className="text-gray-600 mb-8">Sign in to start tracking prices and managing your shopping lists</p>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+            >
+              Get Started
+            </button>
+          </div>
+        )}
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
