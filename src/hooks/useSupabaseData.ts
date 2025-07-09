@@ -332,6 +332,7 @@ export const useSupabaseData = () => {
     products,
     stores,
     shoppingLists,
+    setShoppingLists,
     loading,
     addProduct,
     updateProduct,

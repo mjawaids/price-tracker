@@ -27,6 +27,7 @@ function AppContent() {
     products,
     stores,
     shoppingLists,
+    setShoppingLists,
     addProduct,
     updateProduct,
     deleteProduct,
