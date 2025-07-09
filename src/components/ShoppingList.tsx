@@ -136,7 +136,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-green-900">
-                    {formatPrice(calculateTotal(), 'USD')}
+                    ${calculateTotal().toFixed(2)}
                   </div>
                   <div className="text-sm text-green-700">Best prices selected</div>
                 </div>
@@ -155,7 +155,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                       </div>
                       <div className="text-right">
                         <div className="font-medium text-gray-900">
-                          {formatPrice(group.items.reduce((sum, item) => sum + item.price.price * item.quantity, 0), 'USD')}
+                          ${group.items.reduce((sum, item) => sum + item.price.price * item.quantity, 0).toFixed(2)}
                         </div>
                         <div className="text-sm text-gray-500">
                           {group.items.length} item{group.items.length !== 1 ? 's' : ''}
@@ -201,10 +201,10 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                             
                             <div className="text-right">
                               <div className="font-medium text-gray-900">
-                                {formatPrice(item.price.price * item.quantity, item.price.currency)}
+                                ${(item.price.price * item.quantity).toFixed(2)}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {formatPrice(item.price.price, item.price.currency)} each
+                                ${item.price.price.toFixed(2)} each
                               </div>
                             </div>
                             
