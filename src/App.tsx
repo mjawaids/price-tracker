@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import LandingPage from './components/LandingPage';
 import Navigation from './components/Navigation';
 import AuthModal from './components/AuthModal';
 import Dashboard from './components/Dashboard';
@@ -12,16 +13,30 @@ import PriceManager from './components/PriceManager';
 import AddProduct from './components/AddProduct';
 import AddStore from './components/AddStore';
 import { Product, Store, ShoppingList as ShoppingListType, ShoppingListItem, ViewMode } from './types';
-import { storage } from './utils/storage';
+import { useSupabaseData } from './hooks/useSupabaseData';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [shoppingLists, setShoppingLists] = useState<ShoppingListType[]>([]);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [currentShoppingList, setCurrentShoppingList] = useState<ShoppingListItem[]>([]);
+
+  // Use Supabase data hook
+  const {
+    products,
+    stores,
+    shoppingLists,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    addStore,
+    deleteStore,
+    createShoppingList,
+    deleteShoppingList,
+    renameShoppingList,
+    loading: dataLoading
+  } = useSupabaseData();
 
   // Show auth modal if user tries to access protected features
   const handleViewChange = (view: ViewMode) => {
@@ -32,73 +47,33 @@ function AppContent() {
     setCurrentView(view);
   };
 
-  // Load data from localStorage on component mount
+  // Load the first shopping list when data changes
   useEffect(() => {
-    const savedProducts = storage.getProducts();
-    const savedStores = storage.getStores();
-    const savedShoppingLists = storage.getShoppingLists();
-    
-    setProducts(savedProducts);
-    setStores(savedStores);
-    setShoppingLists(savedShoppingLists);
-    
-    // Load the first shopping list or create a default one
-    if (savedShoppingLists.length > 0) {
-      setCurrentShoppingList(savedShoppingLists[0].items);
+    if (shoppingLists.length > 0) {
+      setCurrentShoppingList(shoppingLists[0].items);
     }
-  }, []);
-
-  // Save data to localStorage whenever it changes
-  useEffect(() => {
-    storage.saveProducts(products);
-  }, [products]);
-
-  useEffect(() => {
-    storage.saveStores(stores);
-  }, [stores]);
-
-  useEffect(() => {
-    storage.saveShoppingLists(shoppingLists);
   }, [shoppingLists]);
 
   const handleAddProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: Date.now().toString(),
-      variants: productData.variants.map(variant => ({
-        ...variant,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        prices: []
-      })),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    
-    setProducts([...products, newProduct]);
+    addProduct(productData);
     setCurrentView('products');
   };
 
   const handleUpdateProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    updateProduct(updatedProduct);
   };
 
   const handleAddStore = (storeData: Omit<Store, 'id' | 'createdAt'>) => {
-    const newStore: Store = {
-      ...storeData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    };
-    
-    setStores([...stores, newStore]);
+    addStore(storeData);
     setCurrentView('stores');
   };
 
   const handleDeleteProduct = (id: string) => {
-    setProducts(products.filter(p => p.id !== id));
+    deleteProduct(id);
   };
 
   const handleDeleteStore = (id: string) => {
-    setStores(stores.filter(s => s.id !== id));
+    deleteStore(id);
   };
 
   const handleAddToShoppingList = (itemData: Omit<ShoppingListItem, 'id' | 'addedAt'>) => {
@@ -169,18 +144,11 @@ function AppContent() {
   };
 
   const handleCreateShoppingList = (name: string) => {
-    const newList: ShoppingListType = {
-      id: Date.now().toString(),
-      name,
-      items: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setShoppingLists([...shoppingLists, newList]);
+    createShoppingList(name);
   };
 
   const handleDeleteShoppingList = (id: string) => {
-    setShoppingLists(shoppingLists.filter(list => list.id !== id));
+    deleteShoppingList(id);
     // If we're deleting the current list, clear the current shopping list
     if (shoppingLists.find(list => list.id === id)?.items === currentShoppingList) {
       setCurrentShoppingList([]);
@@ -193,11 +161,7 @@ function AppContent() {
   };
 
   const handleRenameShoppingList = (id: string, newName: string) => {
-    setShoppingLists(shoppingLists.map(list => 
-      list.id === id 
-        ? { ...list, name: newName, updatedAt: new Date() }
-        : list
-    ));
+    renameShoppingList(id, newName);
   };
 
   const renderCurrentView = () => {
@@ -277,7 +241,7 @@ function AppContent() {
   };
 
   // Show loading screen while checking authentication
-  if (loading) {
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -285,6 +249,24 @@ function AppContent() {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
+    );
+  }
+
+  // Show landing page if user is not authenticated
+  if (!user) {
+    return (
+      <>
+        <LandingPage onShowAuth={(mode) => {
+          setAuthMode(mode);
+          setShowAuthModal(true);
+        }} />
+        
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          initialMode={authMode}
+        />
+      </>
     );
   }
 
@@ -300,21 +282,11 @@ function AppContent() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
+        initialMode={authMode}
       />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {user || currentView === 'dashboard' ? renderCurrentView() : (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to PriceTracker</h2>
-            <p className="text-gray-600 mb-8">Sign in to start tracking prices and managing your shopping lists</p>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-medium hover:bg-blue-700 transition-colors duration-200"
-            >
-              Get Started
-            </button>
-          </div>
-        )}
+        {renderCurrentView()}
       </main>
     </div>
   );
