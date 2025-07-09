@@ -115,8 +115,6 @@ const UserMenu: React.FC = () => {
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
-      )
-      }
       />
     </div>
   )
