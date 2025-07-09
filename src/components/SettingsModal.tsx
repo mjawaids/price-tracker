@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Globe, Palette, Bell, RotateCcw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { CURRENCIES } from '../utils/currency';
@@ -12,6 +12,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { settings, updateSettings, resetSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'notifications'>('general');
 
+  // Handle ESC key press
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscKey);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleReset = () => {
@@ -20,10 +40,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200/50 dark:border-gray-700/50 animate-scale-in">
-        <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl w-full max-w-4xl h-full max-h-[85vh] overflow-hidden shadow-2xl border border-gray-200/50 dark:border-gray-700/50 animate-scale-in flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h2>
             <button
@@ -35,9 +65,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row h-full max-h-[calc(90vh-80px)]">
+        {/* Content */}
+        <div className="flex flex-col md:flex-row flex-1 min-h-0">
           {/* Sidebar */}
-          <div className="w-full md:w-64 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-b md:border-b-0 md:border-r border-gray-200/50 dark:border-gray-700/50">
+          <div className="w-full md:w-64 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-b md:border-b-0 md:border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0">
             <nav className="p-4 space-y-1">
               <button
                 onClick={() => setActiveTab('general')}
@@ -75,7 +106,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Content */}
+          {/* Main Content */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
               {activeTab === 'general' && (
