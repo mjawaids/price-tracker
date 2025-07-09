@@ -67,13 +67,13 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl shadow rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700/50">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-900">Add New Product</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Add New Product</h2>
             <button
               onClick={onCancel}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
             >
               <X className="h-5 w-5" />
             </button>
@@ -83,27 +83,27 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Product Name *
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 placeholder="Enter product name"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Category *
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 required
               >
                 <option value="">Select a category</option>
@@ -114,14 +114,14 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Brand
               </label>
               <input
                 type="text"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 placeholder="Enter brand name"
               />
             </div>
@@ -129,7 +129,7 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Product Variants</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Product Variants</h3>
               <button
                 type="button"
                 onClick={addVariant}
@@ -142,14 +142,14 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
             
             <div className="space-y-4">
               {variants.map((variant, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium text-gray-900">Variant {index + 1}</h4>
+                    <h4 className="font-medium text-gray-900 dark:text-white">Variant {index + 1}</h4>
                     {variants.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeVariant(index)}
-                        className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
+                        className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors duration-200"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
@@ -158,21 +158,21 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Variant Name *
                       </label>
                       <input
                         type="text"
                         value={variant.name}
                         onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         placeholder="e.g., 500ml, Large, Red"
                         required
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Specifications
                       </label>
                       <div className="space-y-2">
@@ -181,21 +181,21 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
                             <input
                               type="text"
                               value={key}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                               placeholder="Property"
                               readOnly
                             />
                             <input
                               type="text"
                               value={value}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                               placeholder="Value"
                               readOnly
                             />
                             <button
                               type="button"
                               onClick={() => removeSpecification(index, key)}
-                              className="p-2 text-red-400 hover:text-red-600 transition-colors duration-200"
+                              className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors duration-200"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -223,7 +223,7 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200"
+              className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
             >
               Cancel
             </button>
@@ -252,14 +252,14 @@ const SpecificationInput: React.FC<{ onAdd: (key: string, value: string) => void
         type="text"
         value={key}
         onChange={(e) => setKey(e.target.value)}
-        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         placeholder="Property (e.g., Size, Color, Weight)"
       />
       <input
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         placeholder="Value (e.g., 500ml, Red, 1kg)"
       />
       <button
