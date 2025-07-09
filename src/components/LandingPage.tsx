@@ -261,7 +261,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
             <div className="flex items-center mb-4 md:mb-0">
               <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <ShoppingCart className="h-5 w-5 text-white" />
@@ -270,6 +270,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
             </div>
             <div className="text-gray-400 text-sm">
               © 2024 PriceTracker. All rights reserved.
+            </div>
+          </div>
+          
+          {/* Credits Section */}
+          <div className="border-t border-gray-800 pt-8">
+            <div className="text-center">
+              <p className="text-gray-400 text-sm mb-2">
+                Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
+                <a 
+                  href="https://jawaid.dev" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200 hover:underline"
+                >
+                  Jawaid.dev
+                </a>
+              </p>
+              <p className="text-gray-500 text-xs">
+                Crafted with passion for smart shoppers everywhere
+              </p>
             </div>
           </div>
         </div>
