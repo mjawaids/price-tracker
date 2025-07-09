@@ -98,26 +98,38 @@ export const useSupabaseData = () => {
   const loadShoppingLists = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('shopping_lists')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('shopping_lists')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
 
-    if (error) {
-      console.error('Error loading shopping lists:', error);
-      return;
+      if (error) {
+        console.error('Error loading shopping lists:', error.message, error);
+        return;
+      }
+
+      if (!data) {
+        console.warn('No shopping lists data returned');
+        setShoppingLists([]);
+        return;
+      }
+
+      const formattedLists: ShoppingList[] = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        items: item.items || [],
+        createdAt: item.created_at ? new Date(item.created_at) : new Date(),
+        updatedAt: item.updated_at ? new Date(item.updated_at) : new Date()
+      }));
+
+      setShoppingLists(formattedLists);
+    } catch (fetchError) {
+      console.error('Network error loading shopping lists:', fetchError);
+      // Set empty array on network error to prevent app crash
+      setShoppingLists([]);
     }
-
-    const formattedLists: ShoppingList[] = data.map(item => ({
-      id: item.id,
-      name: item.name,
-      items: item.items || [],
-      createdAt: new Date(item.created_at),
-      updatedAt: new Date(item.updated_at)
-    }));
-
-    setShoppingLists(formattedLists);
   };
 
   const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
