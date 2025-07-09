@@ -176,6 +176,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
             </button>
           </div>
         </form>
+        
+        {/* Credits Section */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <div className="text-center">
+            <p className="text-gray-500 text-xs mb-1">
+              Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
+              <a 
+                href="https://jawaid.dev" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200 hover:underline"
+              >
+                Jawaid.dev
+              </a>
+            </p>
+            <p className="text-gray-400 text-xs">
+              Crafted with passion for smart shoppers
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

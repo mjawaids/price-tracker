@@ -97,6 +97,26 @@ const Navigation: React.FC<NavigationProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Credits Bar */}
+      <div className="bg-gray-50 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-2 text-center">
+            <p className="text-gray-500 text-xs">
+              Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
+              <a 
+                href="https://jawaid.dev" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200 hover:underline"
+              >
+                Jawaid.dev
+              </a>
+              {' '}• Crafted with passion for smart shoppers everywhere
+            </p>
+          </div>
+        </div>
+      </div>
     </nav>
   );
 };

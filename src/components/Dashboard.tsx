@@ -3,6 +3,7 @@ import { Package, Store, ShoppingCart, TrendingDown, TrendingUp, DollarSign } fr
 import { Product, Store as StoreType, ShoppingList } from '../types';
 import { ViewMode } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
+import { formatPrice } from '../utils/currency';
 
 interface DashboardProps {
   products: Product[];

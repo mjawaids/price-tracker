@@ -155,7 +155,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                       </div>
                       <div className="text-right">
                         <div className="font-medium text-gray-900">
-                          {formatPrice(group.items.reduce((sum, item) => sum + item.price.price * item.quantity, 0), group.items[0]?.price.currency || 'USD')}
+                          {formatPrice(group.items.reduce((sum, item) => sum + item.price.price * item.quantity, 0), 'USD')}
                         </div>
                         <div className="text-sm text-gray-500">
                           {group.items.length} item{group.items.length !== 1 ? 's' : ''}

@@ -113,7 +113,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeletePro
                           {cheapestPrice ? (
                             <div>
                               <div className="text-lg font-semibold text-green-600">
-                                {formatPrice(cheapestPrice.price.price, cheapestPrice.price.currency)}
+                                {formatPrice(cheapestPrice.price.price, 'USD')}
                               </div>
                               <div className="text-sm text-gray-500">
                                 at {cheapestPrice.store?.name}

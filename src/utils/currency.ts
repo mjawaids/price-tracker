@@ -68,14 +68,8 @@ export const formatPrice = (amount: number, currencyCode: string): string => {
   const currency = getCurrencyByCode(currencyCode);
   if (!currency) return `${amount.toFixed(2)} ${currencyCode}`;
   
-  // For currencies with symbols that go before the amount
-  const prefixSymbols = ['$', '€', '£', 'C$', 'A$', 'CHF', 'R$', 'S$', 'HK$', 'NZ$', 'FJ$', 'NT$', '$U'];
-  
-  if (prefixSymbols.includes(currency.symbol)) {
-    return `${currency.symbol}${amount.toFixed(2)}`;
-  } else {
-    return `${amount.toFixed(2)} ${currency.symbol}`;
-  }
+  // Always use the same format: symbol + amount for consistency
+  return `${currency.symbol}${amount.toFixed(2)}`;
 };
 
 export const getDefaultCurrency = (): string => {
