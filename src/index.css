@@ -31,24 +31,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
-  .gradient-border-hover:hover::before {
-    opacity: 1;
-    background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
-  }
-
-  .gradient-border::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c);
-    border-radius: 0 inherit 0 0;
-    opacity: 0.6;
-    z-index: -1;
-  }
-
   .static-gradient {
     background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
   }
