@@ -234,7 +234,7 @@ function AppContent() {
   // Show loading screen while checking authentication
   if (loading || dataLoading) {
     return (
-      <div className="min-h-screen animated-gradient flex items-center justify-center">
+      <div className="min-h-screen static-gradient flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/60 mx-auto mb-4"></div>
           <p className="text-white/80">Loading...</p>
@@ -262,7 +262,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen animated-gradient">
+    <div className="min-h-screen static-gradient">
       <Navigation
         currentView={currentView}
         onViewChange={handleViewChange}

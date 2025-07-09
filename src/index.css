@@ -2,9 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom gradient background */
+/* Custom gradient background - consistent, no animation */
 body {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #7c2d12 75%, #1f2937 100%);
   min-height: 100vh;
 }
 
@@ -26,45 +26,47 @@ body {
 
   .gradient-border {
     position: relative;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
   .gradient-border::before {
     content: '';
     position: absolute;
-    inset: 0;
-    padding: 2px;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
     background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c);
-    border-radius: inherit;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask-composite: xor;
-    -webkit-mask-composite: xor;
+    border-radius: 0 inherit 0 0;
     opacity: 0.6;
+    z-index: -1;
   }
 
-  .gradient-border-hover::before {
+  .gradient-border-hover:hover::before {
     opacity: 1;
     background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
-    animation: gradient-shift 3s ease infinite;
   }
 
-  @keyframes gradient-shift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+  .static-gradient {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #7c2d12 75%, #1f2937 100%);
   }
+}
 
-  .animated-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
-    background-size: 400% 400%;
-    animation: gradient-animation 8s ease infinite;
-  }
+/* Dark mode styles */
+.dark body {
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
+}
 
-  @keyframes gradient-animation {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
+.dark .glass-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .gradient-border {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Scrollbar styling */
@@ -92,9 +94,9 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.4);
 }
