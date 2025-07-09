@@ -2,16 +2,20 @@ import React, { useState } from 'react';
 import { Package, Edit, Trash2, Plus, Search } from 'lucide-react';
 import { Product, Store } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
+import { formatPrice } from '../utils/currency';
+import EditProduct from './EditProduct';
 
 interface ProductListProps {
   products: Product[];
   stores: Store[];
   onDeleteProduct: (id: string) => void;
+  onUpdateProduct: (product: Product) => void;
 }
 
-const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeleteProduct }) => {
+const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeleteProduct, onUpdateProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const categories = ['all', ...new Set(products.map(p => p.category))];
   
@@ -73,7 +77,10 @@ const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeletePro
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                  <button 
+                    onClick={() => setEditingProduct(product)}
+                    className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  >
                     <Edit className="h-5 w-5" />
                   </button>
                   <button
@@ -106,7 +113,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeletePro
                           {cheapestPrice ? (
                             <div>
                               <div className="text-lg font-semibold text-green-600">
-                                ${cheapestPrice.price.price.toFixed(2)}
+                                {formatPrice(cheapestPrice.price.price, cheapestPrice.price.currency)}
                               </div>
                               <div className="text-sm text-gray-500">
                                 at {cheapestPrice.store?.name}
@@ -133,6 +140,17 @@ const ProductList: React.FC<ProductListProps> = ({ products, stores, onDeletePro
           )}
         </div>
       </div>
+      
+      {editingProduct && (
+        <EditProduct
+          product={editingProduct}
+          onUpdateProduct={(updatedProduct) => {
+            onUpdateProduct(updatedProduct);
+            setEditingProduct(null);
+          }}
+          onCancel={() => setEditingProduct(null)}
+        />
+      )}
     </div>
   );
 };

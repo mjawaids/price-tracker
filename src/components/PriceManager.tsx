@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
 import { Product, Store, Price } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
+import { CURRENCIES, formatPrice } from '../utils/currency';
 
 interface PriceManagerProps {
   products: Product[];
@@ -9,6 +11,7 @@ interface PriceManagerProps {
 }
 
 const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateProduct }) => {
+  const { settings } = useSettings();
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedVariant, setSelectedVariant] = useState('');
   const [showAddPriceModal, setShowAddPriceModal] = useState(false);
@@ -16,7 +19,7 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
   const [newPrice, setNewPrice] = useState({
     storeId: '',
     price: '',
-    currency: 'USD',
+    currency: settings.currency,
     isAvailable: true,
     discountPercentage: ''
   });
@@ -122,7 +125,7 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
     setNewPrice({
       storeId: '',
       price: '',
-      currency: 'USD',
+      currency: settings.currency,
       isAvailable: true,
       discountPercentage: ''
     });
@@ -225,7 +228,7 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
                         <div className="flex items-center space-x-4">
                           <div className="text-right">
                             <div className="text-lg font-semibold text-gray-900">
-                              ${price.price.toFixed(2)}
+                              {formatPrice(price.price, price.currency)}
                             </div>
                             {price.discountPercentage && (
                               <div className="text-sm text-green-600">
@@ -320,9 +323,11 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
                     onChange={(e) => setNewPrice({ ...newPrice, currency: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
+                    {CURRENCIES.map(currency => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.flag} {currency.code} - {currency.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

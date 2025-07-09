@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import Navigation from './components/Navigation';
 import AuthModal from './components/AuthModal';
 import Dashboard from './components/Dashboard';
@@ -207,6 +208,7 @@ function AppContent() {
             products={products}
             stores={stores}
             shoppingLists={shoppingLists}
+            onViewChange={handleViewChange}
           />
         );
       case 'products':
@@ -215,6 +217,7 @@ function AppContent() {
             products={products}
             stores={stores}
             onDeleteProduct={handleDeleteProduct}
+            onUpdateProduct={handleUpdateProduct}
           />
         );
       case 'stores':
@@ -320,7 +323,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SettingsProvider>
+        <AppContent />
+      </SettingsProvider>
     </AuthProvider>
   );
 }

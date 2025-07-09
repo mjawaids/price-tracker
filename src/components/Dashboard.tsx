@@ -1,15 +1,17 @@
 import React from 'react';
 import { Package, Store, ShoppingCart, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
 import { Product, Store as StoreType, ShoppingList } from '../types';
+import { ViewMode } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
 
 interface DashboardProps {
   products: Product[];
   stores: StoreType[];
   shoppingLists: ShoppingList[];
+  onViewChange: (view: ViewMode) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists }) => {
+const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, onViewChange }) => {
   const totalProducts = products.length;
   const totalStores = stores.length;
   const totalShoppingListItems = shoppingLists.reduce((sum, list) => sum + list.items.length, 0);
@@ -166,19 +168,28 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists }
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+            <button 
+              onClick={() => onViewChange('add-product')}
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            >
               <Package className="h-8 w-8 text-blue-500 mx-auto mb-2" />
               <h4 className="text-sm font-medium text-gray-900">Add Product</h4>
               <p className="text-xs text-gray-500">Track prices for a new product</p>
             </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+            <button 
+              onClick={() => onViewChange('add-store')}
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            >
               <Store className="h-8 w-8 text-green-500 mx-auto mb-2" />
               <h4 className="text-sm font-medium text-gray-900">Add Store</h4>
               <p className="text-xs text-gray-500">Register a new store location</p>
             </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+            <button 
+              onClick={() => onViewChange('shopping-lists')}
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            >
               <ShoppingCart className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-              <h4 className="text-sm font-medium text-gray-900">Create List</h4>
+              <h4 className="text-sm font-medium text-gray-900">Manage Lists</h4>
               <p className="text-xs text-gray-500">Start a new shopping list</p>
             </button>
           </div>

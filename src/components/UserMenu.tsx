@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
 import { User, Settings, LogOut, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import SettingsModal from './SettingsModal'
 
 const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
@@ -44,7 +46,10 @@ const UserMenu: React.FC = () => {
               </div>
               
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  setShowSettings(true)
+                  setIsOpen(false)
+                }}
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -62,6 +67,11 @@ const UserMenu: React.FC = () => {
           </div>
         </>
       )}
+      
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   )
 }
