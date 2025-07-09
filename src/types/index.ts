@@ -58,4 +58,4 @@ export interface ShoppingList {
   updatedAt: Date;
 }
 
-export type ViewMode = 'dashboard' | 'products' | 'stores' | 'shopping-list' | 'add-product' | 'add-store';
+export type ViewMode = 'dashboard' | 'products' | 'stores' | 'shopping-list' | 'shopping-lists' | 'price-manager' | 'add-product' | 'add-store';

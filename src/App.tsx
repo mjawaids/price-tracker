@@ -4,6 +4,8 @@ import Dashboard from './components/Dashboard';
 import ProductList from './components/ProductList';
 import StoreList from './components/StoreList';
 import ShoppingList from './components/ShoppingList';
+import ShoppingListManager from './components/ShoppingListManager';
+import PriceManager from './components/PriceManager';
 import AddProduct from './components/AddProduct';
 import AddStore from './components/AddStore';
 import { Product, Store, ShoppingList as ShoppingListType, ShoppingListItem, ViewMode } from './types';
@@ -52,6 +54,7 @@ function App() {
       variants: productData.variants.map(variant => ({
         ...variant,
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        prices: []
       })),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -59,6 +62,10 @@ function App() {
     
     setProducts([...products, newProduct]);
     setCurrentView('products');
+  };
+
+  const handleUpdateProduct = (updatedProduct: Product) => {
+    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
   };
 
   const handleAddStore = (storeData: Omit<Store, 'id' | 'createdAt'>) => {
@@ -147,6 +154,38 @@ function App() {
     }
   };
 
+  const handleCreateShoppingList = (name: string) => {
+    const newList: ShoppingListType = {
+      id: Date.now().toString(),
+      name,
+      items: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    setShoppingLists([...shoppingLists, newList]);
+  };
+
+  const handleDeleteShoppingList = (id: string) => {
+    setShoppingLists(shoppingLists.filter(list => list.id !== id));
+    // If we're deleting the current list, clear the current shopping list
+    if (shoppingLists.find(list => list.id === id)?.items === currentShoppingList) {
+      setCurrentShoppingList([]);
+    }
+  };
+
+  const handleSelectShoppingList = (list: ShoppingListType) => {
+    setCurrentShoppingList(list.items);
+    setCurrentView('shopping-list');
+  };
+
+  const handleRenameShoppingList = (id: string, newName: string) => {
+    setShoppingLists(shoppingLists.map(list => 
+      list.id === id 
+        ? { ...list, name: newName, updatedAt: new Date() }
+        : list
+    ));
+  };
+
   const renderCurrentView = () => {
     switch (currentView) {
       case 'dashboard':
@@ -182,6 +221,24 @@ function App() {
             onUpdateQuantity={handleUpdateQuantity}
             onRemoveFromList={handleRemoveFromShoppingList}
             onClearList={handleClearShoppingList}
+          />
+        );
+      case 'shopping-lists':
+        return (
+          <ShoppingListManager
+            shoppingLists={shoppingLists}
+            onCreateList={handleCreateShoppingList}
+            onDeleteList={handleDeleteShoppingList}
+            onSelectList={handleSelectShoppingList}
+            onRenameList={handleRenameShoppingList}
+          />
+        );
+      case 'price-manager':
+        return (
+          <PriceManager
+            products={products}
+            stores={stores}
+            onUpdateProduct={handleUpdateProduct}
           />
         );
       case 'add-product':

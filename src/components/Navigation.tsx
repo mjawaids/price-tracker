@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Package, Store, Home, Plus } from 'lucide-react';
+import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List } from 'lucide-react';
 import { ViewMode } from '../types';
 
 interface NavigationProps {
@@ -17,7 +17,9 @@ const Navigation: React.FC<NavigationProps> = ({
     { id: 'dashboard' as ViewMode, icon: Home, label: 'Dashboard' },
     { id: 'products' as ViewMode, icon: Package, label: 'Products' },
     { id: 'stores' as ViewMode, icon: Store, label: 'Stores' },
+    { id: 'price-manager' as ViewMode, icon: DollarSign, label: 'Prices' },
     { id: 'shopping-list' as ViewMode, icon: ShoppingCart, label: 'Shopping List', badge: shoppingListCount },
+    { id: 'shopping-lists' as ViewMode, icon: List, label: 'My Lists' },
   ];
 
   return (
