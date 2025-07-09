@@ -28,12 +28,25 @@ body {
     position: relative;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
-    border: 2px solid;
-    border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 25%, #2563eb 75%, #3b82f6 100%) 1;
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
-  .gradient-border-hover:hover {
-    border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 15%, #2563eb 60%, #3b82f6 85%, #60a5fa 100%) 1;
+  .gradient-border-hover:hover::before {
+    opacity: 1;
+    background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c);
+    border-radius: 0 inherit 0 0;
+    opacity: 0.6;
+    z-index: -1;
   }
 
   .static-gradient {
@@ -53,12 +66,7 @@ body {
 
 .dark .gradient-border {
   background: rgba(0, 0, 0, 0.3);
-  border: 2px solid;
-  border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 25%, #1e40af 75%, #2563eb 100%) 1;
-}
-
-.dark .gradient-border-hover:hover {
-  border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 15%, #1e40af 60%, #2563eb 85%, #3b82f6 100%) 1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Scrollbar styling */
