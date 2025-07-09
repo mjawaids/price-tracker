@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import LandingPage from './components/LandingPage';
 import Navigation from './components/Navigation';
 import AuthModal from './components/AuthModal';
@@ -233,10 +234,10 @@ function AppContent() {
   // Show loading screen while checking authentication
   if (loading || dataLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
@@ -261,7 +262,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
       <Navigation
         currentView={currentView}
         onViewChange={handleViewChange}
@@ -285,9 +286,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <SettingsProvider>
-        <AppContent />
-      </SettingsProvider>
+      <ThemeProvider>
+        <SettingsProvider>
+          <AppContent />
+        </SettingsProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

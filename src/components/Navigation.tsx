@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List, Menu, X } from 'lucide-react';
 import { ViewMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import UserMenu from './UserMenu';
@@ -18,6 +18,7 @@ const Navigation: React.FC<NavigationProps> = ({
   onShowAuth,
 }) => {
   const { user } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
     { id: 'dashboard' as ViewMode, icon: Home, label: 'Dashboard' },
@@ -29,86 +30,179 @@ const Navigation: React.FC<NavigationProps> = ({
   ];
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+    <>
+      {/* Glass Navigation Bar */}
+      <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
                 <ShoppingCart className="h-5 w-5 text-white" />
               </div>
-              <span className="ml-2 text-xl font-bold text-gray-900">PriceTracker</span>
+              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                PriceTracker
+              </span>
+            </div>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex space-x-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onViewChange(item.id)}
+                  className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    currentView === item.id
+                      ? 'bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-md backdrop-blur-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50 backdrop-blur-sm'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center space-x-3">
+              {user ? (
+                <>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => onViewChange('add-product')}
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Product</span>
+                    </button>
+                    <button
+                      onClick={() => onViewChange('add-store')}
+                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Store</span>
+                    </button>
+                  </div>
+                  <UserMenu />
+                </>
+              ) : (
+                <button
+                  onClick={onShowAuth}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-all duration-200"
+              >
+                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
             </div>
           </div>
-          
-          <div className="flex space-x-1">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => onViewChange(item.id)}
-                className={`relative px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                  currentView === item.id
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <item.icon className="h-5 w-5" />
-                  <span className="hidden sm:inline">{item.label}</span>
-                </div>
-                {item.badge && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {item.badge}
-                  </span>
+        </div>
+      </nav>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div className="fixed top-16 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-2xl animate-slide-up">
+            <div className="px-4 py-6 space-y-4">
+              {/* Mobile Navigation Items */}
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onViewChange(item.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                    currentView === item.id
+                      ? 'bg-blue-100/80 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-md'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <item.icon className="h-5 w-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {item.badge && item.badge > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              {/* Mobile Actions */}
+              <div className="pt-4 border-t border-gray-200/50 dark:border-gray-700/50 space-y-3">
+                {user ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onViewChange('add-product');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Product</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onViewChange('add-store');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Store</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      onShowAuth();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg"
+                  >
+                    Sign In
+                  </button>
                 )}
-              </button>
-            ))}
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => onViewChange('add-product')}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Add Product</span>
-                  </button>
-                  <button
-                    onClick={() => onViewChange('add-store')}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Add Store</span>
-                  </button>
-                </div>
-                <UserMenu />
-              </>
-            ) : (
-              <button
-                onClick={onShowAuth}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200"
-              >
-                Sign In
-              </button>
-            )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
       {/* Credits Bar */}
-      <div className="bg-gray-50 border-b border-gray-200">
+      <div className="bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-800/80 dark:to-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-2 text-center">
-            <p className="text-gray-500 text-xs">
+            <p className="text-gray-500 dark:text-gray-400 text-xs">
               Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
               <a 
                 href="https://jawaid.dev" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200 hover:underline"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200 hover:underline"
               >
                 Jawaid.dev
               </a>
@@ -117,7 +211,7 @@ const Navigation: React.FC<NavigationProps> = ({
           </div>
         </div>
       </div>
-    </nav>
+    </>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getDefaultCurrency } from '../utils/currency';
+import { useTheme } from './ThemeContext';
 
 interface UserSettings {
   currency: string;
@@ -33,6 +34,7 @@ export const useSettings = () => {
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const { setTheme } = useTheme();
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -41,6 +43,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const parsed = JSON.parse(savedSettings);
         setSettings({ ...defaultSettings, ...parsed });
+        // Apply theme setting
+        if (parsed.theme) {
+          setTheme(parsed.theme);
+        }
       } catch (error) {
         console.error('Error loading settings:', error);
       }
@@ -54,6 +60,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateSettings = (updates: Partial<UserSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
+    // Apply theme changes immediately
+    if (updates.theme) {
+      setTheme(updates.theme);
+    }
   };
 
   const resetSettings = () => {

@@ -87,13 +87,13 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
+          <div key={index} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl overflow-hidden shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+            <div className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className={`${stat.color} rounded-md p-3`}>
+                  <div className={`${stat.color} rounded-xl p-3 shadow-lg`}>
                     <stat.icon className="h-6 w-6 text-white" />
                   </div>
                 </div>
@@ -103,10 +103,10 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
                       {stat.name}
                     </dt>
                     <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">
+                      <div className="text-2xl font-semibold text-gray-900 dark:text-white">
                         {stat.value}
                       </div>
-                      <div className="ml-2 flex items-baseline text-sm text-gray-500">
+                      <div className="ml-2 flex items-baseline text-sm text-gray-500 dark:text-gray-400">
                         <span>{stat.change}</span>
                       </div>
                     </dd>
@@ -119,28 +119,28 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Recent Products */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Recent Products</h3>
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+          <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Products</h3>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200/50 dark:divide-gray-700/50">
             {recentProducts.map((product) => (
               <div key={product.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900">{product.name}</h4>
-                    <p className="text-sm text-gray-500">{product.category}</p>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{product.category}</p>
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     {product.variants.length} variant{product.variants.length !== 1 ? 's' : ''}
                   </div>
                 </div>
               </div>
             ))}
             {recentProducts.length === 0 && (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
                 No products added yet
               </div>
             )}
@@ -148,26 +148,26 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
         </div>
 
         {/* Recent Stores */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Recent Stores</h3>
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+          <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Stores</h3>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200/50 dark:divide-gray-700/50">
             {recentStores.map((store) => (
               <div key={store.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900">{store.name}</h4>
-                    <p className="text-sm text-gray-500 capitalize">{store.type}</p>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white">{store.name}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{store.type}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     {store.hasDelivery && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
                         Delivery
                       </span>
                     )}
                     {store.type === 'online' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
                         Online
                       </span>
                     )}
@@ -176,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
               </div>
             ))}
             {recentStores.length === 0 && (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
                 No stores added yet
               </div>
             )}
@@ -185,35 +185,35 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+        <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <button 
               onClick={() => onViewChange('add-product')}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              className="p-6 border border-gray-200/50 dark:border-gray-700/50 rounded-xl hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 transform hover:scale-105 hover:shadow-lg backdrop-blur-sm group"
             >
-              <Package className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-              <h4 className="text-sm font-medium text-gray-900">Add Product</h4>
-              <p className="text-xs text-gray-500">Track prices for a new product</p>
+              <Package className="h-8 w-8 text-blue-500 mx-auto mb-3 group-hover:scale-110 transition-transform duration-200" />
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Add Product</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Track prices for a new product</p>
             </button>
             <button 
               onClick={() => onViewChange('add-store')}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              className="p-6 border border-gray-200/50 dark:border-gray-700/50 rounded-xl hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 transform hover:scale-105 hover:shadow-lg backdrop-blur-sm group"
             >
-              <Store className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <h4 className="text-sm font-medium text-gray-900">Add Store</h4>
-              <p className="text-xs text-gray-500">Register a new store location</p>
+              <Store className="h-8 w-8 text-green-500 mx-auto mb-3 group-hover:scale-110 transition-transform duration-200" />
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Add Store</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Register a new store location</p>
             </button>
             <button 
               onClick={() => onViewChange('shopping-lists')}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              className="p-6 border border-gray-200/50 dark:border-gray-700/50 rounded-xl hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 transform hover:scale-105 hover:shadow-lg backdrop-blur-sm group sm:col-span-2 lg:col-span-1"
             >
-              <ShoppingCart className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-              <h4 className="text-sm font-medium text-gray-900">Manage Lists</h4>
-              <p className="text-xs text-gray-500">Start a new shopping list</p>
+              <ShoppingCart className="h-8 w-8 text-purple-500 mx-auto mb-3 group-hover:scale-110 transition-transform duration-200" />
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Manage Lists</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Start a new shopping list</p>
             </button>
           </div>
         </div>
