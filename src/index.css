@@ -28,25 +28,12 @@ body {
     position: relative;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    border: 2px solid;
+    border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 25%, #2563eb 75%, #3b82f6 100%) 1;
   }
 
-  .gradient-border::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
-    margin: -2px;
-    border-radius: inherit;
-    background: linear-gradient(135deg, #000000 0%, #1a1a2e 25%, #2563eb 75%, #3b82f6 100%);
-  }
-
-  .gradient-border-hover:hover::before {
-    background: linear-gradient(135deg, #000000 0%, #1a1a2e 15%, #2563eb 60%, #3b82f6 85%, #60a5fa 100%);
+  .gradient-border-hover:hover {
+    border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 15%, #2563eb 60%, #3b82f6 85%, #60a5fa 100%) 1;
   }
 
   .static-gradient {
@@ -66,16 +53,12 @@ body {
 
 .dark .gradient-border {
   background: rgba(0, 0, 0, 0.3);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: 2px solid;
+  border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 25%, #1e40af 75%, #2563eb 100%) 1;
 }
 
-.dark .gradient-border::before {
-  background: linear-gradient(135deg, #000000 0%, #1a1a2e 25%, #1e40af 75%, #2563eb 100%);
-}
-
-.dark .gradient-border-hover:hover::before {
-  background: linear-gradient(135deg, #000000 0%, #1a1a2e 15%, #1e40af 60%, #2563eb 85%, #3b82f6 100%);
+.dark .gradient-border-hover:hover {
+  border-image: linear-gradient(135deg, #000000 0%, #1a1a2e 15%, #1e40af 60%, #2563eb 85%, #3b82f6 100%) 1;
 }
 
 /* Scrollbar styling */
