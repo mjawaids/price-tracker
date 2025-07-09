@@ -17,38 +17,45 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
   const totalStores = stores.length;
   const totalShoppingListItems = shoppingLists.reduce((sum, list) => sum + list.items.length, 0);
   
+  // Calculate actual metrics
+  const totalVariants = products.reduce((sum, product) => sum + product.variants.length, 0);
+  const productsWithPrices = products.filter(product => 
+    product.variants.some(variant => variant.prices && variant.prices.length > 0)
+  ).length;
+  const storesWithDelivery = stores.filter(store => store.hasDelivery).length;
+  
   const stats = [
     {
       name: 'Total Products',
       value: totalProducts,
       icon: Package,
       color: 'bg-blue-500',
-      change: '+12%',
-      changeType: 'positive'
+      change: `${totalVariants} variants`,
+      changeType: 'neutral'
     },
     {
       name: 'Available Stores',
       value: totalStores,
       icon: Store,
       color: 'bg-green-500',
-      change: '+8%',
-      changeType: 'positive'
+      change: `${storesWithDelivery} with delivery`,
+      changeType: 'neutral'
     },
     {
       name: 'Shopping List Items',
       value: totalShoppingListItems,
       icon: ShoppingCart,
       color: 'bg-purple-500',
-      change: '+15%',
-      changeType: 'positive'
+      change: `${shoppingLists.length} lists`,
+      changeType: 'neutral'
     },
     {
-      name: 'Potential Savings',
-      value: '$127.50',
+      name: 'Products with Prices',
+      value: productsWithPrices,
       icon: DollarSign,
-      color: 'bg-yellow-500',
-      change: '+5%',
-      changeType: 'positive'
+      color: 'bg-orange-500',
+      change: `${totalProducts - productsWithPrices} need prices`,
+      changeType: 'neutral'
     }
   ];
 
@@ -77,15 +84,8 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
                       <div className="text-2xl font-semibold text-gray-900">
                         {stat.value}
                       </div>
-                      <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                        stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {stat.changeType === 'positive' ? (
-                          <TrendingUp className="h-4 w-4 mr-1" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 mr-1" />
-                        )}
-                        {stat.change}
+                      <div className="ml-2 flex items-baseline text-sm text-gray-500">
+                        <span>{stat.change}</span>
                       </div>
                     </dd>
                   </dl>
