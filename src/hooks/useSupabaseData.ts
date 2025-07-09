@@ -285,6 +285,7 @@ export const useSupabaseData = () => {
     };
 
     setShoppingLists(prev => [formattedList, ...prev]);
+    return formattedList;
   };
 
   const deleteShoppingList = async (id: string) => {
@@ -328,6 +329,29 @@ export const useSupabaseData = () => {
     ));
   };
 
+  const updateShoppingListItems = async (listId: string, items: any[]) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('shopping_lists')
+      .update({
+        items,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', listId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating shopping list items:', error);
+      return;
+    }
+
+    setShoppingLists(prev => prev.map(list => 
+      list.id === listId 
+        ? { ...list, items, updatedAt: new Date() }
+        : list
+    ));
+  };
   return {
     products,
     stores,
@@ -341,6 +365,7 @@ export const useSupabaseData = () => {
     deleteStore,
     createShoppingList,
     deleteShoppingList,
-    renameShoppingList
+    renameShoppingList,
+    updateShoppingListItems
   };
 };

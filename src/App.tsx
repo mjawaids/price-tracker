@@ -36,6 +36,7 @@ function AppContent() {
     createShoppingList,
     deleteShoppingList,
     renameShoppingList,
+    updateShoppingListItems,
     loading: dataLoading
   } = useSupabaseData();
 
@@ -84,24 +85,21 @@ function AppContent() {
       addedAt: new Date(),
     };
     
-    setCurrentShoppingList([...currentShoppingList, newItem]);
+    const updatedList = [...currentShoppingList, newItem];
+    setCurrentShoppingList(updatedList);
     
     // Update the shopping list in the lists array
-    const updatedLists = [...shoppingLists];
-    if (updatedLists.length === 0) {
-      const newList: ShoppingListType = {
-        id: Date.now().toString(),
-        name: 'My Shopping List',
-        items: [newItem],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      updatedLists.push(newList);
+    if (shoppingLists.length === 0) {
+      // Create a new shopping list if none exists
+      createShoppingList('My Shopping List').then((newList) => {
+        if (newList) {
+          updateShoppingListItems(newList.id, updatedList);
+        }
+      });
     } else {
-      updatedLists[0].items = [...currentShoppingList, newItem];
-      updatedLists[0].updatedAt = new Date();
+      // Update existing shopping list
+      updateShoppingListItems(shoppingLists[0].id, updatedList);
     }
-    setShoppingLists(updatedLists);
   };
 
   const handleUpdateQuantity = (id: string, quantity: number) => {
@@ -110,12 +108,9 @@ function AppContent() {
     );
     setCurrentShoppingList(updatedList);
     
-    // Update the shopping list in the lists array
-    const updatedLists = [...shoppingLists];
-    if (updatedLists.length > 0) {
-      updatedLists[0].items = updatedList;
-      updatedLists[0].updatedAt = new Date();
-      setShoppingLists(updatedLists);
+    // Update in database
+    if (shoppingLists.length > 0) {
+      updateShoppingListItems(shoppingLists[0].id, updatedList);
     }
   };
 
@@ -123,24 +118,18 @@ function AppContent() {
     const updatedList = currentShoppingList.filter(item => item.id !== id);
     setCurrentShoppingList(updatedList);
     
-    // Update the shopping list in the lists array
-    const updatedLists = [...shoppingLists];
-    if (updatedLists.length > 0) {
-      updatedLists[0].items = updatedList;
-      updatedLists[0].updatedAt = new Date();
-      setShoppingLists(updatedLists);
+    // Update in database
+    if (shoppingLists.length > 0) {
+      updateShoppingListItems(shoppingLists[0].id, updatedList);
     }
   };
 
   const handleClearShoppingList = () => {
     setCurrentShoppingList([]);
     
-    // Update the shopping list in the lists array
-    const updatedLists = [...shoppingLists];
-    if (updatedLists.length > 0) {
-      updatedLists[0].items = [];
-      updatedLists[0].updatedAt = new Date();
-      setShoppingLists(updatedLists);
+    // Update in database
+    if (shoppingLists.length > 0) {
+      updateShoppingListItems(shoppingLists[0].id, []);
     }
   };
 
