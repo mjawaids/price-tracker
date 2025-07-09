@@ -31,25 +31,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
-  .gradient-border::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 20px;
-    height: 20px;
-    background: linear-gradient(135deg, #60a5fa, #3b82f6);
-    border-radius: inherit 0 0 0;
-    clip-path: polygon(0 0, 100% 0, 0 100%);
-    opacity: 0.7;
-    z-index: -1;
-  }
-
-  .gradient-border-hover:hover::before {
-    opacity: 0.9;
-    background: linear-gradient(135deg, #93c5fd, #60a5fa);
-  }
-
   .static-gradient {
     background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
   }
