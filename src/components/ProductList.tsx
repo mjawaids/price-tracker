@@ -22,6 +22,7 @@ const ProductList: React.FC<ProductListProps> = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const handleEditProduct = (product: Product) => {
+    trackUserAction('edit_product', { productId: product.id, category: product.category });
     setEditingProduct(product);
   };
 

@@ -258,7 +258,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
             Join thousands of smart shoppers who save money every day with PriceTracker
           </p>
           <button
-            onClick={() => onShowAuth('signup')}
+            onClick={() => handleAuthClick('signup', 'cta')}
             className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors duration-200 shadow-lg backdrop-blur-sm border border-white/20"
           >
             Start Your Free Account

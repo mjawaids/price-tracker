@@ -33,6 +33,13 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
 
   const handleAddToList = () => {
     if (selectedProduct && selectedVariant) {
+      trackUserAction('add_to_shopping_list', { 
+        productId: selectedProduct, 
+        variantId: selectedVariant,
+        quantity,
+        priority 
+      });
+      
       onAddToList({
         productId: selectedProduct,
         variantId: selectedVariant,
