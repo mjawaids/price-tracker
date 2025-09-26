@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Product, Store, ShoppingList } from '../types';
+import { trackProduct, trackStore, trackShoppingList } from '../utils/analytics';
 
 export const useSupabaseData = () => {
   const { user } = useAuth();
@@ -169,6 +170,9 @@ export const useSupabaseData = () => {
     };
 
     setProducts(prev => [formattedProduct, ...prev]);
+    
+    // Track product creation
+    trackProduct('create', formattedProduct.id, formattedProduct.category);
   };
 
   const updateProduct = async (updatedProduct: Product) => {
@@ -363,6 +367,9 @@ export const useSupabaseData = () => {
         ? { ...list, items, updatedAt: new Date() }
         : list
     ));
+    
+    // Track shopping list update
+    trackShoppingList('update_items', listId, items.length);
   };
   return {
     products,

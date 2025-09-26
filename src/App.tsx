@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import LandingPage from './components/LandingPage';
 import Navigation from './components/Navigation';
 import AuthModal from './components/AuthModal';
@@ -15,6 +16,7 @@ import AddProduct from './components/AddProduct';
 import AddStore from './components/AddStore';
 import { Product, Store, ShoppingList as ShoppingListType, ShoppingListItem, ViewMode } from './types';
 import { useSupabaseData } from './hooks/useSupabaseData';
+import { trackPageView, trackUserAction } from './utils/analytics';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -43,6 +45,10 @@ function AppContent() {
 
   // Show auth modal if user tries to access protected features
   const handleViewChange = (view: ViewMode) => {
+    // Track page navigation
+    trackPageView(`/${view}`, `${view.charAt(0).toUpperCase() + view.slice(1)} Page`);
+    trackUserAction('navigate', { destination: view });
+    
     if (!user && ['products', 'stores', 'price-manager', 'shopping-list', 'shopping-lists', 'add-product', 'add-store'].includes(view)) {
       setShowAuthModal(true);
       return;
@@ -285,13 +291,15 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <SettingsProvider>
-          <AppContent />
-        </SettingsProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <AnalyticsProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <SettingsProvider>
+            <AppContent />
+          </SettingsProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </AnalyticsProvider>
   );
 }
 

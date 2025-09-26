@@ -1,11 +1,17 @@
 import React from 'react';
 import { ShoppingCart, TrendingDown, Shield, Smartphone, Users, Star, ArrowRight, Check } from 'lucide-react';
+import { trackUserAction } from '../utils/analytics';
 
 interface LandingPageProps {
   onShowAuth: (mode: 'signin' | 'signup') => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
+  const handleAuthClick = (mode: 'signin' | 'signup', location: string) => {
+    trackUserAction('auth_modal_open', { mode, location });
+    onShowAuth(mode);
+  };
+  
   const features = [
     {
       icon: TrendingDown,
@@ -76,13 +82,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
             
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => onShowAuth('signin')}
+                onClick={() => handleAuthClick('signin', 'header')}
                 className="text-white/70 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-white/10 backdrop-blur-sm"
               >
                 Sign In
               </button>
               <button
-                onClick={() => onShowAuth('signup')}
+                onClick={() => handleAuthClick('signup', 'header')}
                 className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
               >
                 Get Started
@@ -106,14 +112,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
-                onClick={() => onShowAuth('signup')}
+                onClick={() => handleAuthClick('signup', 'hero')}
                 className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center space-x-2 backdrop-blur-sm border border-white/20"
               >
                 <span>Start Saving Today</span>
                 <ArrowRight className="h-5 w-5" />
               </button>
               <button
-                onClick={() => onShowAuth('signin')}
+                onClick={() => handleAuthClick('signin', 'hero')}
                 className="border-2 border-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:border-white/50 hover:bg-white/10 transition-all duration-200 backdrop-blur-sm"
               >
                 Sign In

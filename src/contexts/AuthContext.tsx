@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { trackAuth } from '../utils/analytics'
 
 interface AuthContextType {
   user: User | null
@@ -61,6 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })
 
     if (!error && data.user) {
+      // Track successful sign up
+      trackAuth('sign_up');
+      
       // Create profile
       const { error: profileError } = await supabase
         .from('profiles')
@@ -83,10 +87,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
     })
+    
+    if (!error) {
+      trackAuth('sign_in');
+    }
+    
     return { error }
   }
 
   const signOut = async () => {
+    trackAuth('sign_out');
     await supabase.auth.signOut()
   }
 
@@ -94,6 +104,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     })
+    
+    if (!error) {
+      trackAuth('password_reset');
+    }
+    
     return { error }
   }
 
