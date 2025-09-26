@@ -3,7 +3,7 @@ import { User, Settings, LogOut, ChevronDown, Moon, Sun, Monitor, Key } from 'lu
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import SettingsModal from './SettingsModal'
-import ChangePasswordModal from './ChangePasswordModal'</parameter>
+import ChangePasswordModal from './ChangePasswordModal'
 
 const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
