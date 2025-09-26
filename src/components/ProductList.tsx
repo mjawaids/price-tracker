@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Edit, Trash2, DollarSign, Package, Store } from 'lucide-react';
+import { CreditCard as Edit, Trash2, DollarSign, Package, Store } from 'lucide-react';
 import { Product, Store as StoreType } from '../types';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
 import EditProduct from './EditProduct';
+import { trackUserAction } from '../utils/analytics';
 
 interface ProductListProps {
   products: Product[];
@@ -22,7 +23,6 @@ const ProductList: React.FC<ProductListProps> = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const handleEditProduct = (product: Product) => {
-    trackUserAction('edit_product', { productId: product.id, category: product.category });
     setEditingProduct(product);
   };
 
