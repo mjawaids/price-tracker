@@ -76,8 +76,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
               <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <ShoppingCart className="h-5 w-5 text-white" />
               </div>
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">PriceTracker</span>
-              <span className="ml-2 text-xl font-bold text-white">PriceTracker</span>
+              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">SpendLess</span>
+              <span className="ml-2 text-xl font-bold text-white">Price Tracker</span>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -108,7 +108,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
             </h1>
             <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
               Compare prices across thousands of stores, create smart shopping lists, and save money on everything you buy. 
-              Join millions of smart shoppers who trust PriceTracker.
+              Join millions of smart shoppers who trust SpendLess Price Tracker.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
@@ -255,7 +255,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
             Ready to Start Saving?
           </h2>
           <p className="text-xl text-white/80 mb-8">
-            Join thousands of smart shoppers who save money every day with PriceTracker
+            Join thousands of smart shoppers who save money every day with SpendLess Price Tracker
           </p>
           <button
             onClick={() => handleAuthClick('signup', 'cta')}
@@ -274,10 +274,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
               <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <ShoppingCart className="h-5 w-5 text-white" />
               </div>
-              <span className="ml-2 text-xl font-bold">PriceTracker</span>
+              <span className="ml-2 text-xl font-bold">SpendLess Price Tracker</span>
             </div>
             <div className="text-white/60 text-sm">
-              © {new Date().getFullYear()} PriceTracker. All rights reserved.
+              © {new Date().getFullYear()} SpendLess Price Tracker. All rights reserved.
             </div>
           </div>
           

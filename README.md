@@ -211,6 +211,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - Built with ❤️ by [Jawaid.dev](https://jawaid.dev)
+- Powered by [Ibexoft](https://ibexoft.com)
 - Icons by [Lucide](https://lucide.dev)
 - UI components styled with [Tailwind CSS](https://tailwindcss.com)
 - Backend powered by [Supabase](https://supabase.com)
