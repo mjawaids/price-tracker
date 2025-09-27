@@ -211,6 +211,21 @@ const Navigation: React.FC<NavigationProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Legal & Info Links */}
+      <footer className="glass-card border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-4 flex flex-col md:flex-row items-center justify-center md:justify-between gap-3">
+            <div className="text-white/60 text-sm">© {new Date().getFullYear()} SpendLess</div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <a href="/pricing" className="text-white/70 hover:text-white hover:underline">Pricing</a>
+              <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
+              <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
+              <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </>
   );
 };

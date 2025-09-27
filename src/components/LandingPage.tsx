@@ -277,7 +277,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
               <span className="ml-2 text-xl font-bold">PriceTracker</span>
             </div>
             <div className="text-white/60 text-sm">
-              © 2024 PriceTracker. All rights reserved.
+              © {new Date().getFullYear()} PriceTracker. All rights reserved.
             </div>
           </div>
           
@@ -298,6 +298,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
               <p className="text-white/50 text-xs">
                 Crafted with passion for smart shoppers everywhere
               </p>
+            </div>
+          </div>
+
+          {/* Legal & Info Links */}
+          <div className="mt-8 border-t border-white/10 pt-6">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
+              <a href="/pricing" className="text-white/70 hover:text-white hover:underline">Pricing</a>
+              <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
+              <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
+              <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
             </div>
           </div>
         </div>
