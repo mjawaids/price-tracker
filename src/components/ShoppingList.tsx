@@ -4,6 +4,7 @@ import { Product, Store, ShoppingListItem } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
+import { trackUserAction } from '../utils/analytics';
 
 interface ShoppingListProps {
   products: Product[];
@@ -33,6 +34,13 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
 
   const handleAddToList = () => {
     if (selectedProduct && selectedVariant) {
+      trackUserAction('add_to_shopping_list', { 
+        productId: selectedProduct, 
+        variantId: selectedVariant,
+        quantity,
+        priority 
+      });
+      
       trackUserAction('add_to_shopping_list', { 
         productId: selectedProduct, 
         variantId: selectedVariant,
