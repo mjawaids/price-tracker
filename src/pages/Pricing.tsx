@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Star, Zap, Shield, HeadphonesIcon } from 'lucide-react';
+import { Check, Star, Zap, Shield, Headphones as HeadphonesIcon } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import PageFooter from '../components/PageFooter';
 
