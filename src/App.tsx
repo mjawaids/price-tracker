@@ -46,11 +46,9 @@ function AppContent() {
 
   // Show auth modal if user tries to access protected features
   const handleViewChange = (view: ViewMode) => {
-    // Track page navigation only if analytics is initialized
-    if (isInitialized) {
-      trackPageView(`/${view}`, `${view.charAt(0).toUpperCase() + view.slice(1)} Page`);
-      trackUserAction('navigate', { destination: view });
-    }
+    // Track page navigation
+    trackPageView(`/${view}`, `${view.charAt(0).toUpperCase() + view.slice(1)} Page`);
+    trackUserAction('navigate', { destination: view });
     
     if (!user && ['products', 'stores', 'price-manager', 'shopping-list', 'shopping-lists', 'add-product', 'add-store'].includes(view)) {
       setShowAuthModal(true);

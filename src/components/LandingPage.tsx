@@ -1,12 +1,17 @@
 import React from 'react';
 import { ShoppingCart, TrendingDown, Shield, Smartphone, Users, Star, ArrowRight, Check } from 'lucide-react';
-import { trackUserAction } from '../utils/analytics';
+import { trackUserAction, trackPageView } from '../utils/analytics';
 
 interface LandingPageProps {
   onShowAuth: (mode: 'signin' | 'signup') => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
+  // Track landing page view
+  React.useEffect(() => {
+    trackPageView('/', 'Landing Page');
+  }, []);
+
   const handleAuthClick = (mode: 'signin' | 'signup', location: string) => {
     trackUserAction('auth_modal_open', { mode, location });
     onShowAuth(mode);

@@ -8,6 +8,12 @@ declare global {
 
 // Initialize Google Analytics
 export const initGA = (measurementId: string) => {
+  // Prevent double initialization
+  if (window.gtag) {
+    console.log('Google Analytics already initialized');
+    return;
+  }
+
   // Create script tag for Google Analytics
   const script = document.createElement('script');
   script.async = true;
@@ -25,6 +31,7 @@ export const initGA = (measurementId: string) => {
   window.gtag('config', measurementId, {
     page_title: document.title,
     page_location: window.location.href,
+    send_page_view: true
   });
 };
 
@@ -35,6 +42,8 @@ export const trackPageView = (path: string, title?: string) => {
       page_path: path,
       page_title: title || document.title,
     });
+  } else {
+    console.warn('Google Analytics not initialized - trackPageView called');
   }
 };
 
@@ -46,6 +55,8 @@ export const trackEvent = (action: string, category: string, label?: string, val
       event_label: label,
       value: value,
     });
+  } else {
+    console.warn('Google Analytics not initialized - trackEvent called');
   }
 };
 
@@ -56,6 +67,8 @@ export const trackUserAction = (action: string, details?: Record<string, any>) =
       event_category: 'user_interaction',
       ...details,
     });
+  } else {
+    console.warn('Google Analytics not initialized - trackUserAction called');
   }
 };
 
