@@ -8,13 +8,20 @@ declare global {
 
 // Initialize Google Analytics
 export const initGA = (measurementId: string) => {
-  // Prevent double initialization
+  if (!measurementId || measurementId.trim() === '') {
+    console.warn('Google Analytics: No measurement ID provided');
+    return;
+  }
+
+  // Check if gtag is already initialized
   if (window.gtag) {
     console.log('Google Analytics already initialized');
     return;
   }
 
-  // Create script tag for Google Analytics
+  console.log('Initializing Google Analytics with ID:', measurementId);
+
+  // Load gtag script
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
@@ -33,6 +40,8 @@ export const initGA = (measurementId: string) => {
     page_location: window.location.href,
     send_page_view: true
   });
+
+  console.log('Google Analytics initialized successfully');
 };
 
 // Track page views

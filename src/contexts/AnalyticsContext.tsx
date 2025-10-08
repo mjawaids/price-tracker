@@ -20,29 +20,36 @@ export const AnalyticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID;
-    
-    if (measurementId) {
-      // Only initialize in production or when explicitly enabled
-      const isDevelopment = import.meta.env.DEV;
-      const enableInDev = import.meta.env.VITE_GA_ENABLE_IN_DEV === 'true';
-      
-      if (!isDevelopment || enableInDev) {
-        try {
-          initGA(measurementId);
-          setIsInitialized(true);
-          
-          // Track initial page view
-          trackPageView(window.location.pathname, document.title);
-          
-          console.log('Google Analytics initialized with ID:', measurementId);
-        } catch (error) {
-          console.error('Failed to initialize Google Analytics:', error);
-        }
-      } else {
-        console.log('Google Analytics disabled in development mode');
+    const isDevelopment = import.meta.env.DEV;
+    const enableInDev = import.meta.env.VITE_GA_ENABLE_IN_DEV === 'true';
+
+    console.log('Analytics Context:', {
+      measurementId: measurementId ? `${measurementId.substring(0, 5)}...` : 'NOT SET',
+      isDevelopment,
+      enableInDev,
+      willInitialize: measurementId && (!isDevelopment || enableInDev)
+    });
+
+    if (!measurementId) {
+      console.error('CRITICAL: VITE_GA_MEASUREMENT_ID environment variable is not set!');
+      return;
+    }
+
+    // Only initialize in production or when explicitly enabled
+    if (!isDevelopment || enableInDev) {
+      try {
+        initGA(measurementId);
+        setIsInitialized(true);
+
+        // Track initial page view
+        trackPageView(window.location.pathname, document.title);
+
+        console.log('Google Analytics setup complete');
+      } catch (error) {
+        console.error('Failed to initialize Google Analytics:', error);
       }
     } else {
-      console.warn('Google Analytics Measurement ID not found. Set VITE_GA_MEASUREMENT_ID environment variable.');
+      console.log('Google Analytics disabled in development mode');
     }
   }, []);
 
