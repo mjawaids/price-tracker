@@ -27,17 +27,27 @@ export const AnalyticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       measurementId: measurementId ? `${measurementId.substring(0, 5)}...` : 'NOT SET',
       isDevelopment,
       enableInDev,
+      gtagExists: typeof window.gtag !== 'undefined',
       willInitialize: measurementId && (!isDevelopment || enableInDev)
     });
+
+    // Check if gtag is already loaded from HTML
+    if (typeof window.gtag !== 'undefined') {
+      console.log('Google Analytics already loaded from HTML');
+      setIsInitialized(true);
+      trackPageView(window.location.pathname, document.title);
+      return;
+    }
 
     if (!measurementId) {
       console.error('CRITICAL: VITE_GA_MEASUREMENT_ID environment variable is not set!');
       return;
     }
 
-    // Only initialize in production or when explicitly enabled
+    // Only initialize in production or when explicitly enabled (fallback if HTML init failed)
     if (!isDevelopment || enableInDev) {
       try {
+        console.log('Initializing Google Analytics from React...');
         initGA(measurementId);
         setIsInitialized(true);
 

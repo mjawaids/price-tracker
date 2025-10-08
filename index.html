@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Price Comparison Shopping App</title>
+    <script data-cfasync="false">
+      (function() {
+        var gaId = '__GA_MEASUREMENT_ID__';
+        if (gaId && gaId !== '__' + 'GA_MEASUREMENT_ID__') {
+          var script = document.createElement('script');
+          script.async = true;
+          script.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+          document.head.appendChild(script);
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          window.gtag = gtag;
+          gtag('js', new Date());
+          gtag('config', gaId);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
