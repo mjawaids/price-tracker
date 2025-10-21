@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Product, Store, ShoppingList } from '../types';
@@ -10,6 +10,9 @@ export const useSupabaseData = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [loading, setLoading] = useState(false);
+  // timestamp (ms) when data was last successfully loaded
+  const lastLoadRef = useRef<number>(0);
+  const LOAD_TTL_MS = 30 * 1000; // 30 seconds
 
   // Load data when user changes
   useEffect(() => {
@@ -25,6 +28,9 @@ export const useSupabaseData = () => {
 
   const loadAllData = async () => {
     if (!user) return;
+    const now = Date.now();
+    // Skip reload if we loaded recently
+    if (now - lastLoadRef.current < LOAD_TTL_MS) return;
     
     setLoading(true);
     try {
@@ -33,6 +39,8 @@ export const useSupabaseData = () => {
         loadStores(),
         loadShoppingLists()
       ]);
+      // mark successful load
+      lastLoadRef.current = Date.now();
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

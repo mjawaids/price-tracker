@@ -33,17 +33,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      const newUser = session?.user ?? null
       setSession(session)
-      setUser(session?.user ?? null)
+      setUser(prev => (prev?.id === newUser?.id ? prev : newUser))
       setLoading(false)
     })
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const newUser = session?.user ?? null
       setSession(session)
-      setUser(session?.user ?? null)
+      // Only update React state when the user id actually changes. This prevents
+      // redundant updates triggered by Supabase reconnects (which can cause
+      // components to reload data on visibility change).
+      setUser(prev => (prev?.id === newUser?.id ? prev : newUser))
       setLoading(false)
     })
 
