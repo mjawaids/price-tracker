@@ -40,7 +40,7 @@ A modern, full-featured price comparison and shopping management application bui
 
 ## 🚀 Live Demo
 
-Visit the live application: [https://velvety-rabanadas-f4e189.netlify.app](https://velvety-rabanadas-f4e189.netlify.app)
+Visit the live application: [https://spendless.ibexoft.com](https://spendless.ibexoft.com)
 
 ## 🛠️ Tech Stack
 
@@ -63,7 +63,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/mjawaids/price-tracker.git
 cd price-tracker
 ```
 
