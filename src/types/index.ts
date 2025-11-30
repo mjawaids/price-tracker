@@ -36,6 +36,7 @@ export interface Store {
   };
   hasDelivery: boolean;
   deliveryRadius?: number;
+  deliveryFee?: number;
   website?: string;
   phone?: string;
   createdAt: Date;

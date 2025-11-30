@@ -4,12 +4,38 @@ export const findCheapestPrice = (prices: Price[], stores: Store[]) => {
   const availablePrices = prices.filter(price => price.isAvailable);
   if (availablePrices.length === 0) return null;
 
-  const cheapestPrice = availablePrices.reduce((min, current) => 
+  const cheapestPrice = availablePrices.reduce((min, current) =>
     current.price < min.price ? current : min
   );
 
   const store = stores.find(s => s.id === cheapestPrice.storeId);
   return { price: cheapestPrice, store };
+};
+
+export const getPriceWithDelivery = (price: Price, store: Store | undefined): number => {
+  if (!store) return price.price;
+  const deliveryFee = (store.hasDelivery && store.deliveryFee) ? store.deliveryFee : 0;
+  return price.price + deliveryFee;
+};
+
+export const findCheapestPriceWithDelivery = (prices: Price[], stores: Store[]) => {
+  const availablePrices = prices.filter(price => price.isAvailable);
+  if (availablePrices.length === 0) return null;
+
+  let cheapestOption = null;
+  let lowestTotalPrice = Infinity;
+
+  availablePrices.forEach(price => {
+    const store = stores.find(s => s.id === price.storeId);
+    const totalPrice = getPriceWithDelivery(price, store);
+
+    if (totalPrice < lowestTotalPrice) {
+      lowestTotalPrice = totalPrice;
+      cheapestOption = { price, store, totalPrice };
+    }
+  });
+
+  return cheapestOption;
 };
 
 export const calculateTotalSavings = (

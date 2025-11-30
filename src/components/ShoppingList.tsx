@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Minus, ShoppingCart, Trash2, DollarSign, CheckCircle } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, DollarSign, CheckCircle, Truck } from 'lucide-react';
 import { Product, Store, ShoppingListItem } from '../types';
-import { findCheapestPrice } from '../utils/price-comparison';
+import { findCheapestPriceWithDelivery, getPriceWithDelivery } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
 import { trackUserAction } from '../utils/analytics';
@@ -72,38 +72,40 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
     return shoppingList.reduce((total, item) => {
       const { variant } = getProductAndVariant(item.productId, item.variantId);
       if (!variant) return total;
-      
-      const cheapestPrice = findCheapestPrice(variant.prices, stores);
-      return total + (cheapestPrice?.price.price || 0) * item.quantity;
+
+      const cheapestOption = findCheapestPriceWithDelivery(variant.prices, stores);
+      return total + (cheapestOption?.totalPrice || 0) * item.quantity;
     }, 0);
   };
 
   const groupByStore = () => {
-    const storeGroups: Record<string, { store: Store; items: Array<ShoppingListItem & { product: Product; variant: any; price: any }> }> = {};
-    
+    const storeGroups: Record<string, { store: Store; items: Array<ShoppingListItem & { product: Product; variant: any; price: any; priceWithDelivery: number }>; deliveryFee: number }> = {};
+
     shoppingList.forEach(item => {
       const { product, variant } = getProductAndVariant(item.productId, item.variantId);
       if (!product || !variant) return;
-      
-      const cheapestPrice = findCheapestPrice(variant.prices, stores);
-      if (!cheapestPrice) return;
-      
-      const storeId = cheapestPrice.store!.id;
+
+      const cheapestOption = findCheapestPriceWithDelivery(variant.prices, stores);
+      if (!cheapestOption) return;
+
+      const storeId = cheapestOption.store!.id;
       if (!storeGroups[storeId]) {
         storeGroups[storeId] = {
-          store: cheapestPrice.store!,
-          items: []
+          store: cheapestOption.store!,
+          items: [],
+          deliveryFee: (cheapestOption.store?.hasDelivery && cheapestOption.store?.deliveryFee) ? cheapestOption.store.deliveryFee : 0
         };
       }
-      
+
       storeGroups[storeId].items.push({
         ...item,
         product,
         variant,
-        price: cheapestPrice.price
+        price: cheapestOption.price,
+        priceWithDelivery: cheapestOption.totalPrice
       });
     });
-    
+
     return storeGroups;
   };
 
@@ -168,7 +170,15 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-medium text-gray-900">{group.store.name}</h3>
-                        <p className="text-sm text-gray-500 capitalize">{group.store.type}</p>
+                        <div className="flex items-center space-x-3 mt-1">
+                          <p className="text-sm text-gray-500 capitalize">{group.store.type}</p>
+                          {group.deliveryFee > 0 && (
+                            <div className="flex items-center space-x-1 text-sm text-gray-600">
+                              <Truck className="h-3 w-3" />
+                              <span>Delivery: {formatPrice(group.deliveryFee, settings.currency)}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="font-medium text-gray-900"></div>
@@ -215,10 +225,10 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                             
                             <div className="text-right">
                               <div className="font-medium text-gray-900">
-                                {formatPrice(item.price.price * item.quantity, settings.currency)}
+                                {formatPrice(item.priceWithDelivery * item.quantity, settings.currency)}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {formatPrice(item.price.price, settings.currency)} each
+                                {formatPrice(item.priceWithDelivery, settings.currency)} each
                               </div>
                             </div>
                             
