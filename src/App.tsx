@@ -4,7 +4,7 @@ import { SettingsProvider } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AnalyticsProvider, useAnalytics } from './contexts/AnalyticsContext';
 import LandingPage from './components/LandingPage';
-import Navigation from './components/Navigation';
+import MobileNavigation from './components/MobileNavigation';
 import AuthModal from './components/AuthModal';
 import Dashboard from './components/Dashboard';
 import ProductList from './components/ProductList';
@@ -244,7 +244,7 @@ function AppContent() {
       <div className="min-h-screen static-gradient flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/60 mx-auto mb-4"></div>
-          <p className="text-white/80">Loading...</p>
+          <p className="text-white/80 text-sm md:text-base">Loading...</p>
         </div>
       </div>
     );
@@ -270,7 +270,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen static-gradient">
-      <Navigation
+      <MobileNavigation
         currentView={currentView}
         onViewChange={handleViewChange}
         shoppingListCount={currentShoppingList.length}
@@ -283,7 +283,7 @@ function AppContent() {
         initialMode={authMode}
       />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="app-content">
         {renderCurrentView()}
       </main>
     </div>

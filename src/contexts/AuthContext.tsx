@@ -32,17 +32,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((response: any) => {
+      const session = response?.data?.session ?? null
       const newUser = session?.user ?? null
       setSession(session)
       setUser(prev => (prev?.id === newUser?.id ? prev : newUser))
       setLoading(false)
+    }).catch((error: any) => {
+      console.warn('Error getting session:', error)
+      setLoading(false)
     })
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const authListener = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       const newUser = session?.user ?? null
       setSession(session)
       // Only update React state when the user id actually changes. This prevents
@@ -52,7 +54,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    const subscription = authListener?.data?.subscription
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe()
+      }
+    }
   }, [])
 
   const signUp = async (email: string, password: string, fullName: string) => {

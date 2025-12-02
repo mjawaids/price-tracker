@@ -85,31 +85,31 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
   const recentStores = stores.slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+    <div className="space-y-4 md:space-y-6">
+      {/* Stats Grid - Mobile first: 1 column, then 2 on tablet, 4 on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
         {stats.map((stat, index) => (
-          <div key={index} className="relative gradient-border overflow-hidden shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 group gradient-border-hover">
+          <div key={index} className="relative gradient-border overflow-hidden shadow-lg md:shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300 md:transform md:hover:scale-105 group gradient-border-hover active:scale-95 md:active:scale-100">
             {/* Gradient Border */}
             {/* Content */}
             <div className="relative z-10">
-            <div className="p-6">
-              <div className="flex items-center">
+            <div className="p-4 md:p-6">
+              <div className="flex items-center gap-3 md:gap-4">
                 <div className="flex-shrink-0">
-                  <div className={`${stat.color} rounded-xl p-3 shadow-lg`}>
-                    <stat.icon className="h-6 w-6 text-white" />
+                  <div className={`${stat.color} rounded-xl p-2 md:p-3 shadow-lg`}>
+                    <stat.icon className="h-5 md:h-6 w-5 md:w-6 text-white" />
                   </div>
                 </div>
-                <div className="ml-5 w-0 flex-1">
+                <div className="w-0 flex-1 min-w-0">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
+                    <dt className="text-xs md:text-sm font-medium text-gray-500 truncate">
                       <span className="text-white/70">{stat.name}</span>
                     </dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-white">
+                    <dd className="flex items-baseline gap-2 flex-wrap">
+                      <div className="text-xl md:text-2xl font-semibold text-white">
                         {stat.value}
                       </div>
-                      <div className="ml-2 flex items-baseline text-sm text-white/60">
+                      <div className="flex items-baseline text-xs md:text-sm text-white/60">
                         <span>{stat.change}</span>
                       </div>
                     </dd>
@@ -122,32 +122,32 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
         ))}
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+      {/* Recent Activity - Mobile first: 1 column, then 2 on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 lg:gap-6">
         {/* Recent Products */}
-        <div className="relative gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover">
+        <div className="relative gradient-border shadow-lg md:shadow-xl rounded-2xl group md:hover:shadow-2xl transition-all duration-300 gradient-border-hover">
           {/* Gradient Border */}
           {/* Content */}
           <div className="relative z-10">
-          <div className="px-6 py-4 border-b border-white/20">
-            <h3 className="text-lg font-medium text-white">Recent Products</h3>
+          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
+            <h3 className="text-base md:text-lg font-medium text-white">Recent Products</h3>
           </div>
           <div className="divide-y divide-white/10">
             {recentProducts.map((product) => (
-              <div key={product.id} className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-white">{product.name}</h4>
-                    <p className="text-sm text-white/60">{product.category}</p>
+              <div key={product.id} className="p-4 md:p-6 touch-target active:bg-white/5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm md:text-base font-medium text-white truncate">{product.name}</h4>
+                    <p className="text-xs md:text-sm text-white/60 truncate">{product.category}</p>
                   </div>
-                  <div className="text-sm text-white/60">
+                  <div className="text-xs md:text-sm text-white/60 flex-shrink-0">
                     {product.variants.length} variant{product.variants.length !== 1 ? 's' : ''}
                   </div>
                 </div>
               </div>
             ))}
             {recentProducts.length === 0 && (
-              <div className="p-6 text-center text-white/60">
+              <div className="p-4 md:p-6 text-center text-white/60 text-sm">
                 No products added yet
               </div>
             )}
@@ -156,29 +156,29 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
         </div>
 
         {/* Recent Stores */}
-        <div className="relative gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover">
+        <div className="relative gradient-border shadow-lg md:shadow-xl rounded-2xl group md:hover:shadow-2xl transition-all duration-300 gradient-border-hover">
           {/* Gradient Border */}
           {/* Content */}
           <div className="relative z-10">
-          <div className="px-6 py-4 border-b border-white/20">
-            <h3 className="text-lg font-medium text-white">Recent Stores</h3>
+          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
+            <h3 className="text-base md:text-lg font-medium text-white">Recent Stores</h3>
           </div>
           <div className="divide-y divide-white/10">
             {recentStores.map((store) => (
-              <div key={store.id} className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-white">{store.name}</h4>
-                    <p className="text-sm text-white/60 capitalize">{store.type}</p>
+              <div key={store.id} className="p-4 md:p-6 touch-target active:bg-white/5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm md:text-base font-medium text-white truncate">{store.name}</h4>
+                    <p className="text-xs md:text-sm text-white/60 capitalize truncate">{store.type}</p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                     {store.hasDelivery && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+                      <span className="inline-flex items-center px-2 md:px-2.5 py-1 md:py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30 whitespace-nowrap">
                         Delivery
                       </span>
                     )}
                     {store.type === 'online' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      <span className="inline-flex items-center px-2 md:px-2.5 py-1 md:py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">
                         Online
                       </span>
                     )}
@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
               </div>
             ))}
             {recentStores.length === 0 && (
-              <div className="p-6 text-center text-white/60">
+              <div className="p-4 md:p-6 text-center text-white/60 text-sm">
                 No stores added yet
               </div>
             )}
@@ -197,37 +197,37 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       </div>
 
       {/* Quick Actions */}
-      <div className="relative gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover">
+      <div className="relative gradient-border shadow-lg md:shadow-xl rounded-2xl group md:hover:shadow-2xl transition-all duration-300 gradient-border-hover">
         {/* Gradient Border */}
         {/* Content */}
         <div className="relative z-10">
-        <div className="px-6 py-4 border-b border-white/20">
-          <h3 className="text-lg font-medium text-white">Quick Actions</h3>
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
+          <h3 className="text-base md:text-lg font-medium text-white">Quick Actions</h3>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <button 
               onClick={() => onViewChange('add-product')}
-              className="p-6 border border-white/20 rounded-xl hover:bg-white/10 transition-all duration-200 transform hover:scale-105 hover:shadow-lg backdrop-blur-sm group"
+              className="p-4 md:p-6 border border-white/20 rounded-xl md:hover:bg-white/10 transition-all duration-200 md:transform md:hover:scale-105 md:hover:shadow-lg backdrop-blur-sm group touch-target active:bg-white/5 md:active:scale-100"
             >
-              <Package className="h-8 w-8 text-blue-500 mx-auto mb-3 group-hover:scale-110 transition-transform duration-200" />
-              <h4 className="text-sm font-medium text-white mb-1">Add Product</h4>
+              <Package className="h-6 md:h-8 w-6 md:w-8 text-blue-500 mx-auto mb-2 md:mb-3 md:group-hover:scale-110 transition-transform duration-200" />
+              <h4 className="text-xs md:text-sm font-medium text-white mb-1">Add Product</h4>
               <p className="text-xs text-white/60">Track prices for a new product</p>
             </button>
             <button 
               onClick={() => onViewChange('add-store')}
-              className="p-6 border border-white/20 rounded-xl hover:bg-white/10 transition-all duration-200 transform hover:scale-105 hover:shadow-lg backdrop-blur-sm group"
+              className="p-4 md:p-6 border border-white/20 rounded-xl md:hover:bg-white/10 transition-all duration-200 md:transform md:hover:scale-105 md:hover:shadow-lg backdrop-blur-sm group touch-target active:bg-white/5 md:active:scale-100"
             >
-              <Store className="h-8 w-8 text-green-500 mx-auto mb-3 group-hover:scale-110 transition-transform duration-200" />
-              <h4 className="text-sm font-medium text-white mb-1">Add Store</h4>
+              <Store className="h-6 md:h-8 w-6 md:w-8 text-green-500 mx-auto mb-2 md:mb-3 md:group-hover:scale-110 transition-transform duration-200" />
+              <h4 className="text-xs md:text-sm font-medium text-white mb-1">Add Store</h4>
               <p className="text-xs text-white/60">Register a new store location</p>
             </button>
             <button 
               onClick={() => onViewChange('shopping-lists')}
-              className="p-6 border border-white/20 rounded-xl hover:bg-white/10 transition-all duration-200 transform hover:scale-105 hover:shadow-lg backdrop-blur-sm group sm:col-span-2 lg:col-span-1"
+              className="p-4 md:p-6 border border-white/20 rounded-xl md:hover:bg-white/10 transition-all duration-200 md:transform md:hover:scale-105 md:hover:shadow-lg backdrop-blur-sm group md:col-span-2 lg:col-span-1 touch-target active:bg-white/5 md:active:scale-100"
             >
-              <ShoppingCart className="h-8 w-8 text-purple-500 mx-auto mb-3 group-hover:scale-110 transition-transform duration-200" />
-              <h4 className="text-sm font-medium text-white mb-1">Manage Lists</h4>
+              <ShoppingCart className="h-6 md:h-8 w-6 md:w-8 text-purple-500 mx-auto mb-2 md:mb-3 md:group-hover:scale-110 transition-transform duration-200" />
+              <h4 className="text-xs md:text-sm font-medium text-white mb-1">Manage Lists</h4>
               <p className="text-xs text-white/60">Start a new shopping list</p>
             </button>
           </div>
