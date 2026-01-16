@@ -233,6 +233,7 @@ export const useSupabaseData = () => {
       location: storeData.location,
       has_delivery: storeData.hasDelivery,
       delivery_radius: storeData.deliveryRadius,
+      delivery_fee: storeData.deliveryFee,
       website: storeData.website,
       phone: storeData.phone
     };
@@ -255,6 +256,7 @@ export const useSupabaseData = () => {
       location: data.location,
       hasDelivery: data.has_delivery,
       deliveryRadius: data.delivery_radius,
+      deliveryFee: data.delivery_fee,
       website: data.website,
       phone: data.phone,
       createdAt: new Date(data.created_at)
