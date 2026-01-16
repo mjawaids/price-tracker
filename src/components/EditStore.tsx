@@ -15,6 +15,7 @@ const EditStore: React.FC<EditStoreProps> = ({ store, onUpdateStore, onCancel })
   const [city, setCity] = useState(store.location?.city || '');
   const [hasDelivery, setHasDelivery] = useState(store.hasDelivery);
   const [deliveryRadius, setDeliveryRadius] = useState(store.deliveryRadius?.toString() || '');
+  const [deliveryFee, setDeliveryFee] = useState(store.deliveryFee?.toString() || '');
   const [website, setWebsite] = useState(store.website || '');
   const [phone, setPhone] = useState(store.phone || '');
 
@@ -33,6 +34,7 @@ const EditStore: React.FC<EditStoreProps> = ({ store, onUpdateStore, onCancel })
       } : undefined,
       hasDelivery,
       deliveryRadius: deliveryRadius ? parseInt(deliveryRadius) : undefined,
+      deliveryFee: deliveryFee && hasDelivery ? parseFloat(deliveryFee) : undefined,
       website: website || undefined,
       phone: phone || undefined,
     };
@@ -172,17 +174,33 @@ const EditStore: React.FC<EditStoreProps> = ({ store, onUpdateStore, onCancel })
           </div>
 
           {hasDelivery && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Delivery Radius (km)
-              </label>
-              <input
-                type="number"
-                value={deliveryRadius}
-                onChange={(e) => setDeliveryRadius(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Enter delivery radius"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Delivery Radius (km)
+                </label>
+                <input
+                  type="number"
+                  value={deliveryRadius}
+                  onChange={(e) => setDeliveryRadius(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="Enter delivery radius"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Delivery Fee
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={deliveryFee}
+                  onChange={(e) => setDeliveryFee(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="Enter delivery fee"
+                />
+              </div>
             </div>
           )}
 

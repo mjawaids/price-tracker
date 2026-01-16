@@ -274,6 +274,7 @@ export const useSupabaseData = () => {
         location: updatedStore.location,
         has_delivery: updatedStore.hasDelivery,
         delivery_radius: updatedStore.deliveryRadius,
+        delivery_fee: updatedStore.deliveryFee,
         website: updatedStore.website,
         phone: updatedStore.phone,
         updated_at: new Date().toISOString()
