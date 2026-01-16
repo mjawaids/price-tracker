@@ -36,6 +36,7 @@ function AppContent() {
     updateProduct,
     deleteProduct,
     addStore,
+    updateStore,
     deleteStore,
     createShoppingList,
     deleteShoppingList,
@@ -76,6 +77,10 @@ function AppContent() {
   const handleAddStore = (storeData: Omit<Store, 'id' | 'createdAt'>) => {
     addStore(storeData);
     setCurrentView('stores');
+  };
+
+  const handleUpdateStore = (updatedStore: Store) => {
+    updateStore(updatedStore);
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -187,6 +192,7 @@ function AppContent() {
           <StoreList
             stores={stores}
             onDeleteStore={handleDeleteStore}
+            onUpdateStore={handleUpdateStore}
           />
         );
       case 'shopping-list':
