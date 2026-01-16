@@ -278,8 +278,7 @@ export const useSupabaseData = () => {
         delivery_radius: updatedStore.deliveryRadius,
         delivery_fee: updatedStore.deliveryFee,
         website: updatedStore.website,
-        phone: updatedStore.phone,
-        updated_at: new Date().toISOString()
+        phone: updatedStore.phone
       })
       .eq('id', updatedStore.id)
       .eq('user_id', user.id);
