@@ -1,15 +1,27 @@
 import React, { useState } from 'react';
 import { Store, MapPin, Globe, Truck, Phone, Edit, Trash2, Search } from 'lucide-react';
 import { Store as StoreType } from '../types';
+import EditStore from './EditStore';
 
 interface StoreListProps {
   stores: StoreType[];
   onDeleteStore: (id: string) => void;
+  onUpdateStore: (store: StoreType) => void;
 }
 
-const StoreList: React.FC<StoreListProps> = ({ stores, onDeleteStore }) => {
+const StoreList: React.FC<StoreListProps> = ({ stores, onDeleteStore, onUpdateStore }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
+  const [editingStore, setEditingStore] = useState<StoreType | null>(null);
+
+  const handleEditStore = (store: StoreType) => {
+    setEditingStore(store);
+  };
+
+  const handleUpdateStore = (updatedStore: StoreType) => {
+    onUpdateStore(updatedStore);
+    setEditingStore(null);
+  };
 
   const filteredStores = stores.filter(store => {
     const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -95,7 +107,10 @@ const StoreList: React.FC<StoreListProps> = ({ stores, onDeleteStore }) => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/80 transition-colors duration-200">
+                  <button
+                    onClick={() => handleEditStore(store)}
+                    className="p-2 text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/80 transition-colors duration-200"
+                  >
                     <Edit className="h-5 w-5" />
                   </button>
                   <button
@@ -119,6 +134,14 @@ const StoreList: React.FC<StoreListProps> = ({ stores, onDeleteStore }) => {
         </div>
         </div>
       </div>
+
+      {editingStore && (
+        <EditStore
+          store={editingStore}
+          onUpdateStore={handleUpdateStore}
+          onCancel={() => setEditingStore(null)}
+        />
+      )}
     </div>
   );
 };

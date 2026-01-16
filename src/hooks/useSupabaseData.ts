@@ -233,6 +233,7 @@ export const useSupabaseData = () => {
       location: storeData.location,
       has_delivery: storeData.hasDelivery,
       delivery_radius: storeData.deliveryRadius,
+      delivery_fee: storeData.deliveryFee,
       website: storeData.website,
       phone: storeData.phone
     };
@@ -255,12 +256,40 @@ export const useSupabaseData = () => {
       location: data.location,
       hasDelivery: data.has_delivery,
       deliveryRadius: data.delivery_radius,
+      deliveryFee: data.delivery_fee,
       website: data.website,
       phone: data.phone,
       createdAt: new Date(data.created_at)
     };
 
     setStores(prev => [formattedStore, ...prev]);
+  };
+
+  const updateStore = async (updatedStore: Store) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('stores')
+      .update({
+        name: updatedStore.name,
+        type: updatedStore.type,
+        location: updatedStore.location,
+        has_delivery: updatedStore.hasDelivery,
+        delivery_radius: updatedStore.deliveryRadius,
+        delivery_fee: updatedStore.deliveryFee,
+        website: updatedStore.website,
+        phone: updatedStore.phone,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', updatedStore.id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating store:', error);
+      return;
+    }
+
+    setStores(prev => prev.map(s => s.id === updatedStore.id ? updatedStore : s));
   };
 
   const deleteStore = async (id: string) => {
@@ -389,6 +418,7 @@ export const useSupabaseData = () => {
     updateProduct,
     deleteProduct,
     addStore,
+    updateStore,
     deleteStore,
     createShoppingList,
     deleteShoppingList,
