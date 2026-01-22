@@ -51,7 +51,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.error('Error loading settings:', error);
       }
     }
-  }, []);
+  }, [setTheme]);
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
