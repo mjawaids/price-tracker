@@ -85,13 +85,11 @@ const ProductList: React.FC<ProductListProps> = ({
 
   if (products.length === 0) {
     return (
-      <div className="relative gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover overflow-hidden">
-        <div className="relative z-10 bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl">
-          <div className="p-12 text-center">
-            <Package className="h-12 w-12 text-gray-400 dark:text-white/40 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No products yet</h3>
-            <p className="text-gray-500 dark:text-white/60">Add your first product to start tracking prices across different stores.</p>
-          </div>
+      <div className="glass-card shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300 overflow-hidden">
+        <div className="p-12 text-center">
+          <Package className="h-12 w-12 text-white/40 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">No products yet</h3>
+          <p className="text-white/60">Add your first product to start tracking prices across different stores.</p>
         </div>
       </div>
     );
@@ -100,26 +98,25 @@ const ProductList: React.FC<ProductListProps> = ({
   return (
     <>
       <div className="space-y-3 md:space-y-6">
-        <div className="relative gradient-border shadow-lg md:shadow-xl rounded-2xl group md:hover:shadow-2xl transition-all duration-300 gradient-border-hover overflow-hidden">
-          <div className="relative z-10 bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl">
-            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 dark:border-white/20">
-              <h2 className="text-base md:text-lg font-medium text-gray-900 dark:text-white">Products</h2>
-            </div>
-            
-            <div className="divide-y divide-gray-200 dark:divide-white/10">
+        <div className="glass-card shadow-lg md:shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300 overflow-hidden">
+          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
+            <h2 className="text-base md:text-lg font-medium text-white">Products</h2>
+          </div>
+          
+          <div className="divide-y divide-white/10">
               {products.map((product) => {
                 const cheapestPrice = getCheapestPrice(product);
                 const isExpanded = expandedProducts.has(product.id);
 
                 return (
                   <div key={product.id}>
-                    <div className="p-3 md:p-6 md:hover:bg-gray-50 dark:md:hover:bg-white/5 transition-colors duration-200 active:bg-white/5 md:active:bg-transparent touch-target">
+                    <div className="p-3 md:p-6 md:hover:bg-white/5 transition-colors duration-200 active:bg-white/5 md:active:bg-transparent">
                       <div className="flex items-start justify-between gap-2 md:gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-2 md:gap-3">
                             <button
                               onClick={() => toggleExpandProduct(product.id)}
-                              className="p-1 md:p-0 text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 transition-colors duration-200 flex-shrink-0 touch-target"
+                              className="p-3 md:p-2 text-white/40 hover:text-white/60 transition-colors duration-200 flex-shrink-0 touch-target active:scale-95"
                             >
                               {isExpanded ? (
                                 <ChevronDown className="h-4 md:h-5 w-4 md:w-5" />
@@ -131,10 +128,10 @@ const ProductList: React.FC<ProductListProps> = ({
                               <Package className="h-5 md:h-8 w-5 md:w-8 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-sm md:text-lg font-medium text-gray-900 dark:text-white truncate">{product.name}</h3>
+                              <h3 className="text-sm md:text-lg font-medium text-white truncate">{product.name}</h3>
                               <div className="flex items-center gap-1 md:gap-4 mt-1 flex-wrap">
-                                {product.brand && <span className="text-xs md:text-sm text-gray-500 dark:text-white/60 truncate">{product.brand}</span>}
-                                <span className="inline-flex items-center px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 flex-shrink-0">
+                                {product.brand && <span className="text-xs md:text-sm text-white/60 truncate">{product.brand}</span>}
+                                <span className="inline-flex items-center px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 flex-shrink-0">
                                   {product.category}
                                 </span>
                               </div>
@@ -143,15 +140,15 @@ const ProductList: React.FC<ProductListProps> = ({
 
                           <div className="mt-2 md:mt-4 ml-7 md:ml-11">
                             <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
-                              <span className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">Variants:</span>
-                              <span className="text-xs md:text-sm text-gray-500 dark:text-white/60">{product.variants.length} available</span>
+                              <span className="text-xs md:text-sm font-medium text-white/80">Variants:</span>
+                              <span className="text-xs md:text-sm text-white/60">{product.variants.length} available</span>
                             </div>
 
                             {cheapestPrice && (
                               <div className="flex items-center gap-1 md:gap-2">
-                                <DollarSign className="h-3 md:h-4 w-3 md:w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                                <span className="text-xs md:text-sm text-gray-700 dark:text-gray-300 truncate">
-                                  Best: <span className="font-medium text-green-600 dark:text-green-400">
+                                <DollarSign className="h-3 md:h-4 w-3 md:w-4 text-green-400 flex-shrink-0" />
+                                <span className="text-xs md:text-sm text-white/80 truncate">
+                                  Best: <span className="font-medium text-green-400">
                                     {formatPrice(cheapestPrice.price, settings.currency)}
                                   </span>
                                 </span>
@@ -163,13 +160,13 @@ const ProductList: React.FC<ProductListProps> = ({
                         <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                           <button
                             onClick={() => handleEditProduct(product)}
-                            className="p-2 text-gray-400 dark:text-white/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 touch-target"
+                            className="p-3 md:p-2 text-white/40 hover:text-blue-400 transition-colors duration-200 touch-target active:scale-95"
                           >
                             <Edit className="h-4 md:h-5 w-4 md:w-5" />
                           </button>
                           <button
                             onClick={() => onDeleteProduct(product.id)}
-                            className="p-2 text-gray-400 dark:text-white/40 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 touch-target"
+                            className="p-3 md:p-2 text-white/40 hover:text-red-400 transition-colors duration-200 touch-target active:scale-95"
                           >
                             <Trash2 className="h-4 md:h-5 w-4 md:w-5" />
                           </button>
@@ -178,16 +175,16 @@ const ProductList: React.FC<ProductListProps> = ({
                     </div>
 
                     {isExpanded && (
-                      <div className="px-3 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-white/5 border-t border-gray-200 dark:border-white/10">
+                      <div className="px-3 md:px-6 py-3 md:py-4 bg-white/5 border-t border-white/10 animate-slide-up">
                         <div className="space-y-3 md:space-y-6">
                           {product.variants.map((variant) => (
-                            <div key={variant.id} className="border border-gray-200 dark:border-white/10 rounded-lg p-3 md:p-4 bg-white dark:bg-gray-800/50">
+                            <div key={variant.id} className="border border-white/10 rounded-lg p-3 md:p-4 bg-white/5">
                               <div className="mb-3 md:mb-4">
-                                <h4 className="font-semibold text-sm md:text-base text-gray-900 dark:text-white">{variant.name}</h4>
+                                <h4 className="font-semibold text-sm md:text-base text-white">{variant.name}</h4>
                                 {Object.keys(variant.specifications).length > 0 && (
                                   <div className="mt-2 space-y-1">
                                     {Object.entries(variant.specifications).map(([key, value]) => (
-                                      <p key={key} className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                                      <p key={key} className="text-xs md:text-sm text-white/60">
                                         <span className="font-medium">{key}:</span> {value}
                                       </p>
                                     ))}
@@ -196,9 +193,9 @@ const ProductList: React.FC<ProductListProps> = ({
                               </div>
 
                               <div className="space-y-2">
-                                <p className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">Prices by Store:</p>
+                                <p className="text-xs md:text-sm font-medium text-white/80">Prices by Store:</p>
                                 {variant.prices.length === 0 ? (
-                                  <p className="text-sm text-gray-500 dark:text-white/60">No prices recorded yet</p>
+                                  <p className="text-sm text-white/60">No prices recorded yet</p>
                                 ) : (
                                   <div className="space-y-2">
                                     {variant.prices.map((price) => {
@@ -208,33 +205,33 @@ const ProductList: React.FC<ProductListProps> = ({
                                         : price.price;
 
                                       return (
-                                        <div key={price.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded">
+                                        <div key={price.id} className="flex items-center justify-between p-3 bg-white/5 rounded">
                                           <div className="flex items-center space-x-2">
-                                            <Store className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">{store?.name || 'Unknown'}</span>
+                                            <Store className="h-4 w-4 text-white/60" />
+                                            <span className="text-sm font-medium text-white">{store?.name || 'Unknown'}</span>
                                           </div>
                                           <div className="flex items-center space-x-3">
                                             <div className="text-right">
                                               {price.discountPercentage ? (
                                                 <div className="flex items-center space-x-2">
-                                                  <span className="text-sm line-through text-gray-500 dark:text-gray-400">
+                                                  <span className="text-sm line-through text-white/40">
                                                     {formatPrice(price.price, settings.currency)}
                                                   </span>
-                                                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                                  <span className="text-sm font-bold text-green-400">
                                                     {formatPrice(displayPrice, settings.currency)}
                                                   </span>
-                                                  <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">
+                                                  <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
                                                     -{price.discountPercentage}%
                                                   </span>
                                                 </div>
                                               ) : (
-                                                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                                <span className="text-sm font-bold text-white">
                                                   {formatPrice(price.price, settings.currency)}
                                                 </span>
                                               )}
                                             </div>
                                             {!price.isAvailable && (
-                                              <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-2 py-1 rounded">
+                                              <span className="text-xs bg-white/10 text-white/80 px-2 py-1 rounded">
                                                 Out of Stock
                                               </span>
                                             )}
