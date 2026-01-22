@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List, Menu, X } from 'lucide-react';
 import { ViewMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +19,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
 }) => {
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   const primaryNavItems = [
     { id: 'dashboard' as ViewMode, icon: Home, label: 'Home' },
@@ -33,6 +34,65 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   ];
 
   const allNavItems = [...primaryNavItems, ...secondaryNavItems];
+
+  // Handle keyboard events (escape key and focus trap)
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Handle Escape key
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+        return;
+      }
+
+      // Handle Tab key for focus trapping
+      if (e.key === 'Tab' && drawerRef.current) {
+        const focusableElements = drawerRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement?.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement?.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Focus first element when drawer opens
+    if (drawerRef.current) {
+      const focusableElements = drawerRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0] as HTMLElement;
+      firstElement?.focus();
+    }
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileMenuOpen]);
+
+  // Prevent body scroll when drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [isMobileMenuOpen]);
 
   return (
     <>
@@ -129,83 +189,112 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay and Drawer */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
             onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
           />
-          <div className="fixed top-14 left-0 right-0 glass-card border-b border-white/20 shadow-2xl animate-slide-up max-h-[calc(100vh-3.5rem)] overflow-y-auto">
-            <div className="px-4 py-4 space-y-2">
-              {/* Mobile Navigation Items */}
-              {allNavItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onViewChange(item.id);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 touch-target ${
-                    currentView === item.id
-                      ? 'bg-white/20 text-white shadow-md'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{item.label}</span>
+          <nav 
+            ref={drawerRef}
+            className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] glass-card border-r border-white/20 shadow-2xl animate-slide-left overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+          >
+            <div className="flex flex-col h-full">
+              {/* Drawer Header */}
+              <div className="flex justify-between items-center h-14 px-4 border-b border-white/20 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                    <ShoppingCart className="h-5 w-5 text-white" />
                   </div>
-                  {item.badge && item.badge > 0 && (
-                    <span className="bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse shadow-lg">
-                      {item.badge}
-                    </span>
-                  )}
+                  <span className="text-sm font-bold text-white">SpendLess</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
+                  aria-label="Close menu"
+                >
+                  <X className="h-5 w-5" />
                 </button>
-              ))}
+              </div>
 
-              {/* Mobile Actions */}
-              <div className="pt-4 border-t border-white/20 space-y-2">
-                {user ? (
-                  <>
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="space-y-2">
+                  {/* Mobile Navigation Items */}
+                  {allNavItems.map((item) => (
                     <button
+                      key={item.id}
                       onClick={() => {
-                        onViewChange('add-product');
+                        onViewChange(item.id);
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 touch-target ${
+                        currentView === item.id
+                          ? 'bg-white/20 text-white shadow-md'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
                     >
-                      <Plus className="h-4 w-4" />
-                      <span>Add Product</span>
+                      <div className="flex items-center space-x-3">
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-medium">{item.label}</span>
+                      </div>
+                      {item.badge && item.badge > 0 && (
+                        <span className="bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse shadow-lg">
+                          {item.badge}
+                        </span>
+                      )}
                     </button>
-                    <button
-                      onClick={() => {
-                        onViewChange('add-store');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Add Store</span>
-                    </button>
-                    <div className="pt-4 border-t border-white/20">
-                      <UserMenu />
-                    </div>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => {
-                      onShowAuth();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
-                  >
-                    Sign In
-                  </button>
-                )}
+                  ))}
+
+                  {/* Mobile Actions */}
+                  <div className="pt-4 border-t border-white/20 space-y-2">
+                    {user ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            onViewChange('add-product');
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Add Product</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onViewChange('add-store');
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Add Store</span>
+                        </button>
+                        <div className="pt-4 border-t border-white/20">
+                          <UserMenu />
+                        </div>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          onShowAuth();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                      >
+                        Sign In
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </nav>
         </div>
       )}
 
@@ -235,41 +324,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           ))}
         </div>
       </nav>
-
-      {/* Credits Bar - Desktop Only */}
-      <div className="hidden md:block glass-card border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-2 text-center">
-            <p className="text-white/60 text-xs">
-              Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
-              <a 
-                href="https://jawaid.dev" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
-              >
-                Jawaid.dev
-              </a>
-              {' '}• Crafted with passion for smart shoppers everywhere
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Legal & Info Links - Desktop Only */}
-      <footer className="hidden md:block glass-card border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4 flex flex-col md:flex-row items-center justify-center md:justify-between gap-3">
-            <div className="text-white/60 text-sm">© {new Date().getFullYear()} SpendLess</div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <a href="/pricing" className="text-white/70 hover:text-white hover:underline">Pricing</a>
-              <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
-              <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
-              <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </>
   );
 };
