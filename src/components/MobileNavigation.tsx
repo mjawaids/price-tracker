@@ -35,29 +35,24 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
   const allNavItems = [...primaryNavItems, ...secondaryNavItems];
 
-  // Handle escape key to close drawer
+  // Handle keyboard events (escape key and focus trap)
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isMobileMenuOpen) {
+    if (!isMobileMenuOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Handle Escape key
+      if (e.key === 'Escape') {
         setIsMobileMenuOpen(false);
+        return;
       }
-    };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isMobileMenuOpen]);
-
-  // Focus trap for accessibility
-  useEffect(() => {
-    if (isMobileMenuOpen && drawerRef.current) {
-      const focusableElements = drawerRef.current.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      const firstElement = focusableElements[0] as HTMLElement;
-      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-      const handleTab = (e: KeyboardEvent) => {
-        if (e.key !== 'Tab') return;
+      // Handle Tab key for focus trapping
+      if (e.key === 'Tab' && drawerRef.current) {
+        const focusableElements = drawerRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
         if (e.shiftKey) {
           if (document.activeElement === firstElement) {
@@ -70,24 +65,32 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
             firstElement?.focus();
           }
         }
-      };
+      }
+    };
 
-      document.addEventListener('keydown', handleTab);
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Focus first element when drawer opens
+    if (drawerRef.current) {
+      const focusableElements = drawerRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0] as HTMLElement;
       firstElement?.focus();
-
-      return () => document.removeEventListener('keydown', handleTab);
     }
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isMobileMenuOpen]);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {
     if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.classList.add('overflow-hidden');
     } else {
-      document.body.style.overflow = '';
+      document.body.classList.remove('overflow-hidden');
     }
     return () => {
-      document.body.style.overflow = '';
+      document.body.classList.remove('overflow-hidden');
     };
   }, [isMobileMenuOpen]);
 
