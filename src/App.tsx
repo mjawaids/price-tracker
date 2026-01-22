@@ -5,6 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AnalyticsProvider, useAnalytics } from './contexts/AnalyticsContext';
 import LandingPage from './components/LandingPage';
 import MobileNavigation from './components/MobileNavigation';
+import AppFooter from './components/AppFooter';
 import AuthModal from './components/AuthModal';
 import Dashboard from './components/Dashboard';
 import ProductList from './components/ProductList';
@@ -275,7 +276,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen static-gradient">
+    <div className="min-h-screen flex flex-col static-gradient">
       <MobileNavigation
         currentView={currentView}
         onViewChange={handleViewChange}
@@ -289,9 +290,11 @@ function AppContent() {
         initialMode={authMode}
       />
       
-      <main className="app-content">
+      <main className="flex-1 app-content">
         {renderCurrentView()}
       </main>
+
+      <AppFooter />
     </div>
   );
 }
