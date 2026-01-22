@@ -208,7 +208,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                             </div>
                           </div>
                           
-                          <div className="flex items-center space-x-4 flex-wrap gap-2">
+                          <div className="flex items-center flex-wrap gap-2">
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
