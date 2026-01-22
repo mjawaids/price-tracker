@@ -253,7 +253,6 @@ const ProductList: React.FC<ProductListProps> = ({
             </div>
           </div>
         </div>
-      </div>
 
       {editingProduct && (
         <EditProduct
