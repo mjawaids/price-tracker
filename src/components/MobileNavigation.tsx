@@ -230,7 +230,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-sm font-medium">{item.label}</span>
             </button>
           ))}
         </div>
