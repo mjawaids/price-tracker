@@ -51,7 +51,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.error('Error loading settings:', error);
       }
     }
-  }, [setTheme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array is intentional - load settings once on mount
 
   // Save settings to localStorage whenever they change
   useEffect(() => {

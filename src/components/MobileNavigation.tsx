@@ -98,18 +98,20 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
     <>
       {/* Mobile Top App Bar */}
       <header className="app-header md:hidden">
-        <div className="flex justify-between items-center h-14 px-4">
+        <div className="flex items-center h-14 px-4 gap-2">
           {/* Mobile Menu Button - Left Side */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
-            aria-label="Menu"
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="flex-1 flex justify-start">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
+              aria-label="Menu"
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
           
           {/* Logo - Center */}
-          <div className="flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
               <ShoppingCart className="h-5 w-5 text-white" />
             </div>
@@ -117,7 +119,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           </div>
           
           {/* User Menu - Right Side */}
-          <div className="ml-auto">
+          <div className="flex-1 flex justify-end">
             {user ? (
               <UserMenu />
             ) : (
