@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List, Menu, X } from 'lucide-react';
+import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List, Menu, X, User } from 'lucide-react';
 import { ViewMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import UserMenu from './UserMenu';
@@ -98,22 +98,40 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
     <>
       {/* Mobile Top App Bar */}
       <header className="app-header md:hidden">
-        <div className="flex justify-between items-center h-14 px-4">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
+        <div className="flex items-center h-14 px-4 gap-2">
+          {/* Mobile Menu Button - Left Side */}
+          <div className="flex-1 flex justify-start">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
+              aria-label="Menu"
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+          
+          {/* Logo - Center */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
               <ShoppingCart className="h-5 w-5 text-white" />
             </div>
             <span className="text-sm font-bold text-white truncate">SpendLess</span>
           </div>
           
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {/* User Menu - Right Side */}
+          <div className="flex-1 flex justify-end">
+            {user ? (
+              <UserMenu />
+            ) : (
+              <button
+                onClick={onShowAuth}
+                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
+                aria-label="Sign in"
+              >
+                <User className="h-5 w-5" />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

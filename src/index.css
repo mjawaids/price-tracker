@@ -191,7 +191,7 @@ button {
 /* Mobile-first responsive grid adjustments */
 @media (max-width: 640px) {
   .app-content {
-    @apply pt-16 pb-20 px-4;
+    @apply pt-20 pb-20 px-4;
   }
 
   /* Hide scrollbar on mobile for cleaner look */

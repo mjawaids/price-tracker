@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Minus, ShoppingCart, Trash2, DollarSign, CheckCircle, Truck } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, Truck } from 'lucide-react';
 import { Product, Store, ShoppingListItem } from '../types';
-import { findCheapestPriceWithDelivery, getPriceWithDelivery } from '../utils/price-comparison';
+import { findCheapestPriceWithDelivery } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
 import { trackUserAction } from '../utils/analytics';
@@ -112,26 +112,28 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
   const storeGroups = groupByStore();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-hidden">
       <div className="gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover">
-        <div className="px-6 py-4 border-b border-white/20">
-          <div className="flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 border-b border-white/20">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <h2 className="text-lg font-medium text-white">Shopping List</h2>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
+                className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm border border-white/20 text-sm touch-target"
               >
                 <Plus className="h-4 w-4" />
-                <span>Add Item</span>
+                <span className="hidden sm:inline">Add Item</span>
+                <span className="sm:hidden">Add</span>
               </button>
               {shoppingList.length > 0 && (
                 <button
                   onClick={onClearList}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-red-500/30"
+                  className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm border border-red-500/30 text-sm touch-target"
                 >
                   <Trash2 className="h-4 w-4" />
-                  <span>Clear List</span>
+                  <span className="hidden sm:inline">Clear List</span>
+                  <span className="sm:hidden">Clear</span>
                 </button>
               )}
             </div>
@@ -139,22 +141,22 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
         </div>
         
         {shoppingList.length === 0 ? (
-          <div className="p-12 text-center">
+          <div className="p-8 sm:p-12 text-center">
             <ShoppingCart className="h-12 w-12 text-white/40 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">Your shopping list is empty</h3>
-            <p className="text-white/60">Add items to start comparing prices and planning your shopping trip.</p>
+            <p className="text-white/60 text-sm sm:text-base">Add items to start comparing prices and planning your shopping trip.</p>
           </div>
         ) : (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* Summary */}
             <div className="bg-green-500/20 rounded-lg p-4 mb-6 backdrop-blur-sm border border-green-500/30">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h3 className="text-lg font-medium text-green-300">Total Estimated Cost</h3>
+                  <h3 className="text-base sm:text-lg font-medium text-green-300">Total Estimated Cost</h3>
                   <p className="text-sm text-green-400">{shoppingList.length} items</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-green-300">
+                  <div className="text-xl sm:text-2xl font-bold text-green-300">
                     {formatPrice(calculateTotal(), settings.currency)}
                   </div>
                   <div className="text-sm text-green-400">Best prices selected</div>
@@ -169,11 +171,11 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                   <div className="bg-white/10 px-4 py-3 border-b border-white/20 rounded-t-lg backdrop-blur-sm">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-medium text-gray-900">{group.store.name}</h3>
+                        <h3 className="font-medium text-white">{group.store.name}</h3>
                         <div className="flex items-center space-x-3 mt-1">
-                          <p className="text-sm text-gray-500 capitalize">{group.store.type}</p>
+                          <p className="text-sm text-white/70 capitalize">{group.store.type}</p>
                           {group.deliveryFee > 0 && (
-                            <div className="flex items-center space-x-1 text-sm text-gray-600">
+                            <div className="flex items-center space-x-1 text-sm text-white/70">
                               <Truck className="h-3 w-3" />
                               <span>Delivery: {formatPrice(group.deliveryFee, settings.currency)}</span>
                             </div>
@@ -181,60 +183,63 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-gray-900"></div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium text-white"></div>
+                        <div className="text-sm text-white/70">
                           {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-white/20">
                     {group.items.map((item) => (
-                      <div key={item.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{item.product.name}</h4>
+                      <div key={item.id} className="p-4 bg-white/5">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div className="flex-1 min-w-[200px]">
+                            <h4 className="font-medium text-white">{item.product.name}</h4>
                             <div className="flex items-center space-x-2 mt-1">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                item.priority === 'high' ? 'bg-red-100 text-red-800' :
-                                item.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
+                                item.priority === 'high' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                                item.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                                'bg-green-500/20 text-green-300 border border-green-500/30'
                               }`}>
                                 {item.priority} priority
                               </span>
                             </div>
                           </div>
                           
-                          <div className="flex items-center space-x-4">
+                          <div className="flex items-center flex-wrap gap-2">
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                                className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors duration-200 touch-target"
+                                aria-label="Decrease quantity"
                               >
                                 <Minus className="h-4 w-4" />
                               </button>
-                              <span className="w-8 text-center">{item.quantity}</span>
+                              <span className="w-8 text-center text-white font-medium">{item.quantity}</span>
                               <button
                                 onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                                className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors duration-200 touch-target"
+                                aria-label="Increase quantity"
                               >
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
                             
                             <div className="text-right">
-                              <div className="font-medium text-gray-900">
+                              <div className="font-medium text-white">
                                 {formatPrice(item.priceWithDelivery * item.quantity, settings.currency)}
                               </div>
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-white/70">
                                 {formatPrice(item.priceWithDelivery, settings.currency)} each
                               </div>
                             </div>
                             
                             <button
                               onClick={() => onRemoveFromList(item.id)}
-                              className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
+                              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors duration-200 touch-target"
+                              aria-label="Remove item"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
