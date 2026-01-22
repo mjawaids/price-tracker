@@ -117,7 +117,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
         <div className="px-4 sm:px-6 py-4 border-b border-white/20">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h2 className="text-lg font-medium text-white">Shopping List</h2>
-            <div className="flex space-x-2 flex-wrap">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowAddModal(true)}
                 className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm border border-white/20 text-sm touch-target"
