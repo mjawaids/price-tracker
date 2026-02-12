@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List, Menu, X, User } from 'lucide-react';
+import { ShoppingCart, Package, Home, Menu, X, User, Save } from '@geist-ui/icons';
 import { ViewMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import UserMenu from './UserMenu';
@@ -28,9 +28,9 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   ];
 
   const secondaryNavItems = [
-    { id: 'stores' as ViewMode, icon: Store, label: 'Stores' },
-    { id: 'price-manager' as ViewMode, icon: DollarSign, label: 'Prices' },
-    { id: 'shopping-lists' as ViewMode, icon: List, label: 'Lists' },
+    { id: 'stores' as ViewMode, icon: '🏪', label: 'Stores' },
+    { id: 'price-manager' as ViewMode, icon: '💰', label: 'Prices' },
+    { id: 'shopping-lists' as ViewMode, icon: '📋', label: 'Lists' },
   ];
 
   const allNavItems = [...primaryNavItems, ...secondaryNavItems];
@@ -97,38 +97,88 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   return (
     <>
       {/* Mobile Top App Bar */}
-      <header className="app-header md:hidden">
-        <div className="flex items-center h-14 px-4 gap-2">
+      <header style={{
+        display: 'block',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 30, 0.95))',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
+      }} className="md:hidden">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: '56px',
+          padding: '0 16px',
+          gap: '8px'
+        }}>
           {/* Mobile Menu Button - Left Side */}
-          <div className="flex-1 flex justify-start">
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
+              style={{
+                padding: '8px',
+                borderRadius: '8px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
               aria-label="Menu"
             >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
           
           {/* Logo - Center */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-              <ShoppingCart className="h-5 w-5 text-white" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <div style={{
+              height: '32px',
+              width: '32px',
+              background: 'linear-gradient(to right, #3B82F6, #8B5CF6)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            }}>
+              <ShoppingCart size={20} color="white" />
             </div>
-            <span className="text-sm font-bold text-white truncate">SpendLess</span>
+            <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>SpendLess</span>
           </div>
           
           {/* User Menu - Right Side */}
-          <div className="flex-1 flex justify-end">
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
             {user ? (
               <UserMenu />
             ) : (
               <button
                 onClick={onShowAuth}
-                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                  minWidth: '44px',
+                  minHeight: '44px'
+                }}
                 aria-label="Sign in"
               >
-                <User className="h-5 w-5" />
+                <User size={20} />
               </button>
             )}
           </div>
@@ -136,59 +186,146 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       </header>
 
       {/* Desktop Top Navigation Bar */}
-      <nav className="hidden md:block sticky top-0 z-40 glass-card border-b border-white/20 shadow-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav style={{
+        display: 'none',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 30, 0.95))',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
+      }} className="md:block">
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            height: '64px'
+          }}>
             {/* Logo */}
-            <div className="flex items-center">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                <ShoppingCart className="h-5 w-5 text-white" />
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{
+                height: '32px',
+                width: '32px',
+                background: 'linear-gradient(to right, #3B82F6, #8B5CF6)',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+              }}>
+                <ShoppingCart size={20} color="white" />
               </div>
-              <span className="ml-2 text-xl font-bold text-white">SpendLess</span>
+              <span style={{ marginLeft: '8px', fontSize: '20px', fontWeight: 'bold', color: 'white' }}>SpendLess</span>
             </div>
             
             {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-1">
-              {allNavItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => onViewChange(item.id)}
-                  className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-target ${
-                    currentView === item.id
-                      ? 'bg-white/20 text-white shadow-md backdrop-blur-sm'
-                      : 'text-white/70 hover:text-white hover:bg-white/10 backdrop-blur-sm'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <item.icon className="h-4 w-4" />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              {allNavItems.map((item) => {
+                const IconComponent = typeof item.icon === 'string' ? null : item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onViewChange(item.id)}
+                    style={{
+                      position: 'relative',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      transition: 'all 0.2s',
+                      minHeight: '44px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      ...(currentView === item.id ? {
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                      } : {
+                        backgroundColor: 'transparent',
+                        color: 'rgba(255, 255, 255, 0.7)'
+                      })
+                    }}
+                  >
+                    {IconComponent ? <IconComponent size={16} /> : <span>{item.icon}</span>}
                     <span>{item.label}</span>
-                  </div>
-                  {item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse shadow-lg">
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
+                    {item.badge && item.badge > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '-4px',
+                        right: '-4px',
+                        background: 'linear-gradient(to right, #EC4899, #EF4444)',
+                        color: 'white',
+                        fontSize: '12px',
+                        borderRadius: '50%',
+                        height: '20px',
+                        width: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                      }}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
             
             {/* Desktop Actions */}
-            <div className="hidden md:flex items-center space-x-3">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {user ? (
                 <>
-                  <div className="flex space-x-2">
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => onViewChange('add-product')}
-                      className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20 touch-target"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        minHeight: '44px',
+                        cursor: 'pointer'
+                      }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <span style={{ fontSize: '16px' }}>➕</span>
                       <span>Product</span>
                     </button>
                     <button
                       onClick={() => onViewChange('add-store')}
-                      className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20 touch-target"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        minHeight: '44px',
+                        cursor: 'pointer'
+                      }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <span style={{ fontSize: '16px' }}>➕</span>
                       <span>Store</span>
                     </button>
                   </div>
@@ -197,7 +334,20 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
               ) : (
                 <button
                   onClick={onShowAuth}
-                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20 touch-target"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    padding: '8px 24px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    minHeight: '44px',
+                    cursor: 'pointer'
+                  }}
                 >
                   Sign In
                 </button>
@@ -209,68 +359,160 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
       {/* Mobile Menu Overlay and Drawer */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 50
+        }} className="md:hidden">
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backdropFilter: 'blur(8px)'
+            }}
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
           />
           <nav 
             ref={drawerRef}
-            className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] glass-card border-r border-white/20 shadow-2xl animate-slide-left overflow-y-auto"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: '320px',
+              maxWidth: '85vw',
+              background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 30, 0.95))',
+              backdropFilter: 'blur(20px)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              overflowY: 'auto'
+            }}
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
           >
-            <div className="flex flex-col h-full">
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               {/* Drawer Header */}
-              <div className="flex justify-between items-center h-14 px-4 border-b border-white/20 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                    <ShoppingCart className="h-5 w-5 text-white" />
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                height: '56px',
+                padding: '0 16px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                flexShrink: 0
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    height: '32px',
+                    width: '32px',
+                    background: 'linear-gradient(to right, #3B82F6, #8B5CF6)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                  }}>
+                    <ShoppingCart size={20} color="white" />
                   </div>
-                  <span className="text-sm font-bold text-white">SpendLess</span>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>SpendLess</span>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 touch-target"
+                  style={{
+                    padding: '8px',
+                    borderRadius: '8px',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    minWidth: '44px',
+                    minHeight: '44px'
+                  }}
                   aria-label="Close menu"
                 >
-                  <X className="h-5 w-5" />
+                  <X size={20} />
                 </button>
               </div>
 
               {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto px-4 py-4">
-                <div className="space-y-2">
+              <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {/* Mobile Navigation Items */}
-                  {allNavItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onViewChange(item.id);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 touch-target ${
-                        currentView === item.id
-                          ? 'bg-white/20 text-white shadow-md'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-medium">{item.label}</span>
-                      </div>
-                      {item.badge && item.badge > 0 && (
-                        <span className="bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse shadow-lg">
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                  {allNavItems.map((item) => {
+                    const IconComponent = typeof item.icon === 'string' ? null : item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onViewChange(item.id);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 16px',
+                          borderRadius: '8px',
+                          textAlign: 'left',
+                          transition: 'all 0.2s',
+                          minHeight: '44px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          ...(currentView === item.id ? {
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                          } : {
+                            backgroundColor: 'transparent',
+                            color: 'rgba(255, 255, 255, 0.7)'
+                          })
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {IconComponent ? <IconComponent size={20} /> : <span style={{ fontSize: '20px' }}>{item.icon}</span>}
+                          <span style={{ fontWeight: 500 }}>{item.label}</span>
+                        </div>
+                        {item.badge && item.badge > 0 && (
+                          <span style={{
+                            background: 'linear-gradient(to right, #EC4899, #EF4444)',
+                            color: 'white',
+                            fontSize: '12px',
+                            borderRadius: '50%',
+                            height: '24px',
+                            width: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                            flexShrink: 0
+                          }}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
 
                   {/* Mobile Actions */}
-                  <div className="pt-4 border-t border-white/20 space-y-2">
+                  <div style={{
+                    paddingTop: '16px',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
                     {user ? (
                       <>
                         <button
@@ -278,9 +520,26 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                             onViewChange('add-product');
                             setIsMobileMenuOpen(false);
                           }}
-                          className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                          style={{
+                            width: '100%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            fontWeight: 500,
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                            backdropFilter: 'blur(8px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            minHeight: '44px',
+                            cursor: 'pointer'
+                          }}
                         >
-                          <Plus className="h-4 w-4" />
+                          <span style={{ fontSize: '16px' }}>➕</span>
                           <span>Add Product</span>
                         </button>
                         <button
@@ -288,12 +547,32 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                             onViewChange('add-store');
                             setIsMobileMenuOpen(false);
                           }}
-                          className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                          style={{
+                            width: '100%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            fontWeight: 500,
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                            backdropFilter: 'blur(8px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            minHeight: '44px',
+                            cursor: 'pointer'
+                          }}
                         >
-                          <Plus className="h-4 w-4" />
+                          <span style={{ fontSize: '16px' }}>➕</span>
                           <span>Add Store</span>
                         </button>
-                        <div className="pt-4 border-t border-white/20">
+                        <div style={{
+                          paddingTop: '16px',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
                           <UserMenu />
                         </div>
                       </>
@@ -303,7 +582,20 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                           onShowAuth();
                           setIsMobileMenuOpen(false);
                         }}
-                        className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                        style={{
+                          width: '100%',
+                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          color: 'white',
+                          padding: '12px 16px',
+                          borderRadius: '8px',
+                          fontWeight: 500,
+                          transition: 'all 0.2s',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                          backdropFilter: 'blur(8px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          minHeight: '44px',
+                          cursor: 'pointer'
+                        }}
                       >
                         Sign In
                       </button>
@@ -317,29 +609,77 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       )}
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="app-footer md:hidden">
-        <div className="flex justify-around items-center h-16 px-2">
-          {primaryNavItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onViewChange(item.id)}
-              className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all duration-200 relative ${
-                currentView === item.id
-                  ? 'text-white'
-                  : 'text-white/60 hover:text-white/80'
-              }`}
-            >
-              <div className="relative">
-                <item.icon className="h-6 w-6" />
-                {item.badge && item.badge > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse shadow-lg font-bold">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className="text-sm font-medium">{item.label}</span>
-            </button>
-          ))}
+      <nav style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 40,
+        background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 30, 0.95))',
+        backdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.4)'
+      }} className="md:hidden">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          height: '64px',
+          padding: '0 8px'
+        }}>
+          {primaryNavItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onViewChange(item.id)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%',
+                  gap: '4px',
+                  transition: 'all 0.2s',
+                  position: 'relative',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  ...(currentView === item.id ? {
+                    color: 'white'
+                  } : {
+                    color: 'rgba(255, 255, 255, 0.6)'
+                  })
+                }}
+              >
+                <div style={{ position: 'relative' }}>
+                  <IconComponent size={24} />
+                  {item.badge && item.badge > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      background: 'linear-gradient(to right, #EC4899, #EF4444)',
+                      color: 'white',
+                      fontSize: '12px',
+                      borderRadius: '50%',
+                      height: '20px',
+                      width: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                      fontWeight: 'bold'
+                    }}>
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
     </>

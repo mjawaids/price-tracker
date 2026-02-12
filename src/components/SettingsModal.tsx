@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Globe, Palette, Bell, RotateCcw } from 'lucide-react';
+import { X } from '@geist-ui/icons';
+import { Modal, Text, Button, Card } from '@geist-ui/core';
 import { useSettings } from '../contexts/SettingsContext';
 import { CURRENCIES } from '../utils/currency';
 
@@ -50,213 +51,348 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   // Render modal at body level using portal
   return createPortal(
     <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-[9999] animate-fade-in"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        zIndex: 9999
+      }}
       onClick={handleBackdropClick}
     >
-      <div className="glass-card rounded-t-3xl sm:rounded-2xl w-full max-w-4xl h-[90vh] sm:h-auto sm:max-h-[85vh] overflow-hidden shadow-2xl animate-slide-up flex flex-col">
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 30, 0.95))',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '16px',
+        width: '100%',
+        maxWidth: '896px',
+        maxHeight: '85vh',
+        overflow: 'hidden',
+        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
         {/* Header */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/20 flex-shrink-0 safe-top">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg sm:text-xl font-semibold text-white">Settings</h2>
+        <div style={{ 
+          padding: '16px 24px', 
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          flexShrink: 0 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text h3 my={0}>Settings</Text>
             <button
               onClick={onClose}
-              className="p-3 sm:p-2 text-white/40 hover:text-white/80 transition-colors duration-200 rounded-lg hover:bg-white/10 touch-target active:scale-95"
+              style={{
+                padding: '8px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
             >
-              <X className="h-5 w-5" />
+              <X size={20} />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex flex-col sm:flex-row flex-1 min-h-0">
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
           {/* Sidebar */}
-          <div className="w-full sm:w-64 bg-white/5 backdrop-blur-sm border-b sm:border-b-0 sm:border-r border-white/20 flex-shrink-0 overflow-y-auto">
-            <nav className="p-3 sm:p-4 space-y-1">
+          <div style={{
+            width: '256px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(8px)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+            flexShrink: 0,
+            overflowY: 'auto',
+            padding: '16px'
+          }}>
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <button
                 onClick={() => setActiveTab('general')}
-                className={`w-full text-left px-4 py-3 rounded-xl text-sm sm:text-base font-medium transition-all duration-200 min-h-[48px] active:scale-95 ${
-                  activeTab === 'general'
-                    ? 'bg-blue-500/20 text-blue-300 shadow-md'
-                    : 'text-white/60 hover:text-white/80 hover:bg-white/5'
-                }`}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  minHeight: '48px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  ...(activeTab === 'general' ? {
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    color: '#93C5FD'
+                  } : {
+                    backgroundColor: 'transparent',
+                    color: 'rgba(255, 255, 255, 0.6)'
+                  })
+                }}
               >
-                <Globe className="h-4 w-4 inline mr-3" />
-                General
+                🌐 General
               </button>
               <button
                 onClick={() => setActiveTab('appearance')}
-                className={`w-full text-left px-4 py-3 rounded-xl text-sm sm:text-base font-medium transition-all duration-200 min-h-[48px] active:scale-95 ${
-                  activeTab === 'appearance'
-                    ? 'bg-blue-500/20 text-blue-300 shadow-md'
-                    : 'text-white/60 hover:text-white/80 hover:bg-white/5'
-                }`}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  minHeight: '48px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  ...(activeTab === 'appearance' ? {
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    color: '#93C5FD'
+                  } : {
+                    backgroundColor: 'transparent',
+                    color: 'rgba(255, 255, 255, 0.6)'
+                  })
+                }}
               >
-                <Palette className="h-4 w-4 inline mr-3" />
-                Appearance
+                🎨 Appearance
               </button>
               <button
                 onClick={() => setActiveTab('notifications')}
-                className={`w-full text-left px-4 py-3 rounded-xl text-sm sm:text-base font-medium transition-all duration-200 min-h-[48px] active:scale-95 ${
-                  activeTab === 'notifications'
-                    ? 'bg-blue-500/20 text-blue-300 shadow-md'
-                    : 'text-white/60 hover:text-white/80 hover:bg-white/5'
-                }`}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  minHeight: '48px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  ...(activeTab === 'notifications' ? {
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    color: '#93C5FD'
+                  } : {
+                    backgroundColor: 'transparent',
+                    color: 'rgba(255, 255, 255, 0.6)'
+                  })
+                }}
               >
-                <Bell className="h-4 w-4 inline mr-3" />
-                Notifications
+                🔔 Notifications
               </button>
             </nav>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-6">
-              {activeTab === 'general' && (
-                <div className="space-y-4 sm:space-y-6">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-medium text-white mb-3 sm:mb-4">General Settings</h3>
-                    
-                    <div className="space-y-4 sm:space-y-6">
-                      <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
-                          Default Currency
-                        </label>
-                        <select
-                          value={settings.currency}
-                          onChange={(e) => updateSettings({ currency: e.target.value })}
-                          className="w-full px-4 py-3 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/10 backdrop-blur-sm text-white transition-all duration-200 min-h-[48px]"
-                        >
-                          {CURRENCIES.map(currency => (
-                            <option key={currency.code} value={currency.code} className="bg-gray-900 text-white">
-                              {currency.flag} {currency.name} ({currency.symbol})
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-white/60 mt-2">
-                          This will be used as the default currency for new prices
-                        </p>
-                      </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+            {activeTab === 'general' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div>
+                  <Text h4 my={0} style={{ marginBottom: '16px' }}>General Settings</Text>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <Text small style={{ opacity: 0.8 }}>Default Currency</Text>
+                      <select
+                        value={settings.currency}
+                        onChange={(e) => updateSettings({ currency: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          backdropFilter: 'blur(8px)',
+                          color: 'white',
+                          fontSize: '14px',
+                          minHeight: '48px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {CURRENCIES.map(currency => (
+                          <option key={currency.code} value={currency.code} style={{ backgroundColor: '#1a1a1a', color: 'white' }}>
+                            {currency.flag} {currency.name} ({currency.symbol})
+                          </option>
+                        ))}
+                      </select>
+                      <Text small style={{ opacity: 0.6 }}>
+                        This will be used as the default currency for new prices
+                      </Text>
+                    </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
-                          Language
-                        </label>
-                        <select
-                          value={settings.language}
-                          onChange={(e) => updateSettings({ language: e.target.value })}
-                          className="w-full px-4 py-3 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/10 backdrop-blur-sm text-white transition-all duration-200 min-h-[48px]"
-                        >
-                          <option value="en" className="bg-gray-900 text-white">🇺🇸 English</option>
-                          <option value="es" className="bg-gray-900 text-white">🇪🇸 Español</option>
-                          <option value="fr" className="bg-gray-900 text-white">🇫🇷 Français</option>
-                          <option value="de" className="bg-gray-900 text-white">🇩🇪 Deutsch</option>
-                          <option value="it" className="bg-gray-900 text-white">🇮🇹 Italiano</option>
-                          <option value="pt" className="bg-gray-900 text-white">🇵🇹 Português</option>
-                          <option value="zh" className="bg-gray-900 text-white">🇨🇳 中文</option>
-                          <option value="ja" className="bg-gray-900 text-white">🇯🇵 日本語</option>
-                          <option value="ko" className="bg-gray-900 text-white">🇰🇷 한국어</option>
-                          <option value="ar" className="bg-gray-900 text-white">🇸🇦 العربية</option>
-                        </select>
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <Text small style={{ opacity: 0.8 }}>Language</Text>
+                      <select
+                        value={settings.language}
+                        onChange={(e) => updateSettings({ language: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          backdropFilter: 'blur(8px)',
+                          color: 'white',
+                          fontSize: '14px',
+                          minHeight: '48px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="en" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇺🇸 English</option>
+                        <option value="es" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇪🇸 Español</option>
+                        <option value="fr" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇫🇷 Français</option>
+                        <option value="de" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇩🇪 Deutsch</option>
+                        <option value="it" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇮🇹 Italiano</option>
+                        <option value="pt" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇵🇹 Português</option>
+                        <option value="zh" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇨🇳 中文</option>
+                        <option value="ja" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇯🇵 日本語</option>
+                        <option value="ko" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇰🇷 한국어</option>
+                        <option value="ar" style={{ backgroundColor: '#1a1a1a', color: 'white' }}>🇸🇦 العربية</option>
+                      </select>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {activeTab === 'appearance' && (
-                <div className="space-y-4 sm:space-y-6">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-medium text-white mb-3 sm:mb-4">Appearance Settings</h3>
-                    
-                    <div className="space-y-4 sm:space-y-6">
-                      <div>
-                        <label className="block text-sm font-medium text-white/80 mb-3">
-                          Theme
-                        </label>
-                        <div className="space-y-3">
-                          <label className="flex items-center p-3 sm:p-4 rounded-xl border border-white/20 hover:bg-white/5 transition-all duration-200 cursor-pointer min-h-[56px] active:scale-95">
-                            <input
-                              type="radio"
-                              value="light"
-                              checked={settings.theme === 'light'}
-                              onChange={(e) => updateSettings({ theme: e.target.value as 'light' })}
-                              className="mr-3 text-blue-500 focus:ring-blue-500"
-                            />
-                            <div>
-                              <div className="font-medium text-white">Light</div>
-                              <div className="text-sm text-white/60">Always use light theme</div>
-                            </div>
-                          </label>
-                          <label className="flex items-center p-3 sm:p-4 rounded-xl border border-white/20 hover:bg-white/5 transition-all duration-200 cursor-pointer min-h-[56px] active:scale-95">
-                            <input
-                              type="radio"
-                              value="dark"
-                              checked={settings.theme === 'dark'}
-                              onChange={(e) => updateSettings({ theme: e.target.value as 'dark' })}
-                              className="mr-3 text-blue-500 focus:ring-blue-500"
-                            />
-                            <div>
-                              <div className="font-medium text-white">Dark</div>
-                              <div className="text-sm text-white/60">Always use dark theme</div>
-                            </div>
-                          </label>
-                          <label className="flex items-center p-3 sm:p-4 rounded-xl border border-white/20 hover:bg-white/5 transition-all duration-200 cursor-pointer min-h-[56px] active:scale-95">
-                            <input
-                              type="radio"
-                              value="system"
-                              checked={settings.theme === 'system'}
-                              onChange={(e) => updateSettings({ theme: e.target.value as 'system' })}
-                              className="mr-3 text-blue-500 focus:ring-blue-500"
-                            />
-                            <div>
-                              <div className="font-medium text-white">System</div>
-                              <div className="text-sm text-white/60">Follow your device settings</div>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'notifications' && (
-                <div className="space-y-4 sm:space-y-6">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-medium text-white mb-3 sm:mb-4">Notification Settings</h3>
-                    
-                    <div className="space-y-4 sm:space-y-6">
-                      <div className="p-4 rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm min-h-[72px] active:scale-95 transition-transform">
-                        <label className="flex items-start space-x-3 cursor-pointer">
+            {activeTab === 'appearance' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div>
+                  <Text h4 my={0} style={{ marginBottom: '16px' }}>Appearance Settings</Text>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <Text small style={{ opacity: 0.8 }}>Theme</Text>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <label style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          cursor: 'pointer',
+                          minHeight: '56px',
+                          transition: 'all 0.2s'
+                        }}>
                           <input
-                            type="checkbox"
-                            checked={settings.notifications}
-                            onChange={(e) => updateSettings({ notifications: e.target.checked })}
-                            className="mt-1 text-blue-500 focus:ring-blue-500 rounded"
+                            type="radio"
+                            value="light"
+                            checked={settings.theme === 'light'}
+                            onChange={(e) => updateSettings({ theme: e.target.value as 'light' })}
+                            style={{ marginRight: '12px' }}
                           />
                           <div>
-                            <div className="font-medium text-white">Enable notifications</div>
-                            <p className="text-sm text-white/60 mt-1">
-                              Get notified about price changes and deals
-                            </p>
+                            <div style={{ fontWeight: 500, color: 'white' }}>Light</div>
+                            <div style={{ fontSize: '14px', opacity: 0.6 }}>Always use light theme</div>
+                          </div>
+                        </label>
+                        <label style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          cursor: 'pointer',
+                          minHeight: '56px',
+                          transition: 'all 0.2s'
+                        }}>
+                          <input
+                            type="radio"
+                            value="dark"
+                            checked={settings.theme === 'dark'}
+                            onChange={(e) => updateSettings({ theme: e.target.value as 'dark' })}
+                            style={{ marginRight: '12px' }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 500, color: 'white' }}>Dark</div>
+                            <div style={{ fontSize: '14px', opacity: 0.6 }}>Always use dark theme</div>
+                          </div>
+                        </label>
+                        <label style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          cursor: 'pointer',
+                          minHeight: '56px',
+                          transition: 'all 0.2s'
+                        }}>
+                          <input
+                            type="radio"
+                            value="system"
+                            checked={settings.theme === 'system'}
+                            onChange={(e) => updateSettings({ theme: e.target.value as 'system' })}
+                            style={{ marginRight: '12px' }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 500, color: 'white' }}>System</div>
+                            <div style={{ fontSize: '14px', opacity: 0.6 }}>Follow your device settings</div>
                           </div>
                         </label>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Reset Button */}
-              <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/20 safe-bottom">
-                <button
-                  onClick={handleReset}
-                  className="flex items-center justify-center space-x-2 px-4 py-3 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/10 transition-all duration-200 w-full sm:w-auto min-h-[48px] active:scale-95"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  <span>Reset to Defaults</span>
-                </button>
               </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div>
+                  <Text h4 my={0} style={{ marginBottom: '16px' }}>Notification Settings</Text>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      backdropFilter: 'blur(8px)',
+                      minHeight: '72px'
+                    }}>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={settings.notifications}
+                          onChange={(e) => updateSettings({ notifications: e.target.checked })}
+                          style={{ marginTop: '4px' }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: 500, color: 'white' }}>Enable notifications</div>
+                          <Text small style={{ opacity: 0.6, marginTop: '4px' }}>
+                            Get notified about price changes and deals
+                          </Text>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reset Button */}
+            <div style={{
+              marginTop: '32px',
+              paddingTop: '24px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <Button
+                onClick={handleReset}
+                type="error"
+                ghost
+                style={{ minHeight: '48px' }}
+              >
+                🔄 Reset to Defaults
+              </Button>
             </div>
           </div>
         </div>

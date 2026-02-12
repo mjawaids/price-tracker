@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Lock, Eye, EyeOff, Loader, CheckCircle } from 'lucide-react';
+import { X, Lock, Eye, EyeOff } from '@geist-ui/icons';
+import { Modal, Input, Button, Text, Card } from '@geist-ui/core';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ChangePasswordModalProps {
@@ -68,112 +69,142 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fade-in">
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl max-w-md w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50 animate-scale-in">
-        <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Change Password</h2>
-            <button
-              onClick={handleClose}
-              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
+    <Modal visible={isOpen} onClose={handleClose}>
+      <Modal.Title>
+        <Text h3 my={0}>Change Password</Text>
+      </Modal.Title>
+      <Modal.Content>
         {success ? (
-          <div className="p-6 text-center">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Password Updated!</h3>
-            <p className="text-gray-600 dark:text-gray-400">Your password has been successfully changed.</p>
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginBottom: '16px' 
+            }}>
+              <div style={{ 
+                width: '48px', 
+                height: '48px', 
+                borderRadius: '50%', 
+                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Text h3 my={0} style={{ color: '#10B981' }}>✓</Text>
+              </div>
+            </div>
+            <Text h4 my={0} style={{ marginBottom: '8px' }}>Password Updated!</Text>
+            <Text small style={{ opacity: 0.6 }}>Your password has been successfully changed.</Text>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {error && (
-              <div className="bg-red-50/80 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/50 rounded-lg p-3 backdrop-blur-sm">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
+              <Card style={{ 
+                backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid rgba(239, 68, 68, 0.3)' 
+              }}>
+                <Text small style={{ color: '#EF4444', margin: 0 }}>{error}</Text>
+              </Card>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                New Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <input
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text small style={{ opacity: 0.8 }}>New Password</Text>
+              <div style={{ position: 'relative' }}>
+                <div style={{ 
+                  position: 'absolute', 
+                  left: '12px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)' 
+                }}>
+                  <Lock size={16} />
+                </div>
+                <Input
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-2 border border-gray-300/50 dark:border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
                   placeholder="Enter new password"
                   required
-                  minLength={6}
+                  width="100%"
+                  style={{ paddingLeft: '40px', paddingRight: '40px' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
                 >
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm New Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <input
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text small style={{ opacity: 0.8 }}>Confirm New Password</Text>
+              <div style={{ position: 'relative' }}>
+                <div style={{ 
+                  position: 'absolute', 
+                  left: '12px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)' 
+                }}>
+                  <Lock size={16} />
+                </div>
+                <Input
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-2 border border-gray-300/50 dark:border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
                   placeholder="Confirm new password"
                   required
-                  minLength={6}
+                  width="100%"
+                  style={{ paddingLeft: '40px', paddingRight: '40px' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <Text small style={{ opacity: 0.6 }}>
               Password must be at least 6 characters long
-            </p>
-
-            <div className="flex space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading || !newPassword || !confirmPassword}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
-              >
-                {loading && <Loader className="h-4 w-4 animate-spin" />}
-                <span>Update Password</span>
-              </button>
-            </div>
+            </Text>
           </form>
         )}
-      </div>
-    </div>
+      </Modal.Content>
+      {!success && (
+        <Modal.Action passive onClick={handleClose}>Cancel</Modal.Action>
+      )}
+      {!success && (
+        <Modal.Action loading={loading} disabled={loading || !newPassword || !confirmPassword} onClick={handleSubmit}>
+          Update Password
+        </Modal.Action>
+      )}
+    </Modal>
   );
 };
 
