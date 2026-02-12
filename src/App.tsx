@@ -248,10 +248,24 @@ function AppContent() {
   // Show loading screen while checking authentication
   if (loading || dataLoading) {
     return (
-      <div className="min-h-screen static-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/60 mx-auto mb-4"></div>
-          <p className="text-white/80 text-sm md:text-base">Loading...</p>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '48px', 
+            height: '48px', 
+            border: '2px solid rgba(255,255,255,0.6)',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }}></div>
+          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem' }}>Loading...</p>
         </div>
       </div>
     );
@@ -276,7 +290,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col static-gradient">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }} className="static-gradient">
       <MobileNavigation
         currentView={currentView}
         onViewChange={handleViewChange}
@@ -290,7 +304,7 @@ function AppContent() {
         initialMode={authMode}
       />
       
-      <main className="flex-1 app-content">
+      <main style={{ flex: 1 }} className="app-content">
         {renderCurrentView()}
       </main>
 

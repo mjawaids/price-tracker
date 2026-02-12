@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useTheme as useGeistTheme } from '@geist-ui/core';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -18,6 +19,7 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const geistTheme = useGeistTheme();
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [isDark, setIsDark] = useState(false);
 
@@ -33,8 +35,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (theme === 'system') {
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         setIsDark(systemPrefersDark);
+        geistTheme.setTheme(systemPrefersDark ? 'dark' : 'light');
       } else {
         setIsDark(theme === 'dark');
+        geistTheme.setTheme(theme);
       }
     };
 
@@ -46,7 +50,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       mediaQuery.addEventListener('change', updateTheme);
       return () => mediaQuery.removeEventListener('change', updateTheme);
     }
-  }, [theme]);
+  }, [theme, geistTheme]);
 
   useEffect(() => {
     if (isDark) {

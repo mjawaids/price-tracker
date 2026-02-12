@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { GeistProvider, CssBaseline } from '@geist-ui/core';
 import App from './App.tsx';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Privacy from './pages/Privacy';
@@ -10,14 +11,17 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/refund" element={<Refund />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/pricing" element={<Pricing />} />
-      </Routes>
-    </BrowserRouter>
+    <GeistProvider>
+      <CssBaseline />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<App />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/refund" element={<Refund />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/pricing" element={<Pricing />} />
+        </Routes>
+      </BrowserRouter>
+    </GeistProvider>
   </StrictMode>
 );

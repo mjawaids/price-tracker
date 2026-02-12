@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* Mobile-first base styles */
 * {
   -webkit-tap-highlight-color: transparent;
@@ -36,98 +32,110 @@ body.light-mode {
   }
 }
 
-/* Glass morphism utilities */
-@layer utilities {
-  .glass-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  }
-  
-  .glass-card-dark {
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  }
-
-  .gradient-border {
-    position: relative;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .static-gradient {
-    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
-  }
-
-  /* Mobile-first touch targets */
-  .touch-target {
-    min-height: 48px;
-    min-width: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Full-width mobile cards */
-  .mobile-card {
-    @apply w-full rounded-lg p-4 mb-3 transition-all duration-200 active:scale-95;
-  }
-
-  /* Safe area padding for notched devices */
-  .safe-top {
-    padding-top: max(1rem, env(safe-area-inset-top));
-  }
-
-  .safe-bottom {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-
-  /* Mobile app header */
-  .app-header {
-    @apply fixed top-0 left-0 right-0 z-40 glass-card border-b border-white/20 shadow-lg safe-top;
-  }
-
-  /* Mobile app footer/navigation */
-  .app-footer {
-    @apply fixed bottom-0 left-0 right-0 z-40 glass-card border-t border-white/20 shadow-lg safe-bottom;
-  }
-
-  /* Main content area with safe spacing for fixed header/footer */
-  .app-content {
-    @apply w-full pt-20 pb-24 px-4 sm:px-6 md:pt-24 md:pb-8 md:px-8 lg:px-12;
-  }
-
-  /* Smooth transitions for mobile interactions */
-  .mobile-transition {
-    @apply transition-all duration-300 ease-out;
-  }
-
-  /* Bottom sheet modal */
-  .bottom-sheet {
-    @apply fixed bottom-0 left-0 right-0 z-50 glass-card rounded-t-3xl shadow-2xl animate-slide-up safe-bottom;
-  }
-}
-
-/* Dark mode styles - ensure consistent dark background */
-.dark body {
+/* Utility classes for backward compatibility and custom styles */
+.static-gradient {
   background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
 }
 
-.dark .glass-card {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Mobile-first touch targets */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.dark .gradient-border {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Safe area padding for notched devices */
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
 }
 
-/* Scrollbar styling - hidden on mobile for cleaner look */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Main content area with safe spacing for fixed header/footer */
+.app-content {
+  width: 100%;
+  padding: 5rem 1rem 6rem;
+}
+
+@media (min-width: 640px) {
+  .app-content {
+    padding: 5rem 1.5rem 6rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-content {
+    padding: 6rem 2rem 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-content {
+    padding: 6rem 3rem 2rem;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Dark mode styles - handled by Geist */
+.dark {
+  color-scheme: dark;
+}
+
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -146,19 +154,6 @@ body.light-mode {
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* Dark mode scrollbar */
-.dark ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
-}
-
 /* Mobile-specific input styling */
 input[type="text"],
 input[type="email"],
@@ -167,25 +162,18 @@ input[type="password"],
 textarea,
 select {
   font-size: 16px; /* Prevents zoom on iOS */
-  border-radius: 8px;
-  padding: 12px;
-  min-height: 48px;
+  min-height: 44px;
 }
 
 /* Mobile button styling */
 button {
-  min-height: 48px;
-  min-width: 48px;
+  min-height: 44px;
   transition: all 0.2s ease-out;
+  touch-action: manipulation;
 }
 
 button:active {
   transform: scale(0.95);
-}
-
-/* Prevent double-tap zoom on buttons */
-button {
-  touch-action: manipulation;
 }
 
 /* Mobile-first responsive grid adjustments */
