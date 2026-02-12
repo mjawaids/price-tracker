@@ -104,17 +104,23 @@ const Pricing: React.FC = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px', maxWidth: '896px', margin: '0 auto' }}>
-          <style>
-            {`
-              @media (min-width: 1024px) {
-                .pricing-grid {
-                  grid-template-columns: repeat(2, 1fr) !important;
-                }
+        <style>
+          {`
+            .pricing-grid {
+              display: grid;
+              grid-template-columns: 1fr;
+              gap: 32px;
+              max-width: 896px;
+              margin: 0 auto;
+            }
+            @media (min-width: 1024px) {
+              .pricing-grid {
+                grid-template-columns: repeat(2, 1fr);
               }
-            `}
-          </style>
-          <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
+            }
+          `}
+        </style>
+        <div className="pricing-grid">
           {/* Free Plan */}
           <div style={{ position: 'relative' }}>
             <div style={{ 
@@ -238,7 +244,6 @@ const Pricing: React.FC = () => {
                 Coming Soon
               </button>
             </div>
-          </div>
           </div>
         </div>
 
