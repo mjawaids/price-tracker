@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Minus, ShoppingCart, Trash2, Truck } from 'lucide-react';
-import { Product, Store, ShoppingListItem } from '../types';
+import { Plus, Minus, ShoppingCart, Trash, Truck } from '@geist-ui/icons';
+import { Card, Text, Button, Modal, Input, Select } from '@geist-ui/core';
+import { Product, Store, ShoppingListItem, ProductVariant, Price } from '../types';
 import { findCheapestPriceWithDelivery } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
@@ -79,7 +80,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
   };
 
   const groupByStore = () => {
-    const storeGroups: Record<string, { store: Store; items: Array<ShoppingListItem & { product: Product; variant: any; price: any; priceWithDelivery: number }>; deliveryFee: number }> = {};
+    const storeGroups: Record<string, { store: Store; items: Array<ShoppingListItem & { product: Product; variant: ProductVariant; price: Price; priceWithDelivery: number }>; deliveryFee: number }> = {};
 
     shoppingList.forEach(item => {
       const { product, variant } = getProductAndVariant(item.productId, item.variantId);
@@ -112,246 +113,292 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
   const storeGroups = groupByStore();
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
-      <div className="gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover">
-        <div className="px-4 sm:px-6 py-4 border-b border-white/20">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-lg font-medium text-white">Shopping List</h2>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm border border-white/20 text-sm touch-target"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Item</span>
-                <span className="sm:hidden">Add</span>
-              </button>
-              {shoppingList.length > 0 && (
-                <button
-                  onClick={onClearList}
-                  className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm border border-red-500/30 text-sm touch-target"
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+      <Card width="100%">
+        <Card.Content style={{ padding: 0 }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <Text h3 my={0}>Shopping List</Text>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <Button
+                  auto
+                  onClick={() => setShowAddModal(true)}
+                  icon={<Plus size={16} />}
+                  style={{ minHeight: '44px' }}
                 >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Clear List</span>
-                  <span className="sm:hidden">Clear</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {shoppingList.length === 0 ? (
-          <div className="p-8 sm:p-12 text-center">
-            <ShoppingCart className="h-12 w-12 text-white/40 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">Your shopping list is empty</h3>
-            <p className="text-white/60 text-sm sm:text-base">Add items to start comparing prices and planning your shopping trip.</p>
-          </div>
-        ) : (
-          <div className="p-4 sm:p-6">
-            {/* Summary */}
-            <div className="bg-green-500/20 rounded-lg p-4 mb-6 backdrop-blur-sm border border-green-500/30">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <h3 className="text-base sm:text-lg font-medium text-green-300">Total Estimated Cost</h3>
-                  <p className="text-sm text-green-400">{shoppingList.length} items</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-xl sm:text-2xl font-bold text-green-300">
-                    {formatPrice(calculateTotal(), settings.currency)}
-                  </div>
-                  <div className="text-sm text-green-400">Best prices selected</div>
-                </div>
+                  <span style={{ display: 'inline', '@media (max-width: 640px)': { display: 'none' } }}>Add Item</span>
+                  <span style={{ display: 'none', '@media (max-width: 640px)': { display: 'inline' } }}>Add</span>
+                </Button>
+                {shoppingList.length > 0 && (
+                  <Button
+                    auto
+                    type="error"
+                    onClick={onClearList}
+                    icon={<Trash size={16} />}
+                    style={{ minHeight: '44px' }}
+                  >
+                    <span style={{ display: 'inline', '@media (max-width: 640px)': { display: 'none' } }}>Clear List</span>
+                    <span style={{ display: 'none', '@media (max-width: 640px)': { display: 'inline' } }}>Clear</span>
+                  </Button>
+                )}
               </div>
             </div>
+          </div>
+          
+          {shoppingList.length === 0 ? (
+            <div style={{ padding: '96px 32px', textAlign: 'center' }}>
+              <ShoppingCart size={48} style={{ margin: '0 auto 16px', opacity: 0.4 }} />
+              <Text h4 my={0} style={{ marginBottom: '8px' }}>Your shopping list is empty</Text>
+              <Text style={{ opacity: 0.6, fontSize: '14px' }}>Add items to start comparing prices and planning your shopping trip.</Text>
+            </div>
+          ) : (
+            <div style={{ padding: '16px 24px' }}>
+              {/* Summary */}
+              <div style={{ 
+                backgroundColor: 'rgba(16, 185, 129, 0.2)', 
+                borderRadius: '8px', 
+                padding: '16px', 
+                marginBottom: '24px',
+                border: '1px solid rgba(16, 185, 129, 0.3)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <Text h4 my={0} style={{ color: '#10B981', marginBottom: '4px' }}>Total Estimated Cost</Text>
+                    <Text small style={{ color: '#34D399' }}>{shoppingList.length} items</Text>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10B981', marginBottom: '4px' }}>
+                      {formatPrice(calculateTotal(), settings.currency)}
+                    </div>
+                    <Text small style={{ color: '#34D399' }}>Best prices selected</Text>
+                  </div>
+                </div>
+              </div>
 
-            {/* Store Groups */}
-            <div className="space-y-6">
-              {Object.entries(storeGroups).map(([storeId, group]) => (
-                <div key={storeId} className="border border-white/20 rounded-lg backdrop-blur-sm">
-                  <div className="bg-white/10 px-4 py-3 border-b border-white/20 rounded-t-lg backdrop-blur-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-white">{group.store.name}</h3>
-                        <div className="flex items-center space-x-3 mt-1">
-                          <p className="text-sm text-white/70 capitalize">{group.store.type}</p>
-                          {group.deliveryFee > 0 && (
-                            <div className="flex items-center space-x-1 text-sm text-white/70">
-                              <Truck className="h-3 w-3" />
-                              <span>Delivery: {formatPrice(group.deliveryFee, settings.currency)}</span>
-                            </div>
-                          )}
+              {/* Store Groups */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {Object.entries(storeGroups).map(([storeId, group]) => (
+                  <div key={storeId} style={{ border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}>
+                    <div style={{ 
+                      backgroundColor: 'rgba(255,255,255,0.1)', 
+                      padding: '12px 16px', 
+                      borderBottom: '1px solid rgba(255,255,255,0.2)',
+                      borderTopLeftRadius: '8px',
+                      borderTopRightRadius: '8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <Text h4 my={0}>{group.store.name}</Text>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                            <Text small style={{ opacity: 0.7, textTransform: 'capitalize' }}>{group.store.type}</Text>
+                            {group.deliveryFee > 0 && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Truck size={12} style={{ opacity: 0.7 }} />
+                                <Text small style={{ opacity: 0.7 }}>Delivery: {formatPrice(group.deliveryFee, settings.currency)}</Text>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-white"></div>
-                        <div className="text-sm text-white/70">
-                          {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                        <div style={{ textAlign: 'right' }}>
+                          <Text small style={{ opacity: 0.7 }}>
+                            {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                          </Text>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="divide-y divide-white/20">
-                    {group.items.map((item) => (
-                      <div key={item.id} className="p-4 bg-white/5">
-                        <div className="flex items-center justify-between flex-wrap gap-3">
-                          <div className="flex-1 min-w-[200px]">
-                            <h4 className="font-medium text-white">{item.product.name}</h4>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                item.priority === 'high' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
-                                item.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
-                                'bg-green-500/20 text-green-300 border border-green-500/30'
-                              }`}>
-                                {item.priority} priority
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center flex-wrap gap-2">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                                className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors duration-200 touch-target"
-                                aria-label="Decrease quantity"
-                              >
-                                <Minus className="h-4 w-4" />
-                              </button>
-                              <span className="w-8 text-center text-white font-medium">{item.quantity}</span>
-                              <button
-                                onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors duration-200 touch-target"
-                                aria-label="Increase quantity"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </button>
-                            </div>
-                            
-                            <div className="text-right">
-                              <div className="font-medium text-white">
-                                {formatPrice(item.priceWithDelivery * item.quantity, settings.currency)}
-                              </div>
-                              <div className="text-sm text-white/70">
-                                {formatPrice(item.priceWithDelivery, settings.currency)} each
+                    
+                    <div>
+                      {group.items.map((item) => (
+                        <div key={item.id} style={{ 
+                          padding: '16px', 
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderBottom: '1px solid rgba(255,255,255,0.1)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                            <div style={{ flex: '1', minWidth: '200px' }}>
+                              <Text b my={0}>{item.product.name}</Text>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                <span style={{ 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center', 
+                                  padding: '2px 10px', 
+                                  borderRadius: '16px', 
+                                  fontSize: '12px', 
+                                  fontWeight: 500,
+                                  backgroundColor: item.priority === 'high' ? 'rgba(239, 68, 68, 0.2)' :
+                                    item.priority === 'medium' ? 'rgba(234, 179, 8, 0.2)' :
+                                    'rgba(16, 185, 129, 0.2)',
+                                  color: item.priority === 'high' ? '#EF4444' :
+                                    item.priority === 'medium' ? '#EAB308' :
+                                    '#10B981',
+                                  border: item.priority === 'high' ? '1px solid rgba(239, 68, 68, 0.3)' :
+                                    item.priority === 'medium' ? '1px solid rgba(234, 179, 8, 0.3)' :
+                                    '1px solid rgba(16, 185, 129, 0.3)'
+                                }}>
+                                  {item.priority} priority
+                                </span>
                               </div>
                             </div>
                             
-                            <button
-                              onClick={() => onRemoveFromList(item.id)}
-                              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors duration-200 touch-target"
-                              aria-label="Remove item"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                                  style={{
+                                    padding: '8px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    opacity: 0.7,
+                                    transition: 'all 0.2s',
+                                    minWidth: '44px',
+                                    minHeight: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus size={16} />
+                                </button>
+                                <span style={{ width: '32px', textAlign: 'center', fontWeight: 500 }}>{item.quantity}</span>
+                                <button
+                                  onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                                  style={{
+                                    padding: '8px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    opacity: 0.7,
+                                    transition: 'all 0.2s',
+                                    minWidth: '44px',
+                                    minHeight: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus size={16} />
+                                </button>
+                              </div>
+                              
+                              <div style={{ textAlign: 'right' }}>
+                                <Text b my={0}>
+                                  {formatPrice(item.priceWithDelivery * item.quantity, settings.currency)}
+                                </Text>
+                                <Text small style={{ opacity: 0.7 }}>
+                                  {formatPrice(item.priceWithDelivery, settings.currency)} each
+                                </Text>
+                              </div>
+                              
+                              <button
+                                onClick={() => onRemoveFromList(item.id)}
+                                style={{
+                                  padding: '8px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  color: '#EF4444',
+                                  transition: 'all 0.2s',
+                                  minWidth: '44px',
+                                  minHeight: '44px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                aria-label="Remove item"
+                              >
+                                <Trash size={16} />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </Card.Content>
+      </Card>
 
       {/* Add Item Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Add Item to Shopping List</h3>
+      <Modal visible={showAddModal} onClose={() => setShowAddModal(false)}>
+        <Modal.Title>Add Item to Shopping List</Modal.Title>
+        <Modal.Content>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <Text small b style={{ marginBottom: '8px', display: 'block' }}>Product</Text>
+              <Select
+                placeholder="Select a product"
+                value={selectedProduct}
+                onChange={(val) => {
+                  setSelectedProduct(val as string);
+                  setSelectedVariant('');
+                }}
+                width="100%"
+              >
+                {products.map(product => (
+                  <Select.Option key={product.id} value={product.id}>
+                    {product.name} - {product.brand}
+                  </Select.Option>
+                ))}
+              </Select>
             </div>
             
-            <div className="p-6 space-y-4">
+            {selectedProduct && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product
-                </label>
-                <select
-                  value={selectedProduct}
-                  onChange={(e) => {
-                    setSelectedProduct(e.target.value);
-                    setSelectedVariant('');
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>Variant</Text>
+                <Select
+                  placeholder="Select a variant"
+                  value={selectedVariant}
+                  onChange={(val) => setSelectedVariant(val as string)}
+                  width="100%"
                 >
-                  <option value="">Select a product</option>
-                  {products.map(product => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} - {product.brand}
-                    </option>
+                  {products.find(p => p.id === selectedProduct)?.variants.map(variant => (
+                    <Select.Option key={variant.id} value={variant.id}>
+                      {variant.name}
+                    </Select.Option>
                   ))}
-                </select>
+                </Select>
               </div>
-              
-              {selectedProduct && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Variant
-                  </label>
-                  <select
-                    value={selectedVariant}
-                    onChange={(e) => setSelectedVariant(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select a variant</option>
-                    {products.find(p => p.id === selectedProduct)?.variants.map(variant => (
-                      <option key={variant.id} value={variant.id}>
-                        {variant.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Priority
-                </label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
+            )}
+            
+            <div>
+              <Text small b style={{ marginBottom: '8px', display: 'block' }}>Quantity</Text>
+              <Input
+                type="number"
+                min={1}
+                value={quantity.toString()}
+                onChange={(e) => setQuantity(parseInt(e.target.value))}
+                width="100%"
+              />
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-2">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors duration-200"
+            <div>
+              <Text small b style={{ marginBottom: '8px', display: 'block' }}>Priority</Text>
+              <Select
+                value={priority}
+                onChange={(val) => setPriority(val as 'low' | 'medium' | 'high')}
+                width="100%"
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddToList}
-                disabled={!selectedProduct || !selectedVariant}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                Add to List
-              </button>
+                <Select.Option value="low">Low</Select.Option>
+                <Select.Option value="medium">Medium</Select.Option>
+                <Select.Option value="high">High</Select.Option>
+              </Select>
             </div>
           </div>
-        </div>
-      )}
+        </Modal.Content>
+        <Modal.Action passive onClick={() => setShowAddModal(false)}>Cancel</Modal.Action>
+        <Modal.Action onClick={handleAddToList} disabled={!selectedProduct || !selectedVariant}>
+          Add to List
+        </Modal.Action>
+      </Modal>
     </div>
   );
 };
