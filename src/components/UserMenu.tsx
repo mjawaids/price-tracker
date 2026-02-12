@@ -48,8 +48,7 @@ const UserMenu: React.FC = () => {
         }}>
           <User size={16} color="white" />
         </div>
-        <span style={{ 
-          display: 'none', 
+        <span className="sm-inline" style={{ 
           fontSize: '14px', 
           fontWeight: 500 
         }}>

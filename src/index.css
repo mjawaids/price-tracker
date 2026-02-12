@@ -237,3 +237,13 @@ button:active {
     font-size: 16px !important;
   }
 }
+/* Responsive utility for inline text visibility */
+.sm-inline {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .sm-inline {
+    display: inline;
+  }
+}
