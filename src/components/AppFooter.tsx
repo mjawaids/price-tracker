@@ -1,19 +1,51 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const AppFooter: React.FC = () => {
+  const [hoverStates, setHoverStates] = useState<{[key: string]: boolean}>({});
+
+  const desktopOnlyStyle: React.CSSProperties = {
+    display: 'none'
+  };
+
   return (
     <>
+      <style>
+        {`
+          @media (min-width: 768px) {
+            .app-footer-credits,
+            .app-footer-legal {
+              display: block !important;
+            }
+          }
+        `}
+      </style>
+
       {/* Credits Bar - Desktop Only */}
-      <div className="hidden md:block glass-card border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-2 text-center">
-            <p className="text-white/60 text-xs">
-              Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
+      <div 
+        className="app-footer-credits"
+        style={{ 
+          ...desktopOnlyStyle,
+          backdropFilter: 'blur(12px)', 
+          backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+        }}
+      >
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ padding: '8px 0', textAlign: 'center' }}>
+            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+              Made with <span style={{ color: '#ef4444' }}>❤️</span> by{' '}
               <a 
                 href="https://jawaid.dev" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
+                style={{ 
+                  color: hoverStates['credit-link'] ? '#ffffff' : 'rgba(255, 255, 255, 0.8)', 
+                  fontWeight: 500, 
+                  transition: 'all 0.2s',
+                  textDecoration: hoverStates['credit-link'] ? 'underline' : 'none'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'credit-link': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'credit-link': false}))}
               >
                 Jawaid.dev
               </a>
@@ -24,15 +56,67 @@ const AppFooter: React.FC = () => {
       </div>
 
       {/* Legal & Info Links - Desktop Only */}
-      <footer className="hidden md:block glass-card border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4 flex flex-col md:flex-row items-center justify-center md:justify-between gap-3">
-            <div className="text-white/60 text-sm">© {new Date().getFullYear()} SpendLess</div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <a href="/pricing" className="text-white/70 hover:text-white hover:underline">Pricing</a>
-              <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
-              <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
-              <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
+      <footer 
+        className="app-footer-legal"
+        style={{ 
+          ...desktopOnlyStyle,
+          backdropFilter: 'blur(12px)', 
+          backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)' 
+        }}
+      >
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>© {new Date().getFullYear()} SpendLess</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', fontSize: '14px' }}>
+              <a 
+                href="/pricing" 
+                style={{ 
+                  color: hoverStates['link-pricing'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-pricing'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-pricing': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-pricing': false}))}
+              >
+                Pricing
+              </a>
+              <a 
+                href="/privacy" 
+                style={{ 
+                  color: hoverStates['link-privacy'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-privacy'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-privacy': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-privacy': false}))}
+              >
+                Privacy Policy
+              </a>
+              <a 
+                href="/refund" 
+                style={{ 
+                  color: hoverStates['link-refund'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-refund'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-refund': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-refund': false}))}
+              >
+                Refund Policy
+              </a>
+              <a 
+                href="/terms" 
+                style={{ 
+                  color: hoverStates['link-terms'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-terms'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-terms': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-terms': false}))}
+              >
+                Terms & Conditions
+              </a>
             </div>
           </div>
         </div>

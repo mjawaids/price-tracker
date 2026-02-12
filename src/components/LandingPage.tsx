@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShoppingCart, TrendingDown, Shield, Smartphone, Users, Star, ArrowRight, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShoppingCart, TrendingDown, Shield, Star, ArrowRight, Check, User } from '@geist-ui/icons';
 import { trackUserAction, trackPageView } from '../utils/analytics';
 
 interface LandingPageProps {
@@ -7,7 +7,8 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
-  // Track landing page view
+  const [hoverStates, setHoverStates] = useState<{[key: string]: boolean}>({});
+
   React.useEffect(() => {
     trackPageView('/', 'Landing Page');
   }, []);
@@ -34,7 +35,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       description: 'Your data is encrypted and secure. We never share your shopping habits with third parties.'
     },
     {
-      icon: Smartphone,
+      icon: User,
       title: 'Works Everywhere',
       description: 'Access your price comparisons on any device, anywhere. Fully responsive and mobile-optimized.'
     }
@@ -72,29 +73,57 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
   ];
 
   return (
-    <div className="min-h-screen animated-gradient">
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
       {/* Navigation */}
-      <nav className="glass-card border-b border-white/20 sticky top-0 z-50 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <ShoppingCart className="h-5 w-5 text-white" />
+      <nav style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderBottom: '1px solid rgba(255, 255, 255, 0.2)', position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ height: '32px', width: '32px', background: 'linear-gradient(to right, #3b82f6, #9333ea)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingCart size={20} color="#ffffff" />
               </div>
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">SpendLess</span>
-              <span className="ml-2 text-xl font-bold text-white">Price Tracker</span>
+              <span style={{ marginLeft: '8px', fontSize: '20px', fontWeight: 'bold', background: 'linear-gradient(to right, #2563eb, #9333ea)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>SpendLess</span>
+              <span style={{ marginLeft: '8px', fontSize: '20px', fontWeight: 'bold', color: '#ffffff' }}>Price Tracker</span>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <button
                 onClick={() => handleAuthClick('signin', 'header')}
-                className="text-white/70 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-white/10 backdrop-blur-sm"
+                style={{
+                  color: hoverStates['header-signin'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  backdropFilter: 'blur(4px)',
+                  backgroundColor: hoverStates['header-signin'] ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'header-signin': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'header-signin': false}))}
               >
                 Sign In
               </button>
               <button
                 onClick={() => handleAuthClick('signup', 'header')}
-                className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
+                style={{
+                  backgroundColor: hoverStates['header-signup'] ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  padding: '8px 24px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  boxShadow: hoverStates['header-signup'] ? '0 10px 15px rgba(0, 0, 0, 0.15)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer',
+                  transform: hoverStates['header-signup'] ? 'scale(1.05)' : 'scale(1)'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'header-signup': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'header-signup': false}))}
               >
                 Get Started
               </button>
@@ -104,57 +133,97 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+      <section style={{ position: 'relative', padding: '80px 0' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '24px', lineHeight: 1.2 }}>
               Never Overpay
-              <span className="text-yellow-300"> Again</span>
+              <span style={{ color: '#fde047' }}> Again</span>
             </h1>
-            <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '32px', maxWidth: '768px', margin: '0 auto 32px', lineHeight: 1.6 }}>
               Compare prices across thousands of stores, create smart shopping lists, and save money on everything you buy. 
               Join millions of smart shoppers who trust SpendLess Price Tracker.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 onClick={() => handleAuthClick('signup', 'hero')}
-                className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center space-x-2 backdrop-blur-sm border border-white/20"
+                style={{
+                  backgroundColor: hoverStates['hero-signup'] ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  padding: '16px 32px',
+                  borderRadius: '8px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  boxShadow: hoverStates['hero-signup'] ? '0 10px 15px rgba(0, 0, 0, 0.15)' : '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer',
+                  transform: hoverStates['hero-signup'] ? 'scale(1.05)' : 'scale(1)'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'hero-signup': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'hero-signup': false}))}
               >
                 <span>Start Saving Today</span>
-                <ArrowRight className="h-5 w-5" />
+                <ArrowRight size={20} />
               </button>
               <button
                 onClick={() => handleAuthClick('signin', 'hero')}
-                className="border-2 border-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:border-white/50 hover:bg-white/10 transition-all duration-200 backdrop-blur-sm"
+                style={{
+                  border: hoverStates['hero-signin'] ? '2px solid rgba(255, 255, 255, 0.5)' : '2px solid rgba(255, 255, 255, 0.3)',
+                  color: '#ffffff',
+                  padding: '16px 32px',
+                  borderRadius: '8px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  backdropFilter: 'blur(4px)',
+                  backgroundColor: hoverStates['hero-signin'] ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'hero-signin': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'hero-signin': false}))}
               >
                 Sign In
               </button>
             </div>
-            <p className="text-sm text-white/60 mt-4">Free to start • No credit card required</p>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '16px' }}>Free to start • No credit card required</p>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white/10 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
+      <section style={{ padding: '80px 0', backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(4px)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '16px' }}>
               Everything You Need to Save Money
             </h2>
-            <p className="text-xl text-white/80 max-w-2xl mx-auto">
+            <p style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.8)', maxWidth: '672px', margin: '0 auto' }}>
               Powerful features designed to help you find the best deals and optimize your shopping experience.
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px' }}>
             {features.map((feature, index) => (
-              <div key={index} className="text-center group hover:transform hover:scale-105 transition-all duration-200">
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 mb-4 group-hover:shadow-lg transition-shadow duration-200 border border-white/20">
-                  <feature.icon className="h-8 w-8 text-white mx-auto" />
+              <div 
+                key={index} 
+                style={{ 
+                  textAlign: 'center', 
+                  transition: 'all 0.2s',
+                  transform: hoverStates[`feature-${index}`] ? 'scale(1.05)' : 'scale(1)'
+                }} 
+                onMouseEnter={() => setHoverStates(prev => ({...prev, [`feature-${index}`]: true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, [`feature-${index}`]: false}))}
+              >
+                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(4px)', borderRadius: '16px', padding: '24px', marginBottom: '16px', transition: 'box-shadow 0.2s', border: '1px solid rgba(255, 255, 255, 0.2)', display: 'flex', justifyContent: 'center' }}>
+                  <feature.icon size={32} color="#ffffff" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-                <p className="text-white/70 leading-relaxed">{feature.description}</p>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>{feature.title}</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.6 }}>{feature.description}</p>
               </div>
             ))}
           </div>
@@ -162,49 +231,62 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-black/20 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="text-white">
-              <div className="text-4xl font-bold mb-2">$2.5M+</div>
-              <div className="text-white/70">Total Savings</div>
+      <section style={{ padding: '80px 0', backgroundColor: 'rgba(0, 0, 0, 0.2)', backdropFilter: 'blur(4px)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px', textAlign: 'center' }}>
+            <div style={{ color: '#ffffff' }}>
+              <div style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '8px' }}>$2.5M+</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Total Savings</div>
             </div>
-            <div className="text-white">
-              <div className="text-4xl font-bold mb-2">50K+</div>
-              <div className="text-white/70">Happy Users</div>
+            <div style={{ color: '#ffffff' }}>
+              <div style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '8px' }}>50K+</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Happy Users</div>
             </div>
-            <div className="text-white">
-              <div className="text-4xl font-bold mb-2">1M+</div>
-              <div className="text-white/70">Price Comparisons</div>
+            <div style={{ color: '#ffffff' }}>
+              <div style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '8px' }}>1M+</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Price Comparisons</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-white/5 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
+      <section style={{ padding: '80px 0', backgroundColor: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(4px)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '16px' }}>
               Loved by Smart Shoppers
             </h2>
-            <p className="text-xl text-white/80">
+            <p style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.8)' }}>
               See what our users are saying about their savings
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white/20 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-200 border border-white/20">
-                <div className="flex items-center mb-4">
+              <div 
+                key={index} 
+                style={{ 
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                  backdropFilter: 'blur(4px)', 
+                  borderRadius: '12px', 
+                  padding: '24px', 
+                  boxShadow: hoverStates[`testimonial-${index}`] ? '0 10px 15px rgba(0, 0, 0, 0.15)' : '0 4px 6px rgba(0, 0, 0, 0.1)', 
+                  transition: 'box-shadow 0.2s', 
+                  border: '1px solid rgba(255, 255, 255, 0.2)' 
+                }} 
+                onMouseEnter={() => setHoverStates(prev => ({...prev, [`testimonial-${index}`]: true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, [`testimonial-${index}`]: false}))}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                    <Star key={i} size={20} color="#facc15" fill="#facc15" />
                   ))}
                 </div>
-                <p className="text-white/80 mb-4 italic">"{testimonial.content}"</p>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', fontStyle: 'italic' }}>"{testimonial.content}"</p>
                 <div>
-                  <div className="font-semibold text-white">{testimonial.name}</div>
-                  <div className="text-sm text-white/60">{testimonial.role}</div>
+                  <div style={{ fontWeight: 600, color: '#ffffff' }}>{testimonial.name}</div>
+                  <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)' }}>{testimonial.role}</div>
                 </div>
               </div>
             ))}
@@ -213,37 +295,52 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 bg-white/10 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
+      <section style={{ padding: '80px 0', backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(4px)' }}>
+        <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '16px' }}>
               Simple, Transparent Pricing
             </h2>
-            <p className="text-xl text-white/80">
+            <p style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.8)' }}>
               Start free, upgrade when you're ready
             </p>
           </div>
           
-          <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-8 border-2 border-white/30">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-white mb-2">Free Forever</h3>
-              <div className="text-5xl font-bold text-yellow-300 mb-2">$0</div>
-              <p className="text-white/70">Perfect for getting started</p>
+          <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(4px)', borderRadius: '16px', padding: '32px', border: '2px solid rgba(255, 255, 255, 0.3)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '8px' }}>Free Forever</h3>
+              <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#fde047', marginBottom: '8px' }}>$0</div>
+              <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Perfect for getting started</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               {pricingFeatures.map((feature, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                  <span className="text-white/80">{feature}</span>
+                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Check size={20} color="#22c55e" style={{ flexShrink: 0 }} />
+                  <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{feature}</span>
                 </div>
               ))}
             </div>
             
-            <div className="text-center">
+            <div style={{ textAlign: 'center' }}>
               <button
                 onClick={() => onShowAuth('signup')}
-                className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors duration-200 w-full md:w-auto backdrop-blur-sm border border-white/20"
+                style={{
+                  backgroundColor: hoverStates['pricing-cta'] ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  padding: '16px 32px',
+                  borderRadius: '8px',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer',
+                  width: '100%',
+                  maxWidth: '300px'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'pricing-cta': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'pricing-cta': false}))}
               >
                 Get Started Free
               </button>
@@ -253,17 +350,31 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-black/30 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-4">
+      <section style={{ padding: '80px 0', backgroundColor: 'rgba(0, 0, 0, 0.3)', backdropFilter: 'blur(4px)' }}>
+        <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '0 16px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '16px' }}>
             Ready to Start Saving?
           </h2>
-          <p className="text-xl text-white/80 mb-8">
+          <p style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '32px' }}>
             Join thousands of smart shoppers who save money every day with SpendLess Price Tracker
           </p>
           <button
             onClick={() => handleAuthClick('signup', 'cta')}
-            className="bg-white/20 hover:bg-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors duration-200 shadow-lg backdrop-blur-sm border border-white/20"
+            style={{
+              backgroundColor: hoverStates['cta-button'] ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+              color: '#ffffff',
+              padding: '16px 32px',
+              borderRadius: '8px',
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={() => setHoverStates(prev => ({...prev, 'cta-button': true}))}
+            onMouseLeave={() => setHoverStates(prev => ({...prev, 'cta-button': false}))}
           >
             Start Your Free Account
           </button>
@@ -271,47 +382,98 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-black/40 backdrop-blur-sm text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <div className="flex items-center mb-4 md:mb-0">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <ShoppingCart className="h-5 w-5 text-white" />
+      <footer style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(4px)', color: '#ffffff', padding: '48px 0' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ height: '32px', width: '32px', background: 'linear-gradient(to right, #3b82f6, #9333ea)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingCart size={20} color="#ffffff" />
               </div>
-              <span className="ml-2 text-xl font-bold">SpendLess Price Tracker</span>
+              <span style={{ marginLeft: '8px', fontSize: '1.25rem', fontWeight: 'bold' }}>SpendLess Price Tracker</span>
             </div>
-            <div className="text-white/60 text-sm">
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>
               © {new Date().getFullYear()} SpendLess Price Tracker. All rights reserved.
             </div>
           </div>
           
           {/* Credits Section */}
-          <div className="border-t border-white/20 pt-8">
-            <div className="text-center">
-              <p className="text-white/60 text-sm mb-2">
-                Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
+          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.2)', paddingTop: '32px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px', marginBottom: '8px' }}>
+                Made with <span style={{ color: '#ef4444' }}>❤️</span> by{' '}
                 <a 
                   href="https://jawaid.dev" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
+                  style={{ 
+                    color: hoverStates['footer-link'] ? '#ffffff' : 'rgba(255, 255, 255, 0.8)', 
+                    fontWeight: 500, 
+                    transition: 'color 0.2s', 
+                    textDecoration: hoverStates['footer-link'] ? 'underline' : 'none'
+                  }}
+                  onMouseEnter={() => setHoverStates(prev => ({...prev, 'footer-link': true}))}
+                  onMouseLeave={() => setHoverStates(prev => ({...prev, 'footer-link': false}))}
                 >
                   Jawaid.dev
                 </a>
               </p>
-              <p className="text-white/50 text-xs">
+              <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
                 Crafted with passion for smart shoppers everywhere
               </p>
             </div>
           </div>
 
           {/* Legal & Info Links */}
-          <div className="mt-8 border-t border-white/10 pt-6">
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
-              <a href="/pricing" className="text-white/70 hover:text-white hover:underline">Pricing</a>
-              <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
-              <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
-              <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
+          <div style={{ marginTop: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '24px', fontSize: '14px' }}>
+              <a 
+                href="/pricing" 
+                style={{ 
+                  color: hoverStates['link-pricing'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-pricing'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }} 
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-pricing': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-pricing': false}))}
+              >
+                Pricing
+              </a>
+              <a 
+                href="/privacy" 
+                style={{ 
+                  color: hoverStates['link-privacy'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-privacy'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }} 
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-privacy': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-privacy': false}))}
+              >
+                Privacy Policy
+              </a>
+              <a 
+                href="/refund" 
+                style={{ 
+                  color: hoverStates['link-refund'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-refund'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }} 
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-refund': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-refund': false}))}
+              >
+                Refund Policy
+              </a>
+              <a 
+                href="/terms" 
+                style={{ 
+                  color: hoverStates['link-terms'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                  textDecoration: hoverStates['link-terms'] ? 'underline' : 'none',
+                  transition: 'all 0.2s'
+                }} 
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-terms': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-terms': false}))}
+              >
+                Terms & Conditions
+              </a>
             </div>
           </div>
         </div>

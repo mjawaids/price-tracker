@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Star, Zap, Shield, Headphones as HeadphonesIcon } from 'lucide-react';
+import { Check, Star, ShieldCheck, User } from '@geist-ui/icons';
 import PageHeader from '../components/PageHeader';
 import PageFooter from '../components/PageFooter';
 
 const Pricing: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [hoverStates, setHoverStates] = useState<{[key: string]: boolean}>({});
 
   useEffect(() => {
     document.title = 'Pricing • SpendLess';
@@ -40,37 +41,61 @@ const Pricing: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen static-gradient text-white">
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#ffffff' }}>
       <PageHeader 
         title="Choose Your Plan" 
         description="Start free and upgrade when you're ready to unlock advanced features."
       />
       
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '0 16px 48px' }}>
         {/* Billing Toggle */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1 border border-white/20">
-            <div className="flex">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '48px' }}>
+          <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(4px)', borderRadius: '12px', padding: '4px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+            <div style={{ display: 'flex' }}>
               <button
                 onClick={() => setBillingCycle('monthly')}
-                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  billingCycle === 'monthly'
-                    ? 'bg-white/20 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white'
-                }`}
+                style={{
+                  padding: '8px 24px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  backgroundColor: billingCycle === 'monthly' ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                  color: billingCycle === 'monthly' ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                  boxShadow: billingCycle === 'monthly' ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setBillingCycle('yearly')}
-                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative ${
-                  billingCycle === 'yearly'
-                    ? 'bg-white/20 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white'
-                }`}
+                style={{
+                  padding: '8px 24px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  position: 'relative',
+                  backgroundColor: billingCycle === 'yearly' ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                  color: billingCycle === 'yearly' ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                  boxShadow: billingCycle === 'yearly' ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
               >
                 Yearly
-                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                <span style={{ 
+                  position: 'absolute', 
+                  top: '-8px', 
+                  right: '-8px', 
+                  backgroundColor: '#10b981', 
+                  color: '#ffffff', 
+                  fontSize: '10px', 
+                  padding: '2px 8px', 
+                  borderRadius: '9999px' 
+                }}>
                   Save 16%
                 </span>
               </button>
@@ -79,77 +104,126 @@ const Pricing: React.FC = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px', maxWidth: '896px', margin: '0 auto' }}>
           {/* Free Plan */}
-          <div className="relative">
-            <div className="glass-card rounded-2xl p-8 h-full border-2 border-white/20 hover:border-white/30 transition-all duration-300">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-white mb-2">Free Tier</h3>
-                <div className="text-5xl font-bold text-white mb-2">$0</div>
-                <p className="text-white/60">Perfect for getting started</p>
+          <div style={{ position: 'relative' }}>
+            <div style={{ 
+              backdropFilter: 'blur(12px)', 
+              backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+              borderRadius: '16px', 
+              padding: '32px', 
+              height: '100%', 
+              border: '2px solid rgba(255, 255, 255, 0.2)', 
+              borderColor: hoverStates['free-card'] ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+              transition: 'all 0.3s'
+            }}
+            onMouseEnter={() => setHoverStates(prev => ({...prev, 'free-card': true}))}
+            onMouseLeave={() => setHoverStates(prev => ({...prev, 'free-card': false}))}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '8px' }}>Free Tier</h3>
+                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '8px' }}>$0</div>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Perfect for getting started</p>
               </div>
 
-              <div className="space-y-4 mb-8">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
                 {freeFeatures.map((feature, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-white/80">{feature}</span>
+                  <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <Check size={20} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{feature}</span>
                   </div>
                 ))}
               </div>
 
-              <button className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 border border-white/30 hover:border-white/50">
+              <button 
+                style={{
+                  width: '100%',
+                  backgroundColor: hoverStates['free-button'] ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  transition: 'all 0.2s',
+                  border: hoverStates['free-button'] ? '1px solid rgba(255, 255, 255, 0.5)' : '1px solid rgba(255, 255, 255, 0.3)',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'free-button': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'free-button': false}))}
+              >
                 Get Started Free
               </button>
             </div>
           </div>
 
           {/* Pro Plan */}
-          <div className="relative">
+          <div style={{ position: 'relative' }}>
             {/* Popular Badge */}
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg flex items-center space-x-2">
-                <Star className="h-4 w-4" />
+            <div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+              <div style={{ background: 'linear-gradient(to right, #3b82f6, #9333ea)', color: '#ffffff', padding: '8px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: 600, boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Star size={16} />
                 <span>Most Popular</span>
               </div>
             </div>
 
-            <div className="glass-card rounded-2xl p-8 h-full border-2 border-blue-500/50 hover:border-blue-500/70 transition-all duration-300 shadow-2xl">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center space-x-2">
-                  <Zap className="h-6 w-6 text-yellow-400" />
+            <div style={{ 
+              backdropFilter: 'blur(12px)', 
+              backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+              borderRadius: '16px', 
+              padding: '32px', 
+              height: '100%', 
+              border: '2px solid rgba(59, 130, 246, 0.5)', 
+              borderColor: hoverStates['pro-card'] ? 'rgba(59, 130, 246, 0.7)' : 'rgba(59, 130, 246, 0.5)',
+              boxShadow: '0 20px 25px rgba(0, 0, 0, 0.15)',
+              transition: 'all 0.3s'
+            }}
+            onMouseEnter={() => setHoverStates(prev => ({...prev, 'pro-card': true}))}
+            onMouseLeave={() => setHoverStates(prev => ({...prev, 'pro-card': false}))}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '24px' }}>⚡</span>
                   <span>Pro Plan</span>
                 </h3>
-                <div className="text-5xl font-bold text-white mb-2">
+                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '8px' }}>
                   ${billingCycle === 'monthly' ? '7' : '70'}
-                  <span className="text-lg text-white/60">
+                  <span style={{ fontSize: '1.125rem', color: 'rgba(255, 255, 255, 0.6)' }}>
                     /{billingCycle === 'monthly' ? 'month' : 'year'}
                   </span>
                 </div>
                 {billingCycle === 'yearly' && (
-                  <div className="text-green-400 text-sm font-medium">
+                  <div style={{ color: '#10b981', fontSize: '14px', fontWeight: 500 }}>
                     Save $14 per year (16% off)
                   </div>
                 )}
-                <p className="text-white/60 mt-2">For serious savers</p>
-                <div className="inline-flex items-center space-x-1 bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm mt-3">
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginTop: '8px' }}>For serious savers</p>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', padding: '4px 12px', borderRadius: '9999px', fontSize: '14px', marginTop: '12px' }}>
                   <span>🚀</span>
                   <span>Coming Soon</span>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-8">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
                 {proFeatures.map((feature, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-white/80">{feature}</span>
+                  <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <Check size={20} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{feature}</span>
                   </div>
                 ))}
               </div>
 
               <button 
                 disabled
-                className="w-full bg-gradient-to-r from-blue-500/50 to-purple-600/50 text-white/70 font-semibold py-3 px-6 rounded-xl transition-all duration-200 cursor-not-allowed"
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(to right, rgba(59, 130, 246, 0.5), rgba(147, 51, 234, 0.5))',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontWeight: 600,
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  transition: 'all 0.2s',
+                  cursor: 'not-allowed',
+                  border: 'none'
+                }}
               >
                 Coming Soon
               </button>
@@ -158,27 +232,36 @@ const Pricing: React.FC = () => {
         </div>
 
         {/* Billing Notes */}
-        <div className="mt-16 max-w-3xl mx-auto">
-          <div className="glass-card rounded-2xl p-8">
-            <h3 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-blue-400" />
+        <div style={{ marginTop: '64px', maxWidth: '768px', margin: '64px auto 0' }}>
+          <div style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '32px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#ffffff', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldCheck size={20} color="#60a5fa" />
               <span>Billing Information</span>
             </h3>
             
-            <div className="space-y-4 text-white/80">
-              <div className="flex items-start space-x-3">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', color: 'rgba(255, 255, 255, 0.8)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#60a5fa', borderRadius: '50%', marginTop: '8px', flexShrink: 0 }}></span>
                 <p>Subscriptions auto-renew unless cancelled.</p>
               </div>
-              <div className="flex items-start space-x-3">
-                <span className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></span>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#10b981', borderRadius: '50%', marginTop: '8px', flexShrink: 0 }}></span>
                 <p>You can manage or cancel anytime through your Paddle billing portal (link in order emails).</p>
               </div>
-              <div className="flex items-start space-x-3">
-                <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></span>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#a855f7', borderRadius: '50%', marginTop: '8px', flexShrink: 0 }}></span>
                 <p>
                   Refunds follow our{' '}
-                  <a href="/refund" className="text-blue-300 hover:text-blue-200 underline transition-colors">
+                  <a 
+                    href="/refund" 
+                    style={{ 
+                      color: hoverStates['refund-link'] ? '#93c5fd' : '#60a5fa', 
+                      textDecoration: 'underline', 
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={() => setHoverStates(prev => ({...prev, 'refund-link': true}))}
+                    onMouseLeave={() => setHoverStates(prev => ({...prev, 'refund-link': false}))}
+                  >
                     Refund Policy
                   </a>.
                 </p>
@@ -188,36 +271,42 @@ const Pricing: React.FC = () => {
         </div>
 
         {/* FAQ Section */}
-        <div className="mt-16 max-w-3xl mx-auto">
-          <div className="glass-card rounded-2xl p-8">
-            <h3 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
-              <HeadphonesIcon className="h-5 w-5 text-green-400" />
+        <div style={{ marginTop: '64px', maxWidth: '768px', margin: '64px auto 0' }}>
+          <div style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '32px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#ffffff', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <User size={20} color="#10b981" />
               <span>Frequently Asked Questions</span>
             </h3>
             
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div>
-                <h4 className="font-semibold text-white mb-2">Can I upgrade or downgrade anytime?</h4>
-                <p className="text-white/80">Yes, you can change your plan at any time. Changes take effect at your next billing cycle.</p>
+                <h4 style={{ fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>Can I upgrade or downgrade anytime?</h4>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Yes, you can change your plan at any time. Changes take effect at your next billing cycle.</p>
               </div>
               
               <div>
-                <h4 className="font-semibold text-white mb-2">What payment methods do you accept?</h4>
-                <p className="text-white/80">We accept all major credit cards, PayPal, and other payment methods through our secure payment processor, Paddle.</p>
+                <h4 style={{ fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>What payment methods do you accept?</h4>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>We accept all major credit cards, PayPal, and other payment methods through our secure payment processor, Paddle.</p>
               </div>
               
               <div>
-                <h4 className="font-semibold text-white mb-2">Is there a free trial for Pro?</h4>
-                <p className="text-white/80">The Free tier gives you full access to core features. You can upgrade to Pro when you need advanced features.</p>
+                <h4 style={{ fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>Is there a free trial for Pro?</h4>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>The Free tier gives you full access to core features. You can upgrade to Pro when you need advanced features.</p>
               </div>
               
               <div>
-                <h4 className="font-semibold text-white mb-2">Need help choosing?</h4>
-                <p className="text-white/80">
+                <h4 style={{ fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>Need help choosing?</h4>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                   Contact us at{' '}
                   <a 
                     href="mailto:jawaid@jawaid.dev" 
-                    className="text-blue-300 hover:text-blue-200 underline transition-colors"
+                    style={{ 
+                      color: hoverStates['email-link'] ? '#93c5fd' : '#60a5fa', 
+                      textDecoration: 'underline', 
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={() => setHoverStates(prev => ({...prev, 'email-link': true}))}
+                    onMouseLeave={() => setHoverStates(prev => ({...prev, 'email-link': false}))}
                   >
                     jawaid@jawaid.dev
                   </a>{' '}

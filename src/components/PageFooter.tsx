@@ -1,49 +1,102 @@
-import React from 'react';
-import { ShoppingCart } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShoppingCart } from '@geist-ui/icons';
 
 const PageFooter: React.FC = () => {
+  const [hoverStates, setHoverStates] = useState<{[key: string]: boolean}>({});
+
   return (
-    <footer className="bg-black/40 backdrop-blur-sm text-white py-12 mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-          <div className="flex items-center mb-4 md:mb-0">
-            <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="h-5 w-5 text-white" />
+    <footer style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(4px)', color: '#ffffff', padding: '48px 0', marginTop: '64px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ height: '32px', width: '32px', background: 'linear-gradient(to right, #3b82f6, #9333ea)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShoppingCart size={20} color="#ffffff" />
             </div>
-            <span className="ml-2 text-xl font-bold">SpendLess</span>
+            <span style={{ marginLeft: '8px', fontSize: '1.25rem', fontWeight: 'bold' }}>SpendLess</span>
           </div>
-          <div className="text-white/60 text-sm">
+          <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>
             © {new Date().getFullYear()} SpendLess. All rights reserved.
           </div>
         </div>
         
         {/* Credits Section */}
-        <div className="border-t border-white/20 pt-8">
-          <div className="text-center">
-            <p className="text-white/60 text-sm mb-2">
-              Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
+        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.2)', paddingTop: '32px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px', marginBottom: '8px' }}>
+              Made with <span style={{ color: '#ef4444' }}>❤️</span> by{' '}
               <a 
                 href="https://jawaid.dev" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
+                style={{ 
+                  color: hoverStates['credit-link'] ? '#ffffff' : 'rgba(255, 255, 255, 0.8)', 
+                  fontWeight: 500, 
+                  transition: 'all 0.2s',
+                  textDecoration: hoverStates['credit-link'] ? 'underline' : 'none'
+                }}
+                onMouseEnter={() => setHoverStates(prev => ({...prev, 'credit-link': true}))}
+                onMouseLeave={() => setHoverStates(prev => ({...prev, 'credit-link': false}))}
               >
                 Muhammad Jawaid Shamshad
               </a>
             </p>
-            <p className="text-white/50 text-xs">
+            <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
               Crafted with passion for smart shoppers everywhere
             </p>
           </div>
         </div>
 
         {/* Legal & Info Links */}
-        <div className="mt-8 border-t border-white/10 pt-6">
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
-            <a href="/pricing" className="text-white/70 hover:text-white hover:underline">Pricing</a>
-            <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
-            <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
-            <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
+        <div style={{ marginTop: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '24px', fontSize: '14px' }}>
+            <a 
+              href="/pricing" 
+              style={{ 
+                color: hoverStates['link-pricing'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                textDecoration: hoverStates['link-pricing'] ? 'underline' : 'none',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-pricing': true}))}
+              onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-pricing': false}))}
+            >
+              Pricing
+            </a>
+            <a 
+              href="/privacy" 
+              style={{ 
+                color: hoverStates['link-privacy'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                textDecoration: hoverStates['link-privacy'] ? 'underline' : 'none',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-privacy': true}))}
+              onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-privacy': false}))}
+            >
+              Privacy Policy
+            </a>
+            <a 
+              href="/refund" 
+              style={{ 
+                color: hoverStates['link-refund'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                textDecoration: hoverStates['link-refund'] ? 'underline' : 'none',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-refund': true}))}
+              onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-refund': false}))}
+            >
+              Refund Policy
+            </a>
+            <a 
+              href="/terms" 
+              style={{ 
+                color: hoverStates['link-terms'] ? '#ffffff' : 'rgba(255, 255, 255, 0.7)', 
+                textDecoration: hoverStates['link-terms'] ? 'underline' : 'none',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={() => setHoverStates(prev => ({...prev, 'link-terms': true}))}
+              onMouseLeave={() => setHoverStates(prev => ({...prev, 'link-terms': false}))}
+            >
+              Terms & Conditions
+            </a>
           </div>
         </div>
       </div>
