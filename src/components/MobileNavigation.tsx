@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Package, Home, Menu, X, User, Save } from '@geist-ui/icons';
+import { ShoppingCart, Package, Home, Menu, X, User, Plus, MapPin, DollarSign, List } from '@geist-ui/icons';
 import { ViewMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import UserMenu from './UserMenu';
@@ -28,9 +28,9 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   ];
 
   const secondaryNavItems = [
-    { id: 'stores' as ViewMode, icon: '🏪', label: 'Stores' },
-    { id: 'price-manager' as ViewMode, icon: '💰', label: 'Prices' },
-    { id: 'shopping-lists' as ViewMode, icon: '📋', label: 'Lists' },
+    { id: 'stores' as ViewMode, icon: MapPin, label: 'Stores' },
+    { id: 'price-manager' as ViewMode, icon: DollarSign, label: 'Prices' },
+    { id: 'shopping-lists' as ViewMode, icon: List, label: 'Lists' },
   ];
 
   const allNavItems = [...primaryNavItems, ...secondaryNavItems];
@@ -223,7 +223,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
             {/* Desktop Navigation */}
             <div style={{ display: 'flex', gap: '4px' }}>
               {allNavItems.map((item) => {
-                const IconComponent = typeof item.icon === 'string' ? null : item.icon;
+                const IconComponent = item.icon;
                 return (
                   <button
                     key={item.id}
@@ -251,7 +251,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                       })
                     }}
                   >
-                    {IconComponent ? <IconComponent size={16} /> : <span>{item.icon}</span>}
+                    <IconComponent size={16} />
                     <span>{item.label}</span>
                     {item.badge && item.badge > 0 && (
                       <span style={{
@@ -302,7 +302,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                         cursor: 'pointer'
                       }}
                     >
-                      <span style={{ fontSize: '16px' }}>➕</span>
+                      <Plus size={16} />
                       <span>Product</span>
                     </button>
                     <button
@@ -325,7 +325,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                         cursor: 'pointer'
                       }}
                     >
-                      <span style={{ fontSize: '16px' }}>➕</span>
+                      <Plus size={16} />
                       <span>Store</span>
                     </button>
                   </div>
@@ -450,7 +450,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {/* Mobile Navigation Items */}
                   {allNavItems.map((item) => {
-                    const IconComponent = typeof item.icon === 'string' ? null : item.icon;
+                    const IconComponent = item.icon;
                     return (
                       <button
                         key={item.id}
@@ -481,7 +481,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          {IconComponent ? <IconComponent size={20} /> : <span style={{ fontSize: '20px' }}>{item.icon}</span>}
+                          <IconComponent size={20} />
                           <span style={{ fontWeight: 500 }}>{item.label}</span>
                         </div>
                         {item.badge && item.badge > 0 && (
@@ -539,7 +539,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                             cursor: 'pointer'
                           }}
                         >
-                          <span style={{ fontSize: '16px' }}>➕</span>
+                          <Plus size={16} />
                           <span>Add Product</span>
                         </button>
                         <button
@@ -566,7 +566,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                             cursor: 'pointer'
                           }}
                         >
-                          <span style={{ fontSize: '16px' }}>➕</span>
+                          <Plus size={16} />
                           <span>Add Store</span>
                         </button>
                         <div style={{

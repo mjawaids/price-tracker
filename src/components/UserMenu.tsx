@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { User, Settings, LogOut, Moon, Sun } from '@geist-ui/icons'
+import { User, Settings, LogOut, Moon, Sun, Monitor, Key, ChevronDown } from '@geist-ui/icons'
 import { Button, Text } from '@geist-ui/core'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -55,7 +55,7 @@ const UserMenu: React.FC = () => {
         }}>
           {user.user_metadata?.full_name || user.email?.split('@')[0]}
         </span>
-        <span style={{ fontSize: '16px' }}>▼</span>
+        <ChevronDown size={16} />
       </button>
 
       {isOpen && (
@@ -178,7 +178,7 @@ const UserMenu: React.FC = () => {
                       })
                     }}
                   >
-                    <span>⚙</span>
+                    <Monitor size={12} />
                     <span>Auto</span>
                   </button>
                 </div>
@@ -229,7 +229,7 @@ const UserMenu: React.FC = () => {
                   color: 'white'
                 }}
               >
-                <span style={{ marginRight: '8px', fontSize: '16px' }}>🔑</span>
+                <Key size={16} style={{ marginRight: '8px' }} />
                 Change Password
               </button>
               

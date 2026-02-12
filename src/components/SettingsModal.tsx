@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from '@geist-ui/icons';
+import { X, Globe, Bell, RotateCcw } from '@geist-ui/icons';
 import { Modal, Text, Button, Card } from '@geist-ui/core';
 import { useSettings } from '../contexts/SettingsContext';
 import { CURRENCIES } from '../utils/currency';
@@ -138,7 +138,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   })
                 }}
               >
-                🌐 General
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Globe size={16} />
+                  <span>General</span>
+                </div>
               </button>
               <button
                 onClick={() => setActiveTab('appearance')}
@@ -162,7 +165,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   })
                 }}
               >
-                🎨 Appearance
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🎨</span>
+                  <span>Appearance</span>
+                </div>
               </button>
               <button
                 onClick={() => setActiveTab('notifications')}
@@ -186,7 +192,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   })
                 }}
               >
-                🔔 Notifications
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Bell size={16} />
+                  <span>Notifications</span>
+                </div>
               </button>
             </nav>
           </div>
@@ -389,9 +398,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 onClick={handleReset}
                 type="error"
                 ghost
-                style={{ minHeight: '48px' }}
+                style={{ minHeight: '48px', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                🔄 Reset to Defaults
+                <RotateCcw size={16} />
+                <span>Reset to Defaults</span>
               </Button>
             </div>
           </div>

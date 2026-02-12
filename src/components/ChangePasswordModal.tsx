@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Eye, EyeOff } from '@geist-ui/icons';
+import { X, Lock, Eye, EyeOff, Check } from '@geist-ui/icons';
 import { Modal, Input, Button, Text, Card } from '@geist-ui/core';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -91,7 +91,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Text h3 my={0} style={{ color: '#10B981' }}>✓</Text>
+                <Check size={32} color="#10B981" />
               </div>
             </div>
             <Text h4 my={0} style={{ marginBottom: '8px' }}>Password Updated!</Text>
