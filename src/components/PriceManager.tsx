@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, DollarSign, Calendar, CheckCircle, X } from 'lucide-react';
+import { Plus, Edit, Trash, DollarSign, Calendar, Check, X } from '@geist-ui/icons';
+import { Card, Button, Input, Select, Modal, Text } from '@geist-ui/core';
 import { Product, Store, Price } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import { CURRENCIES, formatPrice } from '../utils/currency';
@@ -138,249 +139,244 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
   };
 
   return (
-    <div className="space-y-6">
-      <div className="relative gradient-border shadow-xl rounded-2xl group hover:shadow-2xl transition-all duration-300 gradient-border-hover overflow-hidden">
-        {/* Content */}
-        <div className="relative z-10 bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-white/20">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Price Management</h2>
-          <p className="text-sm text-gray-500 dark:text-white/60 mt-1">Add and update prices for your products across different stores</p>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Product and Variant Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Select Product
-              </label>
-              <select
-                value={selectedProduct}
-                onChange={(e) => {
-                  setSelectedProduct(e.target.value);
-                  setSelectedVariant('');
-                }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="">Choose a product</option>
-                {products.map(product => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} - {product.brand}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {selectedProduct && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <Card width="100%">
+        <Card.Content style={{ padding: 0 }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <Text h3 my={0}>Price Management</Text>
+            <Text small style={{ opacity: 0.6, marginTop: '4px' }}>Add and update prices for your products across different stores</Text>
+          </div>
+          
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: selectedProduct ? 'repeat(auto-fit, minmax(250px, 1fr))' : '1fr', 
+              gap: '24px' 
+            }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Variant
-                </label>
-                <select
-                  value={selectedVariant}
-                  onChange={(e) => setSelectedVariant(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>Select Product</Text>
+                <Select
+                  value={selectedProduct}
+                  onChange={(val) => {
+                    setSelectedProduct(val as string);
+                    setSelectedVariant('');
+                  }}
+                  placeholder="Choose a product"
+                  width="100%"
                 >
-                  <option value="">Choose a variant</option>
-                  {selectedProductData?.variants.map(variant => (
-                    <option key={variant.id} value={variant.id}>
-                      {variant.name}
-                    </option>
+                  {products.map(product => (
+                    <Select.Option key={product.id} value={product.id}>
+                      {product.name} - {product.brand}
+                    </Select.Option>
                   ))}
-                </select>
+                </Select>
+              </div>
+              
+              {selectedProduct && (
+                <div>
+                  <Text small b style={{ marginBottom: '8px', display: 'block' }}>Select Variant</Text>
+                  <Select
+                    value={selectedVariant}
+                    onChange={(val) => setSelectedVariant(val as string)}
+                    placeholder="Choose a variant"
+                    width="100%"
+                  >
+                    {selectedProductData?.variants.map(variant => (
+                      <Select.Option key={variant.id} value={variant.id}>
+                        {variant.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {selectedVariant && selectedVariantData && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
+                  <Text h4 my={0}>Current Prices</Text>
+                  <Button
+                    onClick={() => setShowAddPriceModal(true)}
+                    type="success"
+                    icon={<Plus size={16} />}
+                    auto
+                  >
+                    Add Price
+                  </Button>
+                </div>
+                
+                <Card style={{ padding: '16px' }}>
+                  <Text b style={{ marginBottom: '12px', display: 'block' }}>
+                    {selectedProductData?.name} - {selectedVariantData.name}
+                  </Text>
+                  
+                  {selectedVariantData.prices.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px' }}>
+                      <Text style={{ opacity: 0.6 }}>No prices added yet</Text>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {selectedVariantData.prices.map((price) => (
+                        <div key={price.id} style={{
+                          padding: '16px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '16px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: '200px' }}>
+                            <div style={{
+                              width: '12px',
+                              height: '12px',
+                              borderRadius: '50%',
+                              backgroundColor: price.isAvailable ? '#10B981' : '#f31260',
+                              flexShrink: 0
+                            }} />
+                            <div style={{ minWidth: 0 }}>
+                              <Text b style={{ marginBottom: '4px', display: 'block' }}>{getStoreName(price.storeId)}</Text>
+                              <Text small style={{ opacity: 0.6 }}>
+                                Updated {new Date(price.lastUpdated).toLocaleDateString()}
+                              </Text>
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <Text b style={{ fontSize: '18px', display: 'block' }}>
+                                {formatPrice(price.price, settings.currency)}
+                              </Text>
+                              {price.discountPercentage && (
+                                <Text small style={{ color: '#10B981' }}>
+                                  {price.discountPercentage}% off
+                                </Text>
+                              )}
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                onClick={() => handleEditPrice(price)}
+                                style={{
+                                  padding: '8px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  opacity: 0.6,
+                                  transition: 'opacity 0.2s'
+                                }}
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePrice(price.id)}
+                                style={{
+                                  padding: '8px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  color: '#f31260',
+                                  opacity: 0.8,
+                                  transition: 'opacity 0.2s'
+                                }}
+                              >
+                                <Trash size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
               </div>
             )}
           </div>
+        </Card.Content>
+      </Card>
 
-          {/* Current Prices */}
-          {selectedVariant && selectedVariantData && (
+      <Modal visible={showAddPriceModal} onClose={resetForm}>
+        <Modal.Title>{editingPrice ? 'Edit Price' : 'Add New Price'}</Modal.Title>
+        <Modal.Content>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0' }}>
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Current Prices</h3>
-                <button
-                  onClick={() => setShowAddPriceModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Price</span>
-                </button>
-              </div>
-              
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-                  {selectedProductData?.name} - {selectedVariantData.name}
-                </h4>
-                
-                {selectedVariantData.prices.length === 0 ? (
-                  <p className="text-gray-500 dark:text-white/60 text-center py-8">No prices added yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {selectedVariantData.prices.map((price) => (
-                      <div key={price.id} className="bg-white dark:bg-gray-900/50 rounded-lg p-4 flex items-center justify-between border border-gray-200 dark:border-white/10">
-                        <div className="flex items-center space-x-4">
-                          <div className={`w-3 h-3 rounded-full ${price.isAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
-                          <div>
-                            <h5 className="font-medium text-gray-900 dark:text-white">{getStoreName(price.storeId)}</h5>
-                            <p className="text-sm text-gray-500 dark:text-white/60">
-                              Updated {new Date(price.lastUpdated).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                              {formatPrice(price.price, settings.currency)}
-                            </div>
-                            {price.discountPercentage && (
-                              <div className="text-sm text-green-600">
-                                {price.discountPercentage}% off
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="flex space-x-1">
-                            <button
-                              onClick={() => handleEditPrice(price)}
-                              className="p-2 text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/80 transition-colors duration-200"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeletePrice(price.id)}
-                              className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors duration-200"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-        </div>
-      </div>
-
-      {/* Add/Edit Price Modal */}
-      {showAddPriceModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl max-w-md w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-            <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {editingPrice ? 'Edit Price' : 'Add New Price'}
-                </h3>
-                <button
-                  onClick={resetForm}
-                  className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              <Text small b style={{ marginBottom: '8px', display: 'block' }}>Store</Text>
+              <Select
+                value={newPrice.storeId}
+                onChange={(val) => setNewPrice({ ...newPrice, storeId: val as string })}
+                placeholder="Select a store"
+                width="100%"
+              >
+                {stores.map(store => (
+                  <Select.Option key={store.id} value={store.id}>
+                    {store.name} ({store.type})
+                  </Select.Option>
+                ))}
+              </Select>
             </div>
             
-            <div className="p-6 space-y-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Store
-                </label>
-                <select
-                  value={newPrice.storeId}
-                  onChange={(e) => setNewPrice({ ...newPrice, storeId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                >
-                  <option value="">Select a store</option>
-                  {stores.map(store => (
-                    <option key={store.id} value={store.id}>
-                      {store.name} ({store.type})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Price
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newPrice.price}
-                    onChange={(e) => setNewPrice({ ...newPrice, price: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Currency
-                  </label>
-                  <select
-                    value={newPrice.currency}
-                    onChange={(e) => setNewPrice({ ...newPrice, currency: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  >
-                    {CURRENCIES.map(currency => (
-                      <option key={currency.code} value={currency.code}>
-                        {currency.flag} {currency.code} - {currency.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Discount Percentage (Optional)
-                </label>
-                <input
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>Price</Text>
+                <Input
                   type="number"
-                  step="0.1"
-                  value={newPrice.discountPercentage}
-                  onChange={(e) => setNewPrice({ ...newPrice, discountPercentage: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="0"
+                  step="0.01"
+                  value={newPrice.price}
+                  onChange={(e) => setNewPrice({ ...newPrice, price: e.target.value })}
+                  placeholder="0.00"
+                  width="100%"
                 />
               </div>
               
               <div>
-                <label className="flex items-center text-gray-700 dark:text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={newPrice.isAvailable}
-                    onChange={(e) => setNewPrice({ ...newPrice, isAvailable: e.target.checked })}
-                    className="mr-2"
-                  />
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Available in stock
-                </label>
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>Currency</Text>
+                <Select
+                  value={newPrice.currency}
+                  onChange={(val) => setNewPrice({ ...newPrice, currency: val as string })}
+                  width="100%"
+                >
+                  {CURRENCIES.map(currency => (
+                    <Select.Option key={currency.code} value={currency.code}>
+                      {currency.flag} {currency.code}
+                    </Select.Option>
+                  ))}
+                </Select>
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-700/50 rounded-b-2xl flex justify-end space-x-2">
-              <button
-                onClick={resetForm}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={editingPrice ? handleUpdatePrice : handleAddPrice}
-                disabled={!newPrice.storeId || !newPrice.price}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                {editingPrice ? 'Update Price' : 'Add Price'}
-              </button>
+            <div>
+              <Text small b style={{ marginBottom: '8px', display: 'block' }}>Discount Percentage (Optional)</Text>
+              <Input
+                type="number"
+                step="0.1"
+                value={newPrice.discountPercentage}
+                onChange={(e) => setNewPrice({ ...newPrice, discountPercentage: e.target.value })}
+                placeholder="0"
+                width="100%"
+              />
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                checked={newPrice.isAvailable}
+                onChange={(e) => setNewPrice({ ...newPrice, isAvailable: e.target.checked })}
+                style={{ cursor: 'pointer' }}
+              />
+              <Check size={16} style={{ opacity: 0.6 }} />
+              <Text small>Available in stock</Text>
             </div>
           </div>
-        </div>
-      )}
+        </Modal.Content>
+        <Modal.Action passive onClick={resetForm}>Cancel</Modal.Action>
+        <Modal.Action 
+          onClick={editingPrice ? handleUpdatePrice : handleAddPrice}
+          disabled={!newPrice.storeId || !newPrice.price}
+        >
+          {editingPrice ? 'Update Price' : 'Add Price'}
+        </Modal.Action>
+      </Modal>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Save, X, MapPin, Globe, Truck } from 'lucide-react';
+import { Save, X } from '@geist-ui/icons';
+import { Card, Button, Input, Modal, Text } from '@geist-ui/core';
 import { Store } from '../types';
 
 interface EditStoreProps {
@@ -43,90 +44,105 @@ const EditStore: React.FC<EditStoreProps> = ({ store, onUpdateStore, onCancel })
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Edit Store</h2>
-            <button
-              onClick={onCancel}
-              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px',
+      zIndex: 50
+    }}>
+      <div style={{
+        backgroundColor: 'var(--geist-background)',
+        borderRadius: '12px',
+        maxWidth: '600px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'auto'
+      }}>
+        <div style={{
+          padding: '16px 24px',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Text h3 my={0}>Edit Store</Text>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '8px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              opacity: 0.6,
+              transition: 'opacity 0.2s'
+            }}
+          >
+            <X size={20} />
+          </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Store Name *
-            </label>
-            <input
-              type="text"
+            <Text small b style={{ marginBottom: '8px', display: 'block' }}>Store Name *</Text>
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Enter store name"
+              width="100%"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Store Type *
-            </label>
-            <div className="flex space-x-4">
-              <label className="flex items-center text-gray-700 dark:text-gray-300">
+            <Text small b style={{ marginBottom: '8px', display: 'block' }}>Store Type *</Text>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                 <input
                   type="radio"
                   value="physical"
                   checked={type === 'physical'}
                   onChange={(e) => setType(e.target.value as 'physical')}
-                  className="mr-2 text-blue-600 focus:ring-blue-500"
+                  style={{ cursor: 'pointer' }}
                 />
-                <MapPin className="h-4 w-4 mr-1" />
-                Physical Store
+                <Text small>Physical Store</Text>
               </label>
-              <label className="flex items-center text-gray-700 dark:text-gray-300">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                 <input
                   type="radio"
                   value="online"
                   checked={type === 'online'}
                   onChange={(e) => setType(e.target.value as 'online')}
-                  className="mr-2 text-blue-600 focus:ring-blue-500"
+                  style={{ cursor: 'pointer' }}
                 />
-                <Globe className="h-4 w-4 mr-1" />
-                Online Store
+                <Text small>Online Store</Text>
               </label>
             </div>
           </div>
 
           {type === 'physical' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Address
-                </label>
-                <input
-                  type="text"
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>Address</Text>
+                <Input
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   placeholder="Enter store address"
+                  width="100%"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  City
-                </label>
-                <input
-                  type="text"
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>City</Text>
+                <Input
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   placeholder="Enter city"
+                  width="100%"
                 />
               </div>
             </div>
@@ -134,91 +150,80 @@ const EditStore: React.FC<EditStoreProps> = ({ store, onUpdateStore, onCancel })
 
           {type === 'online' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Website
-              </label>
-              <input
+              <Text small b style={{ marginBottom: '8px', display: 'block' }}>Website</Text>
+              <Input
                 type="url"
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 placeholder="https://example.com"
+                width="100%"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Phone Number
-            </label>
-            <input
+            <Text small b style={{ marginBottom: '8px', display: 'block' }}>Phone Number</Text>
+            <Input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Enter phone number"
+              width="100%"
             />
           </div>
 
           <div>
-            <label className="flex items-center text-gray-700 dark:text-gray-300">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={hasDelivery}
                 onChange={(e) => setHasDelivery(e.target.checked)}
-                className="mr-2 text-blue-600 focus:ring-blue-500"
+                style={{ cursor: 'pointer' }}
               />
-              <Truck className="h-4 w-4 mr-1" />
-              Offers Delivery
+              <Text small>Offers Delivery</Text>
             </label>
           </div>
 
           {hasDelivery && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Delivery Radius (km)
-                </label>
-                <input
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>Delivery Radius (km)</Text>
+                <Input
                   type="number"
                   value={deliveryRadius}
                   onChange={(e) => setDeliveryRadius(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   placeholder="Enter delivery radius"
+                  width="100%"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Delivery Fee
-                </label>
-                <input
+                <Text small b style={{ marginBottom: '8px', display: 'block' }}>Delivery Fee</Text>
+                <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={deliveryFee}
                   onChange={(e) => setDeliveryFee(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   placeholder="Enter delivery fee"
+                  width="100%"
                 />
               </div>
             </div>
           )}
 
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <Button
+              type="success"
+              htmlType="submit"
+              icon={<Save size={16} />}
             >
-              <Save className="h-4 w-4" />
-              <span>Update Store</span>
-            </button>
-            <button
-              type="button"
+              Update Store
+            </Button>
+            <Button
               onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { X, Mail, Lock, User, Eye, EyeOff } from '@geist-ui/icons'
+import { Modal, Card, Button, Input, Text, Spacer } from '@geist-ui/core'
 import { useAuth } from '../contexts/AuthContext'
 
 interface AuthModalProps {
@@ -78,186 +79,177 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 w-full max-w-md">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 50,
+      padding: '1rem'
+    }}>
+      <Card style={{
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        maxWidth: '28rem',
+        width: '100%'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '1.5rem',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+        }}>
+          <Text h3 style={{ margin: 0 }}>
             {mode === 'signin' && 'Sign In'}
             {mode === 'signup' && 'Create Account'}
             {mode === 'forgot' && 'Reset Password'}
-          </h2>
-          <button
+          </Text>
+          <Button
+            icon={<X />}
+            auto
+            scale={0.8}
+            px={0.6}
             onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+            type="abort"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {message && (
-            <div className={`p-3 rounded-lg text-sm ${
-              message.type === 'success' 
-                ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800' 
-                : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-            }`}>
+            <div style={{
+              padding: '0.75rem',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              backgroundColor: message.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              color: message.type === 'success' ? '#16a34a' : '#dc2626',
+              border: `1px solid ${message.type === 'success' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+            }}>
               {message.text}
             </div>
           )}
 
           {mode === 'signup' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  placeholder="Enter your full name"
-                  required
-                />
-              </div>
+              <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Full Name</Text>
+              <Input
+                width="100%"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Enter your full name"
+                required
+                icon={<User />}
+              />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
+            <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Email</Text>
+            <Input
+              width="100%"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+              icon={<Mail />}
+            />
           </div>
 
           {mode !== 'forgot' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  placeholder="Enter your password"
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
+              <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Password</Text>
+              <Input.Password
+                width="100%"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+              />
             </div>
           )}
 
           {mode === 'signup' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  placeholder="Confirm your password"
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
+              <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Confirm Password</Text>
+              <Input.Password
+                width="100%"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
+                required
+              />
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+          <Button
+            htmlType="submit"
+            loading={loading}
+            type="secondary"
+            width="100%"
+            style={{
+              background: 'linear-gradient(to right, #2563eb, #9333ea)',
+              color: 'white'
+            }}
           >
-            {loading ? 'Please wait...' : (
-              mode === 'signin' ? 'Sign In' : 
-              mode === 'signup' ? 'Create Account' : 
-              'Send Reset Email'
-            )}
-          </button>
+            {mode === 'signin' ? 'Sign In' : 
+             mode === 'signup' ? 'Create Account' : 
+             'Send Reset Email'}
+          </Button>
 
-          <div className="text-center space-y-2">
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {mode === 'signin' && (
               <>
-                <button
-                  type="button"
+                <Button
+                  auto
+                  type="abort"
+                  scale={0.75}
                   onClick={() => setMode('forgot')}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  style={{ textDecoration: 'underline' }}
                 >
                   Forgot your password?
-                </button>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                </Button>
+                <Text small style={{ color: 'rgba(0, 0, 0, 0.6)' }}>
                   Don't have an account?{' '}
-                  <button
-                    type="button"
+                  <span
                     onClick={() => setMode('signup')}
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 500, textDecoration: 'underline' }}
                   >
                     Sign up
-                  </button>
-                </p>
+                  </span>
+                </Text>
               </>
             )}
             
             {mode === 'signup' && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <Text small style={{ color: 'rgba(0, 0, 0, 0.6)' }}>
                 Already have an account?{' '}
-                <button
-                  type="button"
+                <span
                   onClick={() => setMode('signin')}
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                  style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 500, textDecoration: 'underline' }}
                 >
                   Sign in
-                </button>
-              </p>
+                </span>
+              </Text>
             )}
             
             {mode === 'forgot' && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <Text small style={{ color: 'rgba(0, 0, 0, 0.6)' }}>
                 Remember your password?{' '}
-                <button
-                  type="button"
+                <span
                   onClick={() => setMode('signin')}
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                  style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 500, textDecoration: 'underline' }}
                 >
                   Sign in
-                </button>
-              </p>
+                </span>
+              </Text>
             )}
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }

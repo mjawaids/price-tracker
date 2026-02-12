@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Minus, Save, X } from 'lucide-react';
+import { Plus, Minus, X } from '@geist-ui/icons';
+import { Save } from '@geist-ui/icons';
+import { Card, Button, Input, Select, Text, Spacer } from '@geist-ui/core';
 import { Product, ProductVariant } from '../types';
 
 interface AddProductProps {
@@ -66,170 +68,164 @@ const AddProduct: React.FC<AddProductProps> = ({ onAddProduct, onCancel }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl shadow rounded-lg border border-gray-200/50 dark:border-gray-700/50">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700/50">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Add New Product</h2>
-            <button
-              onClick={onCancel}
-              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+    <div style={{ maxWidth: '896px', margin: '0 auto' }}>
+      <Card style={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+        <div style={{ 
+          padding: '1.5rem', 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Text h3 style={{ margin: 0 }}>Add New Product</Text>
+          <Button
+            icon={<X />}
+            auto
+            scale={0.8}
+            px={0.6}
+            onClick={onCancel}
+            type="abort"
+          />
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Product Name *
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Enter product name"
-                required
-              />
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+              <div>
+                <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Product Name *</Text>
+                <Input
+                  width="100%"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter product name"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Category *</Text>
+                <Select
+                  placeholder="Select a category"
+                  value={category}
+                  onChange={(val) => setCategory(val as string)}
+                  width="100%"
+                >
+                  {categories.map(cat => (
+                    <Select.Option key={cat} value={cat}>{cat}</Select.Option>
+                  ))}
+                </Select>
+              </div>
+              
+              <div>
+                <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Brand</Text>
+                <Input
+                  width="100%"
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  placeholder="Enter brand name"
+                />
+              </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Category *
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                required
-              >
-                <option value="">Select a category</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Brand
-              </label>
-              <input
-                type="text"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Enter brand name"
-              />
-            </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Product Variants</h3>
-              <button
-                type="button"
-                onClick={addVariant}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Variant</span>
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {variants.map((variant, index) => (
-                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium text-gray-900 dark:text-white">Variant {index + 1}</h4>
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(index)}
-                        className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors duration-200"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Variant Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={variant.name}
-                        onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        placeholder="e.g., 500ml, Large, Red"
-                        required
-                      />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <Text h4 style={{ margin: 0 }}>Product Variants</Text>
+                <Button
+                  icon={<Plus />}
+                  auto
+                  scale={0.75}
+                  onClick={addVariant}
+                  type="secondary"
+                >
+                  Add Variant
+                </Button>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {variants.map((variant, index) => (
+                  <Card key={index} style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                      <Text b>Variant {index + 1}</Text>
+                      {variants.length > 1 && (
+                        <Button
+                          icon={<Minus />}
+                          auto
+                          scale={0.6}
+                          px={0.6}
+                          onClick={() => removeVariant(index)}
+                          type="error"
+                        />
+                      )}
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Specifications
-                      </label>
-                      <div className="space-y-2">
-                        {Object.entries(variant.specifications).map(([key, value]) => (
-                          <div key={key} className="flex items-center space-x-2">
-                            <input
-                              type="text"
-                              value={key}
-                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                              placeholder="Property"
-                              readOnly
-                            />
-                            <input
-                              type="text"
-                              value={value}
-                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                              placeholder="Value"
-                              readOnly
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeSpecification(index, key)}
-                              className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors duration-200"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                        <SpecificationInput
-                          onAdd={(key, value) => addSpecification(index, key, value)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div>
+                        <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Variant Name *</Text>
+                        <Input
+                          width="100%"
+                          value={variant.name}
+                          onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                          placeholder="e.g., 500ml, Large, Red"
+                          required
                         />
                       </div>
+                      
+                      <div>
+                        <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Specifications</Text>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {Object.entries(variant.specifications).map(([key, value]) => (
+                            <div key={key} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <Input
+                                width="100%"
+                                value={key}
+                                placeholder="Property"
+                                readOnly
+                              />
+                              <Input
+                                width="100%"
+                                value={value}
+                                placeholder="Value"
+                                readOnly
+                              />
+                              <Button
+                                icon={<X />}
+                                auto
+                                scale={0.6}
+                                px={0.6}
+                                onClick={() => removeSpecification(index, key)}
+                                type="error"
+                              />
+                            </div>
+                          ))}
+                          <SpecificationInput
+                            onAdd={(key, value) => addSpecification(index, key, value)}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <Button
+                icon={<Save />}
+                type="success"
+                htmlType="submit"
+              >
+                Save Product
+              </Button>
+              <Button
+                type="abort"
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-            >
-              <Save className="h-4 w-4" />
-              <span>Save Product</span>
-            </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-            >
-              Cancel
-            </button>
-          </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 };
@@ -247,28 +243,27 @@ const SpecificationInput: React.FC<{ onAdd: (key: string, value: string) => void
   };
 
   return (
-    <div className="flex items-center space-x-2">
-      <input
-        type="text"
+    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <Input
+        width="100%"
         value={key}
         onChange={(e) => setKey(e.target.value)}
-        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         placeholder="Property (e.g., Size, Color, Weight)"
       />
-      <input
-        type="text"
+      <Input
+        width="100%"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         placeholder="Value (e.g., 500ml, Red, 1kg)"
       />
-      <button
-        type="button"
+      <Button
+        icon={<Plus />}
+        auto
+        scale={0.6}
+        px={0.6}
         onClick={handleAdd}
-        className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200"
-      >
-        <Plus className="h-4 w-4" />
-      </button>
+        type="success"
+      />
     </div>
   );
 };

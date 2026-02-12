@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Save, X, MapPin, Globe, Truck } from 'lucide-react';
+import { X, MapPin, Globe, Truck } from '@geist-ui/icons';
+import { Save } from '@geist-ui/icons';
+import { Card, Button, Input, Radio, Text, Checkbox } from '@geist-ui/core';
 import { Store } from '../types';
 
 interface AddStoreProps {
@@ -41,185 +43,162 @@ const AddStore: React.FC<AddStoreProps> = ({ onAddStore, onCancel }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl shadow rounded-lg border border-gray-200/50 dark:border-gray-700/50">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700/50">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Add New Store</h2>
-            <button
-              onClick={onCancel}
-              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <Card style={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+        <div style={{ 
+          padding: '1.5rem', 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Text h3 style={{ margin: 0 }}>Add New Store</Text>
+          <Button
+            icon={<X />}
+            auto
+            scale={0.8}
+            px={0.6}
+            onClick={onCancel}
+            type="abort"
+          />
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Store Name *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              placeholder="Enter store name"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Store Type *
-            </label>
-            <div className="flex space-x-4">
-              <label className="flex items-center text-gray-700 dark:text-gray-300">
-                <input
-                  type="radio"
-                  value="physical"
-                  checked={type === 'physical'}
-                  onChange={(e) => setType(e.target.value as 'physical')}
-                  className="mr-2 text-blue-600 focus:ring-blue-500"
-                />
-                <MapPin className="h-4 w-4 mr-1" />
-                Physical Store
-              </label>
-              <label className="flex items-center text-gray-700 dark:text-gray-300">
-                <input
-                  type="radio"
-                  value="online"
-                  checked={type === 'online'}
-                  onChange={(e) => setType(e.target.value as 'online')}
-                  className="mr-2 text-blue-600 focus:ring-blue-500"
-                />
-                <Globe className="h-4 w-4 mr-1" />
-                Online Store
-              </label>
-            </div>
-          </div>
-
-          {type === 'physical' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Address
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="Enter store address"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  City
-                </label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="Enter city"
-                />
-              </div>
-            </div>
-          )}
-
-          {type === 'online' && (
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Website
-              </label>
-              <input
-                type="url"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="https://example.com"
+              <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Store Name *</Text>
+              <Input
+                width="100%"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter store name"
+                required
               />
             </div>
-          )}
+            
+            <div>
+              <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Store Type *</Text>
+              <Radio.Group value={type} onChange={(val) => setType(val as 'physical' | 'online')}>
+                <Radio value="physical">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <MapPin size={16} />
+                    Physical Store
+                  </div>
+                </Radio>
+                <Radio value="online">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Globe size={16} />
+                    Online Store
+                  </div>
+                </Radio>
+              </Radio.Group>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              placeholder="Enter phone number"
-            />
-          </div>
+            {type === 'physical' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                <div>
+                  <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Address</Text>
+                  <Input
+                    width="100%"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Enter store address"
+                  />
+                </div>
+                
+                <div>
+                  <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>City</Text>
+                  <Input
+                    width="100%"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Enter city"
+                  />
+                </div>
+              </div>
+            )}
 
-          <div>
-            <label className="flex items-center text-gray-700 dark:text-gray-300">
-              <input
-                type="checkbox"
-                checked={hasDelivery}
+            {type === 'online' && (
+              <div>
+                <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Website</Text>
+                <Input
+                  width="100%"
+                  type="url"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://example.com"
+                />
+              </div>
+            )}
+
+            <div>
+              <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Phone Number</Text>
+              <Input
+                width="100%"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Enter phone number"
+              />
+            </div>
+
+            <div>
+              <Checkbox 
+                checked={hasDelivery} 
                 onChange={(e) => setHasDelivery(e.target.checked)}
-                className="mr-2 text-blue-600 focus:ring-blue-500"
-              />
-              <Truck className="h-4 w-4 mr-1" />
-              Offers Delivery
-            </label>
-          </div>
-
-          {hasDelivery && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Delivery Radius (km)
-                </label>
-                <input
-                  type="number"
-                  value={deliveryRadius}
-                  onChange={(e) => setDeliveryRadius(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="Enter delivery radius"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Delivery Fee
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={deliveryFee}
-                  onChange={(e) => setDeliveryFee(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="Enter delivery fee"
-                />
-              </div>
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Truck size={16} />
+                  Offers Delivery
+                </div>
+              </Checkbox>
             </div>
-          )}
 
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-            >
-              <Save className="h-4 w-4" />
-              <span>Save Store</span>
-            </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-            >
-              Cancel
-            </button>
+            {hasDelivery && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                <div>
+                  <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Delivery Radius (km)</Text>
+                  <Input
+                    width="100%"
+                    type="number"
+                    value={deliveryRadius}
+                    onChange={(e) => setDeliveryRadius(e.target.value)}
+                    placeholder="Enter delivery radius"
+                  />
+                </div>
+                <div>
+                  <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Delivery Fee</Text>
+                  <Input
+                    width="100%"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={deliveryFee}
+                    onChange={(e) => setDeliveryFee(e.target.value)}
+                    placeholder="Enter delivery fee"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <Button
+                icon={<Save />}
+                type="success"
+                htmlType="submit"
+              >
+                Save Store
+              </Button>
+              <Button
+                type="abort"
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 };

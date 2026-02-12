@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { CreditCard as Edit, Trash2, DollarSign, Package, Store, ChevronDown, ChevronRight } from 'lucide-react';
+import { Edit, Trash, DollarSign, Package, Home as Store, ChevronDown, ChevronRight } from '@geist-ui/icons';
+import { Card, Text, Button } from '@geist-ui/core';
 import { Product, Store as StoreType } from '../types';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
@@ -85,119 +86,162 @@ const ProductList: React.FC<ProductListProps> = ({
 
   if (products.length === 0) {
     return (
-      <div className="glass-card shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300 overflow-hidden">
-        <div className="p-12 text-center">
-          <Package className="h-12 w-12 text-white/40 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No products yet</h3>
-          <p className="text-white/60">Add your first product to start tracking prices across different stores.</p>
-        </div>
-      </div>
+      <Card width="100%">
+        <Card.Content>
+          <div style={{ padding: '48px', textAlign: 'center' }}>
+            <Package size={48} style={{ margin: '0 auto 16px', opacity: 0.4 }} />
+            <Text h3 my={0} style={{ marginBottom: '8px' }}>No products yet</Text>
+            <Text style={{ opacity: 0.6 }}>Add your first product to start tracking prices across different stores.</Text>
+          </div>
+        </Card.Content>
+      </Card>
     );
   }
 
   return (
     <>
-      <div className="space-y-3 md:space-y-6">
-        <div className="glass-card shadow-lg md:shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300 overflow-hidden">
-          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
-            <h2 className="text-base md:text-lg font-medium text-white">Products</h2>
-          </div>
-          
-          <div className="divide-y divide-white/10">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <Card width="100%">
+          <Card.Content style={{ padding: 0 }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <Text h4 my={0}>Products</Text>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {products.map((product) => {
                 const cheapestPrice = getCheapestPrice(product);
                 const isExpanded = expandedProducts.has(product.id);
 
                 return (
-                  <div key={product.id}>
-                    <div className="p-3 md:p-6 md:hover:bg-white/5 transition-colors duration-200 active:bg-white/5 md:active:bg-transparent">
-                      <div className="flex items-start justify-between gap-2 md:gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-2 md:gap-3">
+                  <div key={product.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                             <button
                               onClick={() => toggleExpandProduct(product.id)}
-                              className="p-3 md:p-2 text-white/40 hover:text-white/60 transition-colors duration-200 flex-shrink-0 touch-target active:scale-95"
+                              style={{
+                                padding: '8px',
+                                opacity: 0.4,
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                transition: 'opacity 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
                             >
                               {isExpanded ? (
-                                <ChevronDown className="h-4 md:h-5 w-4 md:w-5" />
+                                <ChevronDown size={20} />
                               ) : (
-                                <ChevronRight className="h-4 md:h-5 w-4 md:w-5" />
+                                <ChevronRight size={20} />
                               )}
                             </button>
-                            <div className="flex-shrink-0">
-                              <Package className="h-5 md:h-8 w-5 md:w-8 text-blue-600 dark:text-blue-400" />
+                            <div style={{ flexShrink: 0 }}>
+                              <Package size={32} color="#3B82F6" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm md:text-lg font-medium text-white truncate">{product.name}</h3>
-                              <div className="flex items-center gap-1 md:gap-4 mt-1 flex-wrap">
-                                {product.brand && <span className="text-xs md:text-sm text-white/60 truncate">{product.brand}</span>}
-                                <span className="inline-flex items-center px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 flex-shrink-0">
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <Text b style={{ marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{product.name}</Text>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                                {product.brand && <Text small style={{ opacity: 0.6, overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.brand}</Text>}
+                                <span style={{ 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center', 
+                                  padding: '2px 10px', 
+                                  borderRadius: '16px', 
+                                  fontSize: '12px', 
+                                  fontWeight: 500,
+                                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                  color: '#3B82F6'
+                                }}>
                                   {product.category}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="mt-2 md:mt-4 ml-7 md:ml-11">
-                            <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
-                              <span className="text-xs md:text-sm font-medium text-white/80">Variants:</span>
-                              <span className="text-xs md:text-sm text-white/60">{product.variants.length} available</span>
+                          <div style={{ marginTop: '16px', marginLeft: '52px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                              <Text small b style={{ opacity: 0.8 }}>Variants:</Text>
+                              <Text small style={{ opacity: 0.6 }}>{product.variants.length} available</Text>
                             </div>
 
                             {cheapestPrice && (
-                              <div className="flex items-center gap-1 md:gap-2">
-                                <DollarSign className="h-3 md:h-4 w-3 md:w-4 text-green-400 flex-shrink-0" />
-                                <span className="text-xs md:text-sm text-white/80 truncate">
-                                  Best: <span className="font-medium text-green-400">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <DollarSign size={16} color="#10B981" />
+                                <Text small style={{ opacity: 0.8 }}>
+                                  Best: <Text small b style={{ color: '#10B981', display: 'inline' }}>
                                     {formatPrice(cheapestPrice.price, settings.currency)}
-                                  </span>
-                                </span>
+                                  </Text>
+                                </Text>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                           <button
                             onClick={() => handleEditProduct(product)}
-                            className="p-3 md:p-2 text-white/40 hover:text-blue-400 transition-colors duration-200 touch-target active:scale-95"
+                            style={{
+                              padding: '8px',
+                              opacity: 0.4,
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'opacity 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
                           >
-                            <Edit className="h-4 md:h-5 w-4 md:w-5" />
+                            <Edit size={20} color="#3B82F6" />
                           </button>
                           <button
                             onClick={() => onDeleteProduct(product.id)}
-                            className="p-3 md:p-2 text-white/40 hover:text-red-400 transition-colors duration-200 touch-target active:scale-95"
+                            style={{
+                              padding: '8px',
+                              opacity: 0.4,
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'opacity 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
                           >
-                            <Trash2 className="h-4 md:h-5 w-4 md:w-5" />
+                            <Trash size={20} color="#EF4444" />
                           </button>
                         </div>
                       </div>
                     </div>
 
                     {isExpanded && (
-                      <div className="px-3 md:px-6 py-3 md:py-4 bg-white/5 border-t border-white/10 animate-slide-up">
-                        <div className="space-y-3 md:space-y-6">
+                      <div style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.05)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                           {product.variants.map((variant) => (
-                            <div key={variant.id} className="border border-white/10 rounded-lg p-3 md:p-4 bg-white/5">
-                              <div className="mb-3 md:mb-4">
-                                <h4 className="font-semibold text-sm md:text-base text-white">{variant.name}</h4>
+                            <div key={variant.id} style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                              <div style={{ marginBottom: '16px' }}>
+                                <Text b style={{ marginBottom: '8px', display: 'block' }}>{variant.name}</Text>
                                 {Object.keys(variant.specifications).length > 0 && (
-                                  <div className="mt-2 space-y-1">
+                                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {Object.entries(variant.specifications).map(([key, value]) => (
-                                      <p key={key} className="text-xs md:text-sm text-white/60">
-                                        <span className="font-medium">{key}:</span> {value}
-                                      </p>
+                                      <Text small key={key} style={{ opacity: 0.6 }}>
+                                        <Text small b style={{ display: 'inline' }}>{key}:</Text> {value}
+                                      </Text>
                                     ))}
                                   </div>
                                 )}
                               </div>
 
-                              <div className="space-y-2">
-                                <p className="text-xs md:text-sm font-medium text-white/80">Prices by Store:</p>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <Text small b style={{ opacity: 0.8 }}>Prices by Store:</Text>
                                 {variant.prices.length === 0 ? (
-                                  <p className="text-sm text-white/60">No prices recorded yet</p>
+                                  <Text small style={{ opacity: 0.6 }}>No prices recorded yet</Text>
                                 ) : (
-                                  <div className="space-y-2">
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {variant.prices.map((price) => {
                                       const store = stores.find(s => s.id === price.storeId);
                                       const displayPrice = price.discountPercentage
@@ -205,33 +249,45 @@ const ProductList: React.FC<ProductListProps> = ({
                                         : price.price;
 
                                       return (
-                                        <div key={price.id} className="flex items-center justify-between p-3 bg-white/5 rounded">
-                                          <div className="flex items-center space-x-2">
-                                            <Store className="h-4 w-4 text-white/60" />
-                                            <span className="text-sm font-medium text-white">{store?.name || 'Unknown'}</span>
+                                        <div key={price.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Store size={16} style={{ opacity: 0.6 }} />
+                                            <Text small b>{store?.name || 'Unknown'}</Text>
                                           </div>
-                                          <div className="flex items-center space-x-3">
-                                            <div className="text-right">
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ textAlign: 'right' }}>
                                               {price.discountPercentage ? (
-                                                <div className="flex items-center space-x-2">
-                                                  <span className="text-sm line-through text-white/40">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <Text small style={{ opacity: 0.4, textDecoration: 'line-through' }}>
                                                     {formatPrice(price.price, settings.currency)}
-                                                  </span>
-                                                  <span className="text-sm font-bold text-green-400">
+                                                  </Text>
+                                                  <Text small b style={{ color: '#10B981' }}>
                                                     {formatPrice(displayPrice, settings.currency)}
-                                                  </span>
-                                                  <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
+                                                  </Text>
+                                                  <span style={{ 
+                                                    fontSize: '12px',
+                                                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                                    color: '#10B981',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '4px'
+                                                  }}>
                                                     -{price.discountPercentage}%
                                                   </span>
                                                 </div>
                                               ) : (
-                                                <span className="text-sm font-bold text-white">
+                                                <Text small b>
                                                   {formatPrice(price.price, settings.currency)}
-                                                </span>
+                                                </Text>
                                               )}
                                             </div>
                                             {!price.isAvailable && (
-                                              <span className="text-xs bg-white/10 text-white/80 px-2 py-1 rounded">
+                                              <span style={{ 
+                                                fontSize: '12px',
+                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                opacity: 0.8,
+                                                padding: '2px 8px',
+                                                borderRadius: '4px'
+                                              }}>
                                                 Out of Stock
                                               </span>
                                             )}
@@ -251,8 +307,9 @@ const ProductList: React.FC<ProductListProps> = ({
                 );
               })}
             </div>
-          </div>
-        </div>
+          </Card.Content>
+        </Card>
+      </div>
 
       {editingProduct && (
         <EditProduct

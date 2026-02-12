@@ -1,5 +1,6 @@
 import React from 'react';
-import { Package, Store, ShoppingCart, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
+import { Package, Home, ShoppingCart, TrendingDown, TrendingUp, DollarSign } from '@geist-ui/icons';
+import { Card, Grid, Text } from '@geist-ui/core';
 import { Product, Store as StoreType, ShoppingList } from '../types';
 import { ViewMode } from '../types';
 import { findCheapestPrice } from '../utils/price-comparison';
@@ -51,15 +52,15 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       name: 'Total Products',
       value: totalProducts,
       icon: Package,
-      color: 'bg-blue-500',
+      color: '#3291FF',
       change: `${totalVariants} variants`,
       changeType: 'neutral'
     },
     {
       name: 'Available Stores',
       value: totalStores,
-      icon: Store,
-      color: 'bg-green-500',
+      icon: Home,
+      color: '#0070F3',
       change: `${storesWithDelivery} with delivery`,
       changeType: 'neutral'
     },
@@ -67,7 +68,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       name: 'Shopping List Items',
       value: totalShoppingListItems,
       icon: ShoppingCart,
-      color: 'bg-purple-500',
+      color: '#7928CA',
       change: `${shoppingLists.length} lists`,
       changeType: 'neutral'
     },
@@ -75,7 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       name: 'Potential Savings',
       value: formatPrice(potentialSavings, settings.currency),
       icon: DollarSign,
-      color: 'bg-yellow-500',
+      color: '#F5A623',
       change: `${productsWithPrices} products tracked`,
       changeType: 'neutral'
     }
@@ -85,139 +86,225 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
   const recentStores = stores.slice(0, 5);
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Stats Grid - Mobile first: 1 column, then 2 on tablet, 4 on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-4 lg:gap-6">
-        {stats.map((stat, index) => (
-          <div key={index} className="glass-card overflow-hidden shadow-lg md:shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300 md:transform md:hover:scale-105 active:scale-95 md:active:scale-100 animate-scale-in">
-            <div className="p-4 md:p-6">
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="flex-shrink-0">
-                  <div className={`${stat.color} rounded-xl p-2 md:p-3 shadow-lg`}>
-                    <stat.icon className="h-5 md:h-6 w-5 md:w-6 text-white" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Stats Grid */}
+      <Grid.Container gap={2} justify="flex-start">
+        {stats.map((stat, index) => {
+          const IconComponent = stat.icon;
+          return (
+            <Grid xs={24} sm={12} md={12} lg={6} key={index}>
+              <Card hoverable width="100%" style={{ overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ 
+                    flexShrink: 0,
+                    backgroundColor: stat.color,
+                    borderRadius: '12px',
+                    padding: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <IconComponent size={24} color="white" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text small style={{ opacity: 0.7, marginBottom: '4px' }}>{stat.name}</Text>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+                      <Text h4 my={0}>{stat.value}</Text>
+                      <Text small style={{ opacity: 0.6 }}>{stat.change}</Text>
+                    </div>
                   </div>
                 </div>
-                <div className="w-0 flex-1 min-w-0">
-                  <dl>
-                    <dt className="text-xs md:text-sm font-medium truncate">
-                      <span className="text-white/70">{stat.name}</span>
-                    </dt>
-                    <dd className="flex items-baseline gap-2 flex-wrap">
-                      <div className="text-xl md:text-2xl font-semibold text-white">
-                        {stat.value}
-                      </div>
-                      <div className="flex items-baseline text-xs md:text-sm text-white/60">
-                        <span>{stat.change}</span>
-                      </div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid.Container>
 
-      {/* Recent Activity - Mobile first: 1 column, then 2 on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-4 lg:gap-6">
+      {/* Recent Activity */}
+      <Grid.Container gap={2}>
         {/* Recent Products */}
-        <div className="glass-card shadow-lg md:shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300">
-          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
-            <h3 className="text-base md:text-lg font-medium text-white">Recent Products</h3>
-          </div>
-          <div className="divide-y divide-white/10">
-            {recentProducts.map((product) => (
-              <div key={product.id} className="p-4 md:p-6 md:hover:bg-white/5 active:bg-white/5 md:active:bg-transparent transition-colors duration-200">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-sm md:text-base font-medium text-white truncate">{product.name}</h4>
-                    <p className="text-xs md:text-sm text-white/60 truncate">{product.category}</p>
-                  </div>
-                  <div className="text-xs md:text-sm text-white/60 flex-shrink-0">
-                    {product.variants.length} variant{product.variants.length !== 1 ? 's' : ''}
-                  </div>
-                </div>
+        <Grid xs={24} lg={12}>
+          <Card width="100%" style={{ height: '100%' }}>
+            <Card.Content style={{ padding: 0 }}>
+              <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <Text h4 my={0}>Recent Products</Text>
               </div>
-            ))}
-            {recentProducts.length === 0 && (
-              <div className="p-4 md:p-6 text-center text-white/60 text-sm">
-                No products added yet
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {recentProducts.map((product) => (
+                  <div key={product.id} style={{ 
+                    padding: '16px', 
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <Text b style={{ marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{product.name}</Text>
+                        <Text small style={{ opacity: 0.6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{product.category}</Text>
+                      </div>
+                      <Text small style={{ opacity: 0.6, flexShrink: 0 }}>
+                        {product.variants.length} variant{product.variants.length !== 1 ? 's' : ''}
+                      </Text>
+                    </div>
+                  </div>
+                ))}
+                {recentProducts.length === 0 && (
+                  <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+                    <Text style={{ opacity: 0.6 }}>No products added yet</Text>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </Card.Content>
+          </Card>
+        </Grid>
 
         {/* Recent Stores */}
-        <div className="glass-card shadow-lg md:shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300">
-          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
-            <h3 className="text-base md:text-lg font-medium text-white">Recent Stores</h3>
-          </div>
-          <div className="divide-y divide-white/10">
-            {recentStores.map((store) => (
-              <div key={store.id} className="p-4 md:p-6 md:hover:bg-white/5 active:bg-white/5 md:active:bg-transparent transition-colors duration-200">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-sm md:text-base font-medium text-white truncate">{store.name}</h4>
-                    <p className="text-xs md:text-sm text-white/60 capitalize truncate">{store.type}</p>
-                  </div>
-                  <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                    {store.hasDelivery && (
-                      <span className="inline-flex items-center px-2 md:px-2.5 py-1 md:py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30 whitespace-nowrap">
-                        Delivery
-                      </span>
-                    )}
-                    {store.type === 'online' && (
-                      <span className="inline-flex items-center px-2 md:px-2.5 py-1 md:py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">
-                        Online
-                      </span>
-                    )}
-                  </div>
-                </div>
+        <Grid xs={24} lg={12}>
+          <Card width="100%" style={{ height: '100%' }}>
+            <Card.Content style={{ padding: 0 }}>
+              <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <Text h4 my={0}>Recent Stores</Text>
               </div>
-            ))}
-            {recentStores.length === 0 && (
-              <div className="p-4 md:p-6 text-center text-white/60 text-sm">
-                No stores added yet
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {recentStores.map((store) => (
+                  <div key={store.id} style={{ 
+                    padding: '16px', 
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <Text b style={{ marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{store.name}</Text>
+                        <Text small style={{ opacity: 0.6, textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{store.type}</Text>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        {store.hasDelivery && (
+                          <span style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            padding: '4px 10px', 
+                            borderRadius: '16px', 
+                            fontSize: '12px', 
+                            fontWeight: 500,
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            color: '#10B981',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            Delivery
+                          </span>
+                        )}
+                        {store.type === 'online' && (
+                          <span style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            padding: '4px 10px', 
+                            borderRadius: '16px', 
+                            fontSize: '12px', 
+                            fontWeight: 500,
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            color: '#3B82F6',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            Online
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {recentStores.length === 0 && (
+                  <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+                    <Text style={{ opacity: 0.6 }}>No stores added yet</Text>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      </div>
+            </Card.Content>
+          </Card>
+        </Grid>
+      </Grid.Container>
 
       {/* Quick Actions */}
-      <div className="glass-card shadow-lg md:shadow-xl rounded-2xl md:hover:shadow-2xl transition-all duration-300">
-        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/20">
-          <h3 className="text-base md:text-lg font-medium text-white">Quick Actions</h3>
-        </div>
-        <div className="p-4 md:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-            <button 
-              onClick={() => onViewChange('add-product')}
-              className="p-4 md:p-6 border border-white/20 rounded-xl md:hover:bg-white/10 transition-all duration-200 md:transform md:hover:scale-105 md:hover:shadow-lg backdrop-blur-sm group active:scale-95 md:active:scale-100 min-h-[120px]"
-            >
-              <Package className="h-6 md:h-8 w-6 md:w-8 text-blue-500 mx-auto mb-2 md:mb-3 md:group-hover:scale-110 transition-transform duration-200" />
-              <h4 className="text-sm md:text-base font-medium text-white mb-1">Add Product</h4>
-              <p className="text-xs md:text-sm text-white/60">Track prices for a new product</p>
-            </button>
-            <button 
-              onClick={() => onViewChange('add-store')}
-              className="p-4 md:p-6 border border-white/20 rounded-xl md:hover:bg-white/10 transition-all duration-200 md:transform md:hover:scale-105 md:hover:shadow-lg backdrop-blur-sm group active:scale-95 md:active:scale-100 min-h-[120px]"
-            >
-              <Store className="h-6 md:h-8 w-6 md:w-8 text-green-500 mx-auto mb-2 md:mb-3 md:group-hover:scale-110 transition-transform duration-200" />
-              <h4 className="text-sm md:text-base font-medium text-white mb-1">Add Store</h4>
-              <p className="text-xs md:text-sm text-white/60">Register a new store location</p>
-            </button>
-            <button 
-              onClick={() => onViewChange('shopping-lists')}
-              className="p-4 md:p-6 border border-white/20 rounded-xl md:hover:bg-white/10 transition-all duration-200 md:transform md:hover:scale-105 md:hover:shadow-lg backdrop-blur-sm group sm:col-span-2 lg:col-span-1 active:scale-95 md:active:scale-100 min-h-[120px]"
-            >
-              <ShoppingCart className="h-6 md:h-8 w-6 md:w-8 text-purple-500 mx-auto mb-2 md:mb-3 md:group-hover:scale-110 transition-transform duration-200" />
-              <h4 className="text-sm md:text-base font-medium text-white mb-1">Manage Lists</h4>
-              <p className="text-xs md:text-sm text-white/60">Start a new shopping list</p>
-            </button>
+      <Card width="100%">
+        <Card.Content style={{ padding: 0 }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <Text h4 my={0}>Quick Actions</Text>
           </div>
-        </div>
-      </div>
+          <div style={{ padding: '24px' }}>
+            <Grid.Container gap={2}>
+              <Grid xs={24} sm={12} lg={8}>
+                <button 
+                  onClick={() => onViewChange('add-product')}
+                  style={{
+                    width: '100%',
+                    padding: '24px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '12px',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    minHeight: '120px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Package size={32} color="#3B82F6" style={{ marginBottom: '12px' }} />
+                  <Text b style={{ marginBottom: '4px' }}>Add Product</Text>
+                  <Text small style={{ opacity: 0.6, textAlign: 'center' }}>Track prices for a new product</Text>
+                </button>
+              </Grid>
+              <Grid xs={24} sm={12} lg={8}>
+                <button 
+                  onClick={() => onViewChange('add-store')}
+                  style={{
+                    width: '100%',
+                    padding: '24px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '12px',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    minHeight: '120px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Home size={32} color="#10B981" style={{ marginBottom: '12px' }} />
+                  <Text b style={{ marginBottom: '4px' }}>Add Store</Text>
+                  <Text small style={{ opacity: 0.6, textAlign: 'center' }}>Register a new store location</Text>
+                </button>
+              </Grid>
+              <Grid xs={24} sm={24} lg={8}>
+                <button 
+                  onClick={() => onViewChange('shopping-lists')}
+                  style={{
+                    width: '100%',
+                    padding: '24px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '12px',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    minHeight: '120px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <ShoppingCart size={32} color="#8B5CF6" style={{ marginBottom: '12px' }} />
+                  <Text b style={{ marginBottom: '4px' }}>Manage Lists</Text>
+                  <Text small style={{ opacity: 0.6, textAlign: 'center' }}>Start a new shopping list</Text>
+                </button>
+              </Grid>
+            </Grid.Container>
+          </div>
+        </Card.Content>
+      </Card>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart } from '@geist-ui/icons';
+import { Spacer, Text } from '@geist-ui/core';
 
 interface PageHeaderProps {
   title: string;
@@ -10,20 +11,52 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) => {
   return (
     <>
       {/* Navigation */}
-      <nav className="glass-card border-b border-white/20 sticky top-0 z-50 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <ShoppingCart className="h-5 w-5 text-white" />
+      <nav style={{
+        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{
+                height: '32px',
+                width: '32px',
+                background: 'linear-gradient(to right, #3b82f6, #9333ea)',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <ShoppingCart size={20} style={{ color: 'white' }} />
               </div>
-              <span className="ml-2 text-xl font-bold text-white">SpendLess</span>
+              <Text span style={{ marginLeft: '8px', fontSize: '1.25rem', fontWeight: 'bold', color: 'white' }}>SpendLess</Text>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <a
                 href="/"
-                className="text-white/70 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-white/10 backdrop-blur-sm"
+                style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
                 Back to App
               </a>
@@ -33,11 +66,15 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) => {
       </nav>
 
       {/* Page Header */}
-      <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h1 className="text-4xl font-bold text-white mb-4">{title}</h1>
+      <div style={{
+        background: 'linear-gradient(to right, rgba(37, 99, 235, 0.2), rgba(147, 51, 234, 0.2))',
+        backdropFilter: 'blur(4px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{ maxWidth: '896px', margin: '0 auto', padding: '3rem 1rem' }}>
+          <Text h1 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: 'white', margin: '0 0 1rem 0' }}>{title}</Text>
           {description && (
-            <p className="text-xl text-white/80 max-w-2xl">{description}</p>
+            <Text p style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.8)', maxWidth: '672px', margin: 0 }}>{description}</Text>
           )}
         </div>
       </div>
