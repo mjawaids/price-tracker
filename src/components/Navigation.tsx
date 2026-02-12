@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Package, Store, Home, Plus, DollarSign, List, Menu, X } from 'lucide-react';
+import { ShoppingCart, Package, Home, DollarSign, Menu, X } from '@geist-ui/icons';
 import { ViewMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import UserMenu from './UserMenu';
@@ -23,46 +23,82 @@ const Navigation: React.FC<NavigationProps> = ({
   const navItems = [
     { id: 'dashboard' as ViewMode, icon: Home, label: 'Dashboard' },
     { id: 'products' as ViewMode, icon: Package, label: 'Products' },
-    { id: 'stores' as ViewMode, icon: Store, label: 'Stores' },
+    { id: 'stores' as ViewMode, icon: ShoppingCart, label: 'Stores' },
     { id: 'price-manager' as ViewMode, icon: DollarSign, label: 'Prices' },
     { id: 'shopping-list' as ViewMode, icon: ShoppingCart, label: 'Shopping List', badge: shoppingListCount },
-    { id: 'shopping-lists' as ViewMode, icon: List, label: 'My Lists' },
+    { id: 'shopping-lists' as ViewMode, icon: ShoppingCart, label: 'My Lists' },
   ];
 
   return (
     <>
       {/* Glass Navigation Bar */}
-      <nav className="sticky top-0 z-40 glass-card border-b border-white/20 shadow-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav style={{ position: 'sticky', top: 0, zIndex: 40, backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderBottom: '1px solid rgba(255, 255, 255, 0.2)', boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
             {/* Logo */}
-            <div className="flex items-center">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                <ShoppingCart className="h-5 w-5 text-white" />
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ height: '32px', width: '32px', background: 'linear-gradient(to right, #3b82f6, #9333ea)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                <ShoppingCart size={20} color="#ffffff" />
               </div>
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                <span className="text-white">SpendLess Price Tracker</span>
+              <span style={{ marginLeft: '8px', fontSize: '20px', fontWeight: 'bold', color: '#ffffff' }}>
+                SpendLess Price Tracker
               </span>
             </div>
             
             {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-1">
+            <div style={{ display: 'none', gap: '4px' }} className="md:flex">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id)}
-                  className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    currentView === item.id
-                      ? 'bg-white/20 text-white shadow-md backdrop-blur-sm'
-                      : 'text-white/70 hover:text-white hover:bg-white/10 backdrop-blur-sm'
-                  }`}
+                  style={{
+                    position: 'relative',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                    backgroundColor: currentView === item.id ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                    color: currentView === item.id ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(4px)',
+                    boxShadow: currentView === item.id ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentView !== item.id) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.color = '#ffffff';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentView !== item.id) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                    }
+                  }}
                 >
-                  <div className="flex items-center space-x-2">
-                    <item.icon className="h-4 w-4" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <item.icon size={16} />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse shadow-lg">
+                    <span style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: 'linear-gradient(to right, #ec4899, #ef4444)',
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      borderRadius: '9999px',
+                      height: '20px',
+                      width: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}>
                       {item.badge}
                     </span>
                   )}
@@ -71,22 +107,72 @@ const Navigation: React.FC<NavigationProps> = ({
             </div>
             
             {/* Desktop Actions */}
-            <div className="hidden md:flex items-center space-x-3">
+            <div style={{ display: 'none', alignItems: 'center', gap: '12px' }} className="md:flex">
               {user ? (
                 <>
-                  <div className="flex space-x-2">
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => onViewChange('add-product')}
-                      className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: '#ffffff',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                        e.currentTarget.style.boxShadow = '0 10px 15px rgba(0, 0, 0, 0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                      }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <span style={{ fontSize: '16px' }}>+</span>
                       <span>Product</span>
                     </button>
                     <button
                       onClick={() => onViewChange('add-store')}
-                      className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: '#ffffff',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                        e.currentTarget.style.boxShadow = '0 10px 15px rgba(0, 0, 0, 0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                      }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <span style={{ fontSize: '16px' }}>+</span>
                       <span>Store</span>
                     </button>
                   </div>
@@ -95,7 +181,29 @@ const Navigation: React.FC<NavigationProps> = ({
               ) : (
                 <button
                   onClick={onShowAuth}
-                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm border border-white/20"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    padding: '8px 24px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                    backdropFilter: 'blur(4px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 10px 15px rgba(0, 0, 0, 0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                  }}
                 >
                   Sign In
                 </button>
@@ -106,9 +214,25 @@ const Navigation: React.FC<NavigationProps> = ({
             <div className="md:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  transition: 'all 0.2s',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
-                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </div>
@@ -117,13 +241,13 @@ const Navigation: React.FC<NavigationProps> = ({
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} className="md:hidden">
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="fixed top-16 left-0 right-0 glass-card border-b border-white/20 shadow-2xl animate-slide-up">
-            <div className="px-4 py-6 space-y-4">
+          <div style={{ position: 'fixed', top: '64px', left: 0, right: 0, backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderBottom: '1px solid rgba(255, 255, 255, 0.2)', boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)', animation: 'slideUp 0.3s ease-out' }}>
+            <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Mobile Navigation Items */}
               {navItems.map((item) => (
                 <button
@@ -132,18 +256,52 @@ const Navigation: React.FC<NavigationProps> = ({
                     onViewChange(item.id);
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                    currentView === item.id
-                      ? 'bg-white/20 text-white shadow-md'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    backgroundColor: currentView === item.id ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                    color: currentView === item.id ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: currentView === item.id ? '0 4px 6px rgba(0, 0, 0, 0.1)' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentView !== item.id) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.color = '#ffffff';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentView !== item.id) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                    }
+                  }}
                 >
-                  <div className="flex items-center space-x-3">
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{item.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <item.icon size={20} />
+                    <span style={{ fontWeight: 500 }}>{item.label}</span>
                   </div>
                   {item.badge && item.badge > 0 && (
-                    <span className="bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse shadow-lg">
+                    <span style={{
+                      background: 'linear-gradient(to right, #ec4899, #ef4444)',
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      borderRadius: '9999px',
+                      height: '24px',
+                      width: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}>
                       {item.badge}
                     </span>
                   )}
@@ -151,7 +309,7 @@ const Navigation: React.FC<NavigationProps> = ({
               ))}
 
               {/* Mobile Actions */}
-              <div className="pt-4 border-t border-white/20 space-y-3">
+              <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.2)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {user ? (
                   <>
                     <button
@@ -159,9 +317,31 @@ const Navigation: React.FC<NavigationProps> = ({
                         onViewChange('add-product');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20"
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: '#ffffff',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                      }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <span style={{ fontSize: '16px' }}>+</span>
                       <span>Add Product</span>
                     </button>
                     <button
@@ -169,9 +349,31 @@ const Navigation: React.FC<NavigationProps> = ({
                         onViewChange('add-store');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg backdrop-blur-sm border border-white/20"
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: '#ffffff',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                      }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <span style={{ fontSize: '16px' }}>+</span>
                       <span>Add Store</span>
                     </button>
                   </>
@@ -181,7 +383,25 @@ const Navigation: React.FC<NavigationProps> = ({
                       onShowAuth();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white/20"
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      color: '#ffffff',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      fontWeight: 500,
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      backdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                    }}
                   >
                     Sign In
                   </button>
@@ -193,16 +413,24 @@ const Navigation: React.FC<NavigationProps> = ({
       )}
       
       {/* Credits Bar */}
-      <div className="glass-card border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-2 text-center">
-            <p className="text-white/60 text-xs">
-              Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
+      <div style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ padding: '8px 0', textAlign: 'center' }}>
+            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+              Made with <span style={{ color: '#ef4444', animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>❤️</span> by{' '}
               <a 
                 href="https://jawaid.dev" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
+                style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, transition: 'color 0.2s', textDecoration: 'none' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.textDecoration = 'underline';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                  e.currentTarget.style.textDecoration = 'none';
+                }}
               >
                 Jawaid.dev
               </a>
@@ -213,15 +441,15 @@ const Navigation: React.FC<NavigationProps> = ({
       </div>
 
       {/* Legal & Info Links */}
-      <footer className="glass-card border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4 flex flex-col md:flex-row items-center justify-center md:justify-between gap-3">
-            <div className="text-white/60 text-sm">© {new Date().getFullYear()} SpendLess</div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <a href="/pricing" className="text-white/70 hover:text-white hover:underline">Pricing</a>
-              <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
-              <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
-              <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
+      <footer style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }} className="md:flex-row md:justify-between">
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>© {new Date().getFullYear()} SpendLess</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px 16px', fontSize: '14px' }}>
+              <a href="/pricing" style={{ color: 'rgba(255, 255, 255, 0.7)', textDecoration: 'none' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.textDecoration = 'underline'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.textDecoration = 'none'; }}>Pricing</a>
+              <a href="/privacy" style={{ color: 'rgba(255, 255, 255, 0.7)', textDecoration: 'none' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.textDecoration = 'underline'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.textDecoration = 'none'; }}>Privacy Policy</a>
+              <a href="/refund" style={{ color: 'rgba(255, 255, 255, 0.7)', textDecoration: 'none' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.textDecoration = 'underline'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.textDecoration = 'none'; }}>Refund Policy</a>
+              <a href="/terms" style={{ color: 'rgba(255, 255, 255, 0.7)', textDecoration: 'none' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.textDecoration = 'underline'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; e.currentTarget.style.textDecoration = 'none'; }}>Terms & Conditions</a>
             </div>
           </div>
         </div>
