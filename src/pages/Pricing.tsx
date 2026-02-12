@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Star, ShieldCheck, User } from '@geist-ui/icons';
+import { Check, Star, ShieldCheck, HelpCircle } from '@geist-ui/icons';
 import PageHeader from '../components/PageHeader';
 import PageFooter from '../components/PageFooter';
 
@@ -104,7 +104,17 @@ const Pricing: React.FC = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px', maxWidth: '896px', margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px', maxWidth: '896px', margin: '0 auto' }}>
+          <style>
+            {`
+              @media (min-width: 1024px) {
+                .pricing-grid {
+                  grid-template-columns: repeat(2, 1fr) !important;
+                }
+              }
+            `}
+          </style>
+          <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
           {/* Free Plan */}
           <div style={{ position: 'relative' }}>
             <div style={{ 
@@ -229,6 +239,7 @@ const Pricing: React.FC = () => {
               </button>
             </div>
           </div>
+          </div>
         </div>
 
         {/* Billing Notes */}
@@ -274,7 +285,7 @@ const Pricing: React.FC = () => {
         <div style={{ marginTop: '64px', maxWidth: '768px', margin: '64px auto 0' }}>
           <div style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '32px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#ffffff', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <User size={20} color="#10b981" />
+              <HelpCircle size={20} color="#10b981" />
               <span>Frequently Asked Questions</span>
             </h3>
             

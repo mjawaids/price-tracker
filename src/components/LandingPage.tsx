@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, TrendingDown, Shield, Star, ArrowRight, Check, User } from '@geist-ui/icons';
+import { ShoppingCart, TrendingDown, Shield, Star, ArrowRight, Check, Smartphone } from '@geist-ui/icons';
 import { trackUserAction, trackPageView } from '../utils/analytics';
 
 interface LandingPageProps {
@@ -35,7 +35,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onShowAuth }) => {
       description: 'Your data is encrypted and secure. We never share your shopping habits with third parties.'
     },
     {
-      icon: User,
+      icon: Smartphone,
       title: 'Works Everywhere',
       description: 'Access your price comparisons on any device, anywhere. Fully responsive and mobile-optimized.'
     }
