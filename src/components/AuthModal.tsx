@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { X, Mail, Lock, User, Eye, EyeOff } from '@geist-ui/icons'
-import { Modal, Card, Button, Input, Text, Spacer } from '@geist-ui/core'
+import { Card, Button, Text } from '@geist-ui/core'
 import { useAuth } from '../contexts/AuthContext'
 
 interface AuthModalProps {
@@ -76,6 +76,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
     }
   }
 
+  const inputStyle = {
+    width: '100%',
+    padding: '0.75rem',
+    borderRadius: '8px',
+    border: '1px solid rgba(0, 0, 0, 0.2)',
+    fontSize: '1rem',
+    backgroundColor: 'white',
+    color: '#000'
+  };
+
   if (!isOpen) return null
 
   return (
@@ -135,53 +145,96 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
           {mode === 'signup' && (
             <div>
               <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Full Name</Text>
-              <Input
-                width="100%"
+              <input
+                style={inputStyle}
+                type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Enter your full name"
                 required
-                icon={<User />}
               />
             </div>
           )}
 
           <div>
             <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Email</Text>
-            <Input
-              width="100%"
+            <input
+              style={inputStyle}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
-              icon={<Mail />}
             />
           </div>
 
           {mode !== 'forgot' && (
             <div>
               <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Password</Text>
-              <Input.Password
-                width="100%"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  style={{...inputStyle, paddingRight: '3rem'}}
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
           )}
 
           {mode === 'signup' && (
             <div>
               <Text small b style={{ display: 'block', marginBottom: '0.5rem' }}>Confirm Password</Text>
-              <Input.Password
-                width="100%"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  style={{...inputStyle, paddingRight: '3rem'}}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
           )}
 
