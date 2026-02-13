@@ -51,9 +51,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
       document.body.classList.remove('light-mode');
     } else {
       document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
       document.body.classList.add('light-mode');
     }
   }, [isDark]);

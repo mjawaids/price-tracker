@@ -11,7 +11,7 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <GeistProvider themeType="dark">
+    <GeistProvider>
       <CssBaseline />
       <BrowserRouter>
         <Routes>

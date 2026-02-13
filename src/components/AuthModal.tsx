@@ -80,10 +80,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
     width: '100%',
     padding: '0.75rem',
     borderRadius: '8px',
-    border: '1px solid rgba(0, 0, 0, 0.2)',
+    border: '1px solid',
+    borderColor: 'var(--geist-border, rgba(0, 0, 0, 0.2))',
     fontSize: '1rem',
-    backgroundColor: 'white',
-    color: '#000'
+    backgroundColor: 'var(--geist-background, white)',
+    color: 'var(--geist-foreground, #000)'
   };
 
   if (!isOpen) return null
