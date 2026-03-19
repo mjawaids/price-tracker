@@ -3,16 +3,9 @@ export interface Product {
   name: string;
   category: string;
   brand?: string;
-  variants: ProductVariant[];
+  prices: Price[];
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface ProductVariant {
-  id: string;
-  name: string;
-  specifications: Record<string, string>;
-  prices: Price[];
 }
 
 export interface Price {
@@ -45,7 +38,6 @@ export interface Store {
 export interface ShoppingListItem {
   id: string;
   productId: string;
-  variantId: string;
   quantity: number;
   addedAt: Date;
   priority: 'low' | 'medium' | 'high';

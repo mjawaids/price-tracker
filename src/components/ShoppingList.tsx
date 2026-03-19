@@ -28,64 +28,51 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
   const { settings } = useSettings();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [selectedVariant, setSelectedVariant] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
 
   const handleAddToList = () => {
-    if (selectedProduct && selectedVariant) {
-      trackUserAction('add_to_shopping_list', { 
-        productId: selectedProduct, 
-        variantId: selectedVariant,
+    if (selectedProduct) {
+      trackUserAction('add_to_shopping_list', {
+        productId: selectedProduct,
         quantity,
-        priority 
+        priority
       });
-      
-      trackUserAction('add_to_shopping_list', { 
-        productId: selectedProduct, 
-        variantId: selectedVariant,
-        quantity,
-        priority 
-      });
-      
+
       onAddToList({
         productId: selectedProduct,
-        variantId: selectedVariant,
         quantity,
         priority,
       });
       setShowAddModal(false);
       setSelectedProduct('');
-      setSelectedVariant('');
       setQuantity(1);
       setPriority('medium');
     }
   };
 
-  const getProductAndVariant = (productId: string, variantId: string) => {
-    const product = products.find(p => p.id === productId);
-    const variant = product?.variants.find(v => v.id === variantId);
-    return { product, variant };
+  const getProduct = (productId: string) => {
+    return products.find(p => p.id === productId);
   };
 
   const calculateTotal = () => {
     return shoppingList.reduce((total, item) => {
-      const { variant } = getProductAndVariant(item.productId, item.variantId);
-      if (!variant) return total;
+      const product = getProduct(item.productId);
+      if (!product) return total;
 
-      const cheapestOption = findCheapestPriceWithDelivery(variant.prices, stores);
+      const cheapestOption = findCheapestPriceWithDelivery(product.prices, stores);
       return total + (cheapestOption?.totalPrice || 0) * item.quantity;
     }, 0);
   };
 
   const groupByStore = () => {
-    const storeGroups: Record<string, { store: Store; items: Array<ShoppingListItem & { product: Product; variant: any; price: any; priceWithDelivery: number }>; deliveryFee: number }> = {};
+    const storeGroups: Record<string, { store: Store; items: Array<ShoppingListItem & { product: Product; price: any; priceWithDelivery: number }>; deliveryFee: number }> = {};
 
     shoppingList.forEach(item => {
-      const { product, variant } = getProductAndVariant(item.productId, item.variantId);
-      if (!product || !variant) return;
+      const product = getProduct(item.productId);
+      if (!product) return;
 
-      const cheapestOption = findCheapestPriceWithDelivery(variant.prices, stores);
+      const cheapestOption = findCheapestPriceWithDelivery(product.prices, stores);
       if (!cheapestOption) return;
 
       const storeId = cheapestOption.store!.id;
@@ -100,7 +87,6 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
       storeGroups[storeId].items.push({
         ...item,
         product,
-        variant,
         price: cheapestOption.price,
         priceWithDelivery: cheapestOption.totalPrice
       });
@@ -139,7 +125,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
             </div>
           </div>
         </div>
-        
+
         {shoppingList.length === 0 ? (
           <div className="p-8 sm:p-12 text-center">
             <ShoppingCart className="h-12 w-12 text-white/40 mx-auto mb-4" />
@@ -183,14 +169,13 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-white"></div>
                         <div className="text-sm text-white/70">
                           {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="divide-y divide-white/20">
                     {group.items.map((item) => (
                       <div key={item.id} className="p-4 bg-white/5">
@@ -207,7 +192,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                               </span>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center flex-wrap gap-2">
                             <div className="flex items-center space-x-2">
                               <button
@@ -226,7 +211,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
-                            
+
                             <div className="text-right">
                               <div className="font-medium text-white">
                                 {formatPrice(item.priceWithDelivery * item.quantity, settings.currency)}
@@ -235,7 +220,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                                 {formatPrice(item.priceWithDelivery, settings.currency)} each
                               </div>
                             </div>
-                            
+
                             <button
                               onClick={() => onRemoveFromList(item.id)}
                               className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors duration-200 touch-target"
@@ -258,55 +243,32 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
       {/* Add Item Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Add Item to Shopping List</h3>
+          <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-lg max-w-md w-full border border-gray-200/50 dark:border-gray-700/50">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700/50">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Add Item to Shopping List</h3>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Product
                 </label>
                 <select
                   value={selectedProduct}
-                  onChange={(e) => {
-                    setSelectedProduct(e.target.value);
-                    setSelectedVariant('');
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setSelectedProduct(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                   <option value="">Select a product</option>
                   {products.map(product => (
                     <option key={product.id} value={product.id}>
-                      {product.name} - {product.brand}
+                      {product.name}{product.brand ? ` - ${product.brand}` : ''}
                     </option>
                   ))}
                 </select>
               </div>
-              
-              {selectedProduct && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Variant
-                  </label>
-                  <select
-                    value={selectedVariant}
-                    onChange={(e) => setSelectedVariant(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select a variant</option>
-                    {products.find(p => p.id === selectedProduct)?.variants.map(variant => (
-                      <option key={variant.id} value={variant.id}>
-                        {variant.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Quantity
                 </label>
                 <input
@@ -314,18 +276,18 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                   min="1"
                   value={quantity}
                   onChange={(e) => setQuantity(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Priority
                 </label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -333,17 +295,17 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                 </select>
               </div>
             </div>
-            
-            <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-2">
+
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 flex justify-end space-x-2">
               <button
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors duration-200"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddToList}
-                disabled={!selectedProduct || !selectedVariant}
+                disabled={!selectedProduct}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 Add to List
