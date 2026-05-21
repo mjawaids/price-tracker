@@ -47,7 +47,7 @@ const ProductList: React.FC<ProductListProps> = ({
     let cheapestPrice = Infinity;
     let cheapestStore = '';
 
-    product.prices.forEach(price => {
+    (product.prices || []).forEach(price => {
       if (price.price < cheapestPrice) {
         cheapestPrice = price.price;
         const store = stores.find(s => s.id === price.storeId);
@@ -116,7 +116,7 @@ const ProductList: React.FC<ProductListProps> = ({
                         <div className="mt-2 md:mt-4 ml-7 md:ml-11">
                           <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
                             <span className="text-xs md:text-sm font-medium text-white/80">Prices:</span>
-                            <span className="text-xs md:text-sm text-white/60">{product.prices.length} store{product.prices.length !== 1 ? 's' : ''}</span>
+                            <span className="text-xs md:text-sm text-white/60">{(product.prices || []).length} store{(product.prices || []).length !== 1 ? 's' : ''}</span>
                           </div>
 
                           {cheapestPrice && (
@@ -154,11 +154,11 @@ const ProductList: React.FC<ProductListProps> = ({
                     <div className="px-3 md:px-6 py-3 md:py-4 bg-white/5 border-t border-white/10 animate-slide-up">
                       <div className="space-y-2">
                         <p className="text-xs md:text-sm font-medium text-white/80">Prices by Store:</p>
-                        {product.prices.length === 0 ? (
+                        {(product.prices || []).length === 0 ? (
                           <p className="text-sm text-white/60">No prices recorded yet. Use Price Manager to add prices.</p>
                         ) : (
                           <div className="space-y-2">
-                            {product.prices.map((price) => {
+                            {(product.prices || []).map((price) => {
                               const store = stores.find(s => s.id === price.storeId);
                               const displayPrice = price.discountPercentage
                                 ? price.price * (1 - price.discountPercentage / 100)

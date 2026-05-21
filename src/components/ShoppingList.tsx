@@ -60,7 +60,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
       const product = getProduct(item.productId);
       if (!product) return total;
 
-      const cheapestOption = findCheapestPriceWithDelivery(product.prices, stores);
+      const cheapestOption = findCheapestPriceWithDelivery(product.prices || [], stores);
       return total + (cheapestOption?.totalPrice || 0) * item.quantity;
     }, 0);
   };
@@ -72,7 +72,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
       const product = getProduct(item.productId);
       if (!product) return;
 
-      const cheapestOption = findCheapestPriceWithDelivery(product.prices, stores);
+      const cheapestOption = findCheapestPriceWithDelivery(product.prices || [], stores);
       if (!cheapestOption) return;
 
       const storeId = cheapestOption.store!.id;

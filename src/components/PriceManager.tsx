@@ -42,7 +42,7 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
     };
 
     // Remove existing price for this store if it exists
-    const updatedPrices = product.prices.filter(p => p.storeId !== newPrice.storeId);
+    const updatedPrices = (product.prices || []).filter(p => p.storeId !== newPrice.storeId);
     updatedPrices.push(priceData);
 
     onUpdateProduct({ ...product, prices: updatedPrices, updatedAt: new Date() });
@@ -67,7 +67,7 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
     const product = products.find(p => p.id === selectedProduct);
     if (!product) return;
 
-    const updatedPrices = product.prices.map(p =>
+    const updatedPrices = (product.prices || []).map(p =>
       p.id === editingPrice.id
         ? {
             ...editingPrice,
@@ -93,7 +93,7 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
 
     onUpdateProduct({
       ...product,
-      prices: product.prices.filter(p => p.id !== priceId),
+      prices: (product.prices || []).filter(p => p.id !== priceId),
       updatedAt: new Date()
     });
   };
@@ -161,11 +161,11 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
                 </div>
 
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                  {selectedProductData.prices.length === 0 ? (
+                  {(selectedProductData.prices || []).length === 0 ? (
                     <p className="text-gray-500 dark:text-white/60 text-center py-8">No prices added yet</p>
                   ) : (
                     <div className="space-y-3">
-                      {selectedProductData.prices.map((price) => (
+                      {(selectedProductData.prices || []).map((price) => (
                         <div key={price.id} className="bg-white dark:bg-gray-900/50 rounded-lg p-4 flex items-center justify-between border border-gray-200 dark:border-white/10">
                           <div className="flex items-center space-x-4">
                             <div className={`w-3 h-3 rounded-full ${price.isAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
