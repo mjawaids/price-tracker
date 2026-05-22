@@ -40,7 +40,6 @@ export interface ShoppingListItem {
   productId: string;
   quantity: number;
   addedAt: Date;
-  priority: 'low' | 'medium' | 'high';
 }
 
 export interface ShoppingList {
