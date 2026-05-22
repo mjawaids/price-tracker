@@ -159,7 +159,7 @@ const ShoppingListManager: React.FC<ShoppingListManagerProps> = ({
                       <div className="space-y-2">
                         {list.items.slice(0, 3).map((item, index) => (
                           <div key={index} className="text-sm text-gray-700 dark:text-white/80 bg-white dark:bg-gray-900/50 rounded px-2 py-1 border border-gray-200 dark:border-white/10">
-                            Qty: {item.quantity} • Priority: {item.priority}
+                            Qty: {item.quantity}
                           </div>
                         ))}
                         {list.items.length > 3 && (
