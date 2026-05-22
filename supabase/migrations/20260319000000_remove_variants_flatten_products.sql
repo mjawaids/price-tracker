@@ -11,11 +11,9 @@
   4. Removes shopping list items whose productId no longer exists
   5. Drops the old `variants` column
 
-  The entire migration runs inside a transaction — a failure at any step
-  rolls back all changes.
+  Supabase wraps each migration file in a transaction automatically,
+  so no explicit BEGIN/COMMIT is needed here.
 */
-
-BEGIN;
 
 -- Step 1: Add prices column to products
 ALTER TABLE products ADD COLUMN IF NOT EXISTS prices jsonb DEFAULT '[]'::jsonb;
@@ -126,5 +124,3 @@ WHERE jsonb_array_length(COALESCE(items, '[]'::jsonb)) > 0;
 
 -- Step 6: Drop the variants column
 ALTER TABLE products DROP COLUMN IF EXISTS variants;
-
-COMMIT;
