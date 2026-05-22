@@ -31,7 +31,7 @@ export const useSupabaseData = () => {
     const now = Date.now();
     // Skip reload if we loaded recently
     if (now - lastLoadRef.current < LOAD_TTL_MS) return;
-    
+
     setLoading(true);
     try {
       await Promise.all([
@@ -67,7 +67,7 @@ export const useSupabaseData = () => {
       name: item.name,
       category: item.category,
       brand: item.brand,
-      variants: item.variants || [],
+      prices: item.prices || [],
       createdAt: new Date(item.created_at),
       updatedAt: new Date(item.updated_at)
     }));
@@ -149,11 +149,7 @@ export const useSupabaseData = () => {
       name: productData.name,
       category: productData.category,
       brand: productData.brand,
-      variants: productData.variants.map(variant => ({
-        ...variant,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        prices: []
-      }))
+      prices: productData.prices || []
     };
 
     const { data, error } = await supabase
@@ -172,13 +168,13 @@ export const useSupabaseData = () => {
       name: data.name,
       category: data.category,
       brand: data.brand,
-      variants: data.variants || [],
+      prices: data.prices || [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
 
     setProducts(prev => [formattedProduct, ...prev]);
-    
+
     // Track product creation
     trackProduct('create', formattedProduct.id, formattedProduct.category);
   };
@@ -192,7 +188,7 @@ export const useSupabaseData = () => {
         name: updatedProduct.name,
         category: updatedProduct.category,
         brand: updatedProduct.brand,
-        variants: updatedProduct.variants,
+        prices: updatedProduct.prices,
         updated_at: new Date().toISOString()
       })
       .eq('id', updatedProduct.id)
@@ -374,8 +370,8 @@ export const useSupabaseData = () => {
       return;
     }
 
-    setShoppingLists(prev => prev.map(list => 
-      list.id === id 
+    setShoppingLists(prev => prev.map(list =>
+      list.id === id
         ? { ...list, name: newName, updatedAt: new Date() }
         : list
     ));
@@ -398,12 +394,12 @@ export const useSupabaseData = () => {
       return;
     }
 
-    setShoppingLists(prev => prev.map(list => 
-      list.id === listId 
+    setShoppingLists(prev => prev.map(list =>
+      list.id === listId
         ? { ...list, items, updatedAt: new Date() }
         : list
     ));
-    
+
     // Track shopping list update
     trackShoppingList('update_items', listId, items.length);
   };

@@ -2,7 +2,6 @@ import React from 'react';
 import { Package, Store, ShoppingCart, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
 import { Product, Store as StoreType, ShoppingList } from '../types';
 import { ViewMode } from '../types';
-import { findCheapestPrice } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -20,26 +19,21 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
   const totalShoppingListItems = shoppingLists.reduce((sum, list) => sum + list.items.length, 0);
   
   // Calculate actual metrics
-  const totalVariants = products.reduce((sum, product) => sum + product.variants.length, 0);
-  const productsWithPrices = products.filter(product => 
-    product.variants.some(variant => variant.prices && variant.prices.length > 0)
-  ).length;
+  const productsWithPrices = products.filter(product => product.prices && product.prices.length > 0).length;
   const storesWithDelivery = stores.filter(store => store.hasDelivery).length;
-  
+
   // Calculate potential savings by comparing highest vs lowest prices
   const calculatePotentialSavings = () => {
     let totalSavings = 0;
     products.forEach(product => {
-      product.variants.forEach(variant => {
-        if (variant.prices && variant.prices.length > 1) {
-          const prices = variant.prices.filter(p => p.isAvailable).map(p => p.price);
-          if (prices.length > 1) {
-            const highest = Math.max(...prices);
-            const lowest = Math.min(...prices);
-            totalSavings += (highest - lowest);
-          }
+      if (product.prices && product.prices.length > 1) {
+        const prices = product.prices.filter(p => p.isAvailable).map(p => p.price);
+        if (prices.length > 1) {
+          const highest = Math.max(...prices);
+          const lowest = Math.min(...prices);
+          totalSavings += (highest - lowest);
         }
-      });
+      }
     });
     return totalSavings;
   };
@@ -52,7 +46,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
       value: totalProducts,
       icon: Package,
       color: 'bg-blue-500',
-      change: `${totalVariants} variants`,
+      change: `${productsWithPrices} with prices`,
       changeType: 'neutral'
     },
     {
@@ -134,7 +128,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, stores, shoppingLists, 
                     <p className="text-xs md:text-sm text-white/60 truncate">{product.category}</p>
                   </div>
                   <div className="text-xs md:text-sm text-white/60 flex-shrink-0">
-                    {product.variants.length} variant{product.variants.length !== 1 ? 's' : ''}
+                    {product.prices.length} store{product.prices.length !== 1 ? 's' : ''}
                   </div>
                 </div>
               </div>
