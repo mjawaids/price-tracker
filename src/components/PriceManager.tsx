@@ -3,7 +3,6 @@ import { Plus, Edit, Trash2, CheckCircle, X } from 'lucide-react';
 import { Product, Store, Price } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import { CURRENCIES, formatPrice } from '../utils/currency';
-import SmartSelect from './SmartSelect';
 
 interface PriceManagerProps {
   products: Product[];
@@ -131,16 +130,18 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Select Product
               </label>
-              <SmartSelect
+              <select
                 value={selectedProduct}
-                onChange={setSelectedProduct}
-                placeholder="Choose a product"
-                options={products.map(product => ({
-                  value: product.id,
-                  label: product.name,
-                  sublabel: product.brand,
-                }))}
-              />
+                onChange={(e) => setSelectedProduct(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                <option value="">Choose a product</option>
+                {products.map(product => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}{product.brand ? ` - ${product.brand}` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Current Prices */}
@@ -237,16 +238,18 @@ const PriceManager: React.FC<PriceManagerProps> = ({ products, stores, onUpdateP
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Store
                 </label>
-                <SmartSelect
+                <select
                   value={newPrice.storeId}
-                  onChange={(v) => setNewPrice({ ...newPrice, storeId: v })}
-                  placeholder="Select a store"
-                  options={stores.map(store => ({
-                    value: store.id,
-                    label: store.name,
-                    sublabel: store.type,
-                  }))}
-                />
+                  onChange={(e) => setNewPrice({ ...newPrice, storeId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="">Select a store</option>
+                  {stores.map(store => (
+                    <option key={store.id} value={store.id}>
+                      {store.name} ({store.type})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
