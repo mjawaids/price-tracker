@@ -5,6 +5,7 @@ import { findCheapestPriceWithDelivery } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
 import { trackUserAction } from '../utils/analytics';
+import SmartSelect from './SmartSelect';
 
 interface ShoppingListProps {
   products: Product[];
@@ -253,18 +254,16 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Product
                 </label>
-                <select
+                <SmartSelect
                   value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                >
-                  <option value="">Select a product</option>
-                  {products.map(product => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}{product.brand ? ` - ${product.brand}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedProduct}
+                  placeholder="Select a product"
+                  options={products.map(product => ({
+                    value: product.id,
+                    label: product.name,
+                    sublabel: product.brand,
+                  }))}
+                />
               </div>
 
               <div>
