@@ -67,6 +67,7 @@ export const useSupabaseData = () => {
       name: item.name,
       category: item.category,
       brand: item.brand,
+      unit: item.unit || '',
       prices: item.prices || [],
       createdAt: new Date(item.created_at),
       updatedAt: new Date(item.updated_at)
@@ -96,6 +97,8 @@ export const useSupabaseData = () => {
       location: item.location,
       hasDelivery: item.has_delivery,
       deliveryRadius: item.delivery_radius,
+      deliveryFee: item.delivery_fee,
+      deliveryRule: item.delivery_rule || undefined,
       website: item.website,
       phone: item.phone,
       createdAt: new Date(item.created_at)
@@ -149,6 +152,7 @@ export const useSupabaseData = () => {
       name: productData.name,
       category: productData.category,
       brand: productData.brand,
+      unit: productData.unit || '',
       prices: productData.prices || []
     };
 
@@ -168,6 +172,7 @@ export const useSupabaseData = () => {
       name: data.name,
       category: data.category,
       brand: data.brand,
+      unit: data.unit || '',
       prices: data.prices || [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
@@ -188,6 +193,7 @@ export const useSupabaseData = () => {
         name: updatedProduct.name,
         category: updatedProduct.category,
         brand: updatedProduct.brand,
+        unit: updatedProduct.unit || '',
         prices: updatedProduct.prices,
         updated_at: new Date().toISOString()
       })
@@ -230,6 +236,7 @@ export const useSupabaseData = () => {
       has_delivery: storeData.hasDelivery,
       delivery_radius: storeData.deliveryRadius,
       delivery_fee: storeData.deliveryFee,
+      delivery_rule: storeData.deliveryRule ?? null,
       website: storeData.website,
       phone: storeData.phone
     };
@@ -253,6 +260,7 @@ export const useSupabaseData = () => {
       hasDelivery: data.has_delivery,
       deliveryRadius: data.delivery_radius,
       deliveryFee: data.delivery_fee,
+      deliveryRule: data.delivery_rule || undefined,
       website: data.website,
       phone: data.phone,
       createdAt: new Date(data.created_at)
@@ -273,6 +281,7 @@ export const useSupabaseData = () => {
         has_delivery: updatedStore.hasDelivery,
         delivery_radius: updatedStore.deliveryRadius,
         delivery_fee: updatedStore.deliveryFee,
+        delivery_rule: updatedStore.deliveryRule ?? null,
         website: updatedStore.website,
         phone: updatedStore.phone
       })
