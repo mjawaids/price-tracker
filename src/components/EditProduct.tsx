@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Save, X } from 'lucide-react';
 import { Product } from '../types';
-import SmartSelect from './SmartSelect';
 
 interface EditProductProps {
   product: Product;
@@ -67,12 +66,17 @@ const EditProduct: React.FC<EditProductProps> = ({ product, onUpdateProduct, onC
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Category *
               </label>
-              <SmartSelect
+              <select
                 value={category}
-                onChange={setCategory}
-                placeholder="Select a category"
-                options={categories.map(cat => ({ value: cat, label: cat }))}
-              />
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                required
+              >
+                <option value="">Select a category</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
 
             <div>

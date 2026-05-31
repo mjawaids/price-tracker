@@ -5,7 +5,6 @@ import { findCheapestPriceWithDelivery } from '../utils/price-comparison';
 import { formatPrice } from '../utils/currency';
 import { useSettings } from '../contexts/SettingsContext';
 import { trackUserAction } from '../utils/analytics';
-import SmartSelect from './SmartSelect';
 
 interface ShoppingListProps {
   products: Product[];
@@ -30,21 +29,25 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
 
   const handleAddToList = () => {
     if (selectedProduct) {
       trackUserAction('add_to_shopping_list', {
         productId: selectedProduct,
-        quantity
+        quantity,
+        priority
       });
 
       onAddToList({
         productId: selectedProduct,
         quantity,
+        priority,
       });
       setShowAddModal(false);
       setSelectedProduct('');
       setQuantity(1);
+      setPriority('medium');
     }
   };
 
@@ -179,6 +182,15 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                         <div className="flex items-center justify-between flex-wrap gap-3">
                           <div className="flex-1 min-w-[200px]">
                             <h4 className="font-medium text-white">{item.product.name}</h4>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                item.priority === 'high' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                                item.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                                'bg-green-500/20 text-green-300 border border-green-500/30'
+                              }`}>
+                                {item.priority} priority
+                              </span>
+                            </div>
                           </div>
 
                           <div className="flex items-center flex-wrap gap-2">
@@ -241,16 +253,18 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Product
                 </label>
-                <SmartSelect
+                <select
                   value={selectedProduct}
-                  onChange={setSelectedProduct}
-                  placeholder="Select a product"
-                  options={products.map(product => ({
-                    value: product.id,
-                    label: product.name,
-                    sublabel: product.brand,
-                  }))}
-                />
+                  onChange={(e) => setSelectedProduct(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="">Select a product</option>
+                  {products.map(product => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}{product.brand ? ` - ${product.brand}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -266,6 +280,20 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Priority
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
             </div>
 
             <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 flex justify-end space-x-2">
