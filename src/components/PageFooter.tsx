@@ -23,7 +23,7 @@ const PageFooter: React.FC = () => {
             <p className="text-white/60 text-sm mb-2">
               Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
               <a
-                href="https://jawaid.dev"
+                href="https://jawaid.dev/?utm_source=spendless&utm_medium=referral&utm_campaign=footer_credit"
                 target="_blank"
                 rel="noopener"
                 className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
@@ -32,7 +32,7 @@ const PageFooter: React.FC = () => {
               </a>{' '}
               &mdash; Powered by 🚀{' '}
               <a
-                href="https://ibexoft.com"
+                href="https://ibexoft.com/?utm_source=spendless&utm_medium=referral&utm_campaign=footer_credit"
                 target="_blank"
                 rel="noopener"
                 className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
