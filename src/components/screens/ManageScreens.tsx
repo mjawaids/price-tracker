@@ -54,9 +54,10 @@ function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onC
   const app = useApp();
   const isNew = target === 'new';
   const p = isNew ? null : (target as Product | null);
+  const defaultCat = CATEGORIES[0].name;
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
-  const [cat, setCat] = useState('Pantry');
+  const [cat, setCat] = useState(defaultCat);
 
   useEffect(() => {
     if (p) {
@@ -66,7 +67,7 @@ function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onC
     } else {
       setName('');
       setUnit('');
-      setCat('Pantry');
+      setCat(defaultCat);
     }
   }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
 

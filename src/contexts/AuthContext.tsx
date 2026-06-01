@@ -134,6 +134,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
     if (!user) return { error: new Error('No user') }
 
+    // Update the auth user metadata so the UI (which reads user_metadata)
+    // reflects the change immediately.
+    const { data: authData, error: authError } = await supabase.auth.updateUser({
+      data: updates,
+    })
+    if (!authError && authData?.user) {
+      setUser(authData.user)
+    }
+
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -142,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .eq('id', user.id)
 
-    return { error }
+    return { error: error || authError }
   }
 
   const value = {

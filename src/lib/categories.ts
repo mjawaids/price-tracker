@@ -8,15 +8,24 @@ export interface Category {
   hue: number;
 }
 
-// The 7 canonical categories from the design handoff, with their hues.
+// Daily-household + grocery categories tuned for shopping in Pakistan.
+// Order here drives the section order on Browse.
 export const CATEGORIES: Category[] = [
-  { id: 'produce', name: 'Produce', hue: 135 },
-  { id: 'dairy', name: 'Dairy & Eggs', hue: 235 },
-  { id: 'bakery', name: 'Bakery', hue: 45 },
-  { id: 'meat', name: 'Meat', hue: 15 },
-  { id: 'pantry', name: 'Pantry', hue: 75 },
-  { id: 'household', name: 'Household', hue: 190 },
-  { id: 'beverages', name: 'Beverages', hue: 300 },
+  { id: 'fruits-veg', name: 'Fruits & Vegetables', hue: 140 },
+  { id: 'meat', name: 'Meat & Poultry', hue: 25 },
+  { id: 'dairy', name: 'Dairy & Eggs', hue: 250 },
+  { id: 'bakery', name: 'Bakery & Bread', hue: 55 },
+  { id: 'grains', name: 'Rice, Atta & Pulses', hue: 85 },
+  { id: 'cooking-oil', name: 'Cooking Oil & Ghee', hue: 50 },
+  { id: 'spices', name: 'Spices & Condiments', hue: 35 },
+  { id: 'pantry', name: 'Pantry & Canned', hue: 100 },
+  { id: 'frozen', name: 'Frozen Foods', hue: 195 },
+  { id: 'snacks', name: 'Snacks & Biscuits', hue: 350 },
+  { id: 'beverages', name: 'Tea, Coffee & Beverages', hue: 300 },
+  { id: 'baby', name: 'Baby & Kids', hue: 10 },
+  { id: 'pharmacy', name: 'Health & Pharmacy', hue: 215 },
+  { id: 'personal-care', name: 'Personal Care', hue: 325 },
+  { id: 'household', name: 'Cleaning & Household', hue: 180 },
 ];
 
 const slug = (s: string) =>

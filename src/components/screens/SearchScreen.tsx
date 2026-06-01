@@ -1,16 +1,57 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { resolveCategory } from '../../lib/categories';
 import { Icon, Chip } from '../ui';
 import { ReceiptRow } from './browseParts';
 
-const RECENTS = ['Milk', 'Coffee', 'Olive Oil', 'Eggs'];
+// Static starting points shown when there are no real recent searches yet.
+const SUGGESTED = ['Milk', 'Coffee', 'Olive Oil', 'Eggs'];
+
+const RECENTS_KEY = 'spendless-recent-searches';
+const MAX_RECENTS = 8;
+
+function loadRecents(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((t) => typeof t === 'string').slice(0, MAX_RECENTS);
+    }
+  } catch {
+    /* ignore malformed storage */
+  }
+  return [];
+}
 
 export default function SearchScreen() {
   const app = useApp();
   const { compact } = useBreakpoint();
   const [q, setQ] = useState('');
+  const [recents, setRecents] = useState<string[]>(loadRecents);
+
+  const commitRecent = useCallback((term: string) => {
+    const t = term.trim();
+    if (!t) return;
+    setRecents((prev) => {
+      const next = [t, ...prev.filter((r) => r.toLowerCase() !== t.toLowerCase())].slice(0, MAX_RECENTS);
+      try {
+        localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore quota / unavailable storage */
+      }
+      return next;
+    });
+  }, []);
+
+  const clearRecents = useCallback(() => {
+    setRecents([]);
+    try {
+      localStorage.removeItem(RECENTS_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const results = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -37,6 +78,9 @@ export default function SearchScreen() {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRecent(q);
+            }}
             placeholder="Search products…"
             className="flex-1 bg-transparent outline-none border-none font-sans text-base"
           />
@@ -51,10 +95,44 @@ export default function SearchScreen() {
       <div style={{ maxWidth: maxW, margin: '0 auto' }}>
         {!q && (
           <div style={{ padding: compact ? '20px 18px' : '24px 28px' }}>
-            <div className="font-mono text-[11px] tracking-[0.12em] text-ink-faint uppercase mb-3">Recent</div>
+            {recents.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-mono text-[11px] tracking-[0.12em] text-ink-faint uppercase">Recent</div>
+                  <button
+                    type="button"
+                    onClick={clearRecents}
+                    className="font-mono text-[11px] tracking-[0.06em] uppercase text-accent-ink"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {recents.map((r) => (
+                    <Chip
+                      key={r}
+                      onClick={() => {
+                        setQ(r);
+                        commitRecent(r);
+                      }}
+                    >
+                      {r}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="font-mono text-[11px] tracking-[0.12em] text-ink-faint uppercase mb-3">Suggested</div>
             <div className="flex flex-wrap gap-2">
-              {RECENTS.map((r) => (
-                <Chip key={r} onClick={() => setQ(r)}>
+              {SUGGESTED.map((r) => (
+                <Chip
+                  key={r}
+                  onClick={() => {
+                    setQ(r);
+                    commitRecent(r);
+                  }}
+                >
                   {r}
                 </Chip>
               ))}
@@ -80,7 +158,11 @@ export default function SearchScreen() {
             }}
           >
             {results.map((p) => (
-              <div key={p.id} className="border-b border-line last:border-b-0">
+              <div
+                key={p.id}
+                className="border-b border-line last:border-b-0"
+                onClick={() => commitRecent(q)}
+              >
                 <ReceiptRow p={p} />
               </div>
             ))}
