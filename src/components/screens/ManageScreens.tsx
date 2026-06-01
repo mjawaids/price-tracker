@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { useCategories } from '../../contexts/CategoriesContext';
 import { Product, Store, Price, DeliveryRule } from '../../types';
-import { resolveCategory, storeHue, catTint, catInk } from '../../lib/categories';
+import { CATEGORIES, resolveCategory, storeHue } from '../../lib/categories';
 import { priceMap, priceRange, deliveryLabel, deliveryRuleOf } from '../../utils/optimizer';
 import { Icon, Thumb, Chip, Btn, Sheet, StoreDot } from '../ui';
 import { Field, TextIn, NumIn, ManageHeader } from './manageParts';
@@ -53,10 +52,9 @@ export function ManageProducts() {
 
 function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onClose: () => void }) {
   const app = useApp();
-  const { categories } = useCategories();
   const isNew = target === 'new';
   const p = isNew ? null : (target as Product | null);
-  const defaultCat = categories[0]?.name || 'Pantry';
+  const defaultCat = CATEGORIES[0].name;
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
   const [cat, setCat] = useState(defaultCat);
@@ -99,7 +97,7 @@ function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onC
       </Field>
       <Field label="Category">
         <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
+          {CATEGORIES.map((c) => (
             <Chip key={c.id} active={cat === c.name} onClick={() => setCat(c.name)}>
               {c.name}
             </Chip>
@@ -398,149 +396,6 @@ function PriceSheet({ target, onClose }: { target: Product | null; onClose: () =
       <div className="mt-5">
         <Btn full onClick={save}>
           Save prices
-        </Btn>
-      </div>
-    </Sheet>
-  );
-}
-
-// ── CATEGORIES ──────────────────────────────────────────────────────────────
-export function ManageCategories() {
-  const app = useApp();
-  const { categories, addCategory, renameCategory, deleteCategory, resetCategories } = useCategories();
-  const [sheet, setSheet] = useState<'new' | string | null>(null);
-
-  // products per category id
-  const counts = new Map<string, number>();
-  app.products.forEach((p) => {
-    const id = resolveCategory(p.category).id;
-    counts.set(id, (counts.get(id) || 0) + 1);
-  });
-
-  return (
-    <div className="pb-6">
-      <ManageHeader
-        title="Categories"
-        sub={`${categories.length} categories`}
-        action={
-          <Btn size="sm" icon="plus" onClick={() => setSheet('new')}>
-            Add
-          </Btn>
-        }
-      />
-      <div className={listGrid}>
-        {categories.map((c) => {
-          const n = counts.get(c.id) || 0;
-          return (
-            <div
-              key={c.id}
-              onClick={() => setSheet(c.id)}
-              className="flex items-center gap-3 bg-surface rounded-2xl p-[11px] shadow-card cursor-pointer"
-            >
-              <span
-                className="grid place-items-center shrink-0"
-                style={{ width: 38, height: 38, borderRadius: 11, background: catTint(c.hue) }}
-              >
-                <span style={{ width: 12, height: 12, borderRadius: 4, background: `oklch(0.62 0.13 ${c.hue})` }} />
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-[15px]" style={{ color: catInk(c.hue) }}>
-                  {c.name}
-                </div>
-                <div className="text-[12.5px] text-ink-faint">
-                  {n ? `${n} product${n > 1 ? 's' : ''}` : 'no products yet'}
-                </div>
-              </div>
-              <Icon name="chevR" size={18} color="var(--ink-faint)" />
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex justify-center mt-5">
-        <Btn size="sm" variant="ghost" onClick={resetCategories}>
-          Reset to defaults
-        </Btn>
-      </div>
-      <CategorySheet
-        target={sheet}
-        onClose={() => setSheet(null)}
-        onAdd={addCategory}
-        onRename={renameCategory}
-        onDelete={deleteCategory}
-        categories={categories}
-      />
-    </div>
-  );
-}
-
-function CategorySheet({
-  target,
-  onClose,
-  onAdd,
-  onRename,
-  onDelete,
-  categories,
-}: {
-  target: 'new' | string | null;
-  onClose: () => void;
-  onAdd: (name: string) => boolean;
-  onRename: (id: string, name: string) => void;
-  onDelete: (id: string) => void;
-  categories: { id: string; name: string }[];
-}) {
-  const isNew = target === 'new';
-  const existing = isNew ? null : categories.find((c) => c.id === target) || null;
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    setName(existing?.name || '');
-    setError('');
-  }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!target) return null;
-
-  const save = () => {
-    const next = name.trim();
-    if (!next) return;
-    if (isNew) {
-      if (!onAdd(next)) {
-        setError('That category already exists.');
-        return;
-      }
-    } else if (existing) {
-      onRename(existing.id, next);
-    }
-    onClose();
-  };
-  const del = () => {
-    if (existing) onDelete(existing.id);
-    onClose();
-  };
-
-  return (
-    <Sheet open={!!target} onClose={onClose} title={isNew ? 'New category' : 'Edit category'}>
-      <Field label="Name" hint="Products keep their existing label even if a category is removed.">
-        <TextIn
-          value={name}
-          autoFocus
-          onChange={(e) => {
-            setName(e.target.value);
-            setError('');
-          }}
-          onKeyDown={(e) => e.key === 'Enter' && save()}
-          placeholder="e.g. Frozen, Snacks, Personal care"
-        />
-      </Field>
-      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'oklch(0.55 0.16 25)' }}>{error}</div>}
-      <div className="flex gap-2.5 mt-1.5">
-        {!isNew && (
-          <Btn variant="ghost" icon="trash" onClick={del}>
-            Delete
-          </Btn>
-        )}
-        <Btn full onClick={save}>
-          {isNew ? 'Add category' : 'Save changes'}
         </Btn>
       </div>
     </Sheet>

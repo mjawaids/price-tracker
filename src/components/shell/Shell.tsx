@@ -11,7 +11,7 @@ import DetailScreen from '../screens/DetailScreen';
 import CartScreen from '../screens/CartScreen';
 import PlanScreen from '../screens/PlanScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import { ManageProducts, ManageStores, ManagePrices, ManageCategories } from '../screens/ManageScreens';
+import { ManageProducts, ManageStores, ManagePrices } from '../screens/ManageScreens';
 
 const SCREENS: Record<ScreenName, () => JSX.Element> = {
   browse: BrowseScreen,
@@ -23,11 +23,10 @@ const SCREENS: Record<ScreenName, () => JSX.Element> = {
   mproducts: ManageProducts,
   mstores: ManageStores,
   mprices: ManagePrices,
-  mcategories: ManageCategories,
 };
 
-const MANAGE_SCREENS: ScreenName[] = ['mproducts', 'mstores', 'mprices', 'mcategories'];
-const NAV_SCREENS: ScreenName[] = ['browse', 'search', 'cart', 'mproducts', 'mstores', 'mprices', 'mcategories'];
+const MANAGE_SCREENS: ScreenName[] = ['mproducts', 'mstores', 'mprices'];
+const NAV_SCREENS: ScreenName[] = ['browse', 'search', 'cart', 'mproducts', 'mstores', 'mprices'];
 
 interface NavDef {
   id: ScreenName | 'manage' | 'shop';
@@ -104,7 +103,6 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
     { id: 'mproducts', icon: 'box', label: 'Products' },
     { id: 'mstores', icon: 'store', label: 'Stores' },
     { id: 'mprices', icon: 'tag', label: 'Prices' },
-    { id: 'mcategories', icon: 'grid', label: 'Categories' },
   ];
   return (
     <div className="shrink-0 border-r border-line bg-paper flex flex-col" style={{ width: mini ? 84 : 248, padding: mini ? '18px 12px' : '20px 16px' }}>
@@ -216,7 +214,6 @@ export default function Shell() {
     { id: 'mproducts', icon: 'box', label: 'Products' },
     { id: 'mstores', icon: 'store', label: 'Stores' },
     { id: 'mprices', icon: 'tag', label: 'Prices' },
-    { id: 'mcategories', icon: 'grid', label: 'Categories' },
     { id: 'shop', icon: 'cart', label: 'Shop' },
   ];
   const onShopTab = (id: NavDef['id']) => {

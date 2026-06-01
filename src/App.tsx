@@ -1,6 +1,5 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
-import { CategoriesProvider } from './contexts/CategoriesContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { AppProvider } from './contexts/AppContext';
@@ -30,11 +29,9 @@ function AppContent() {
   }
 
   return (
-    <CategoriesProvider>
-      <AppProvider>
-        <Shell />
-      </AppProvider>
-    </CategoriesProvider>
+    <AppProvider>
+      <Shell />
+    </AppProvider>
   );
 }
 

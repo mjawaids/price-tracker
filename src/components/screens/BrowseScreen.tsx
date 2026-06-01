@@ -1,31 +1,29 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
-import { resolveCategory } from '../../lib/categories';
-import { useCategories } from '../../contexts/CategoriesContext';
+import { resolveCategory, CATEGORIES } from '../../lib/categories';
 import { Icon, Chip } from '../ui';
 import { AisleView } from './browseParts';
 
 function BrowseHeader({ cat, setCat }: { cat: string; setCat: (c: string) => void }) {
   const app = useApp();
-  const { categories } = useCategories();
   const { compact } = useBreakpoint();
   const firstName = app.user.name.split(' ')[0];
   const initials = app.user.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
 
-  // categories present in the catalogue (managed order + extras)
+  // categories present in the catalogue (canonical order + extras)
   const cats = useMemo(() => {
     const present = new Map<string, string>();
     app.products.forEach((p) => {
       const c = resolveCategory(p.category);
       if (!present.has(c.id)) present.set(c.id, c.name);
     });
-    const ordered = categories.filter((c) => present.has(c.id)).map((c) => ({ id: c.id, name: c.name }));
+    const ordered = CATEGORIES.filter((c) => present.has(c.id)).map((c) => ({ id: c.id, name: c.name }));
     const extras = Array.from(present.entries())
-      .filter(([id]) => !categories.some((c) => c.id === id))
+      .filter(([id]) => !CATEGORIES.some((c) => c.id === id))
       .map(([id, name]) => ({ id, name }));
     return [...ordered, ...extras];
-  }, [app.products, categories]);
+  }, [app.products]);
 
   return (
     <div className="sticky top-0 z-20 bg-paper border-b border-line" style={{ paddingTop: compact ? 14 : 22 }}>
