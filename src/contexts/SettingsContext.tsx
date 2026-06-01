@@ -7,6 +7,7 @@ interface UserSettings {
   theme: 'light' | 'dark' | 'system';
   notifications: boolean;
   language: string;
+  location: string | null;
 }
 
 interface SettingsContextType {
@@ -17,9 +18,10 @@ interface SettingsContextType {
 
 const defaultSettings: UserSettings = {
   currency: getDefaultCurrency(),
-  theme: 'system',
+  theme: 'light',
   notifications: true,
   language: 'en',
+  location: null,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
