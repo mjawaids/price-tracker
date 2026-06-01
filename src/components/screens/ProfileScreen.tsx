@@ -290,6 +290,26 @@ export default function ProfileScreen() {
           </Btn>
         </div>
         <div className="text-center mt-[18px] font-mono text-[11px] text-ink-faint">SpendLess · v1.0.0</div>
+        <div className="text-center mt-[6px] font-mono text-[11px] text-ink-faint">
+          Made with ❤️ by{' '}
+          <a
+            href="https://jawaid.dev/?utm_source=spendless&utm_medium=referral&utm_campaign=app_footer"
+            target="_blank"
+            rel="noopener"
+            className="text-accent hover:underline"
+          >
+            Jawaid
+          </a>{' '}
+          · Powered by 🚀{' '}
+          <a
+            href="https://ibexoft.com/?utm_source=spendless&utm_medium=referral&utm_campaign=app_footer"
+            target="_blank"
+            rel="noopener"
+            className="text-accent hover:underline"
+          >
+            Ibexoft
+          </a>
+        </div>
       </div>
 
       <EditProfileSheet open={sheet === 'edit'} onClose={() => setSheet(null)} />
