@@ -25,7 +25,7 @@ const PageFooter: React.FC = () => {
               <a
                 href="https://jawaid.dev"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener"
                 className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
               >
                 Jawaid
@@ -34,7 +34,7 @@ const PageFooter: React.FC = () => {
               <a
                 href="https://ibexoft.com"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener"
                 className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
               >
                 Ibexoft
