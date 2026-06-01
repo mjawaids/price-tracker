@@ -72,12 +72,7 @@ export const formatPrice = (amount: number, currencyCode: string): string => {
   return `${currency.symbol}${amount.toFixed(2)}`;
 };
 
-export const getDefaultCurrency = (): string => {
-  // Try to detect user's locale and return appropriate currency
-  const locale = navigator.language || 'en-US';
-  const countryCode = locale.split('-')[1];
-  
-  const countryToCurrency: Record<string, string> = {
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
     'US': 'USD',
     'GB': 'GBP',
     'DE': 'EUR',
@@ -133,7 +128,17 @@ export const getDefaultCurrency = (): string => {
     'UY': 'UYU',
     'BO': 'BOB',
     'PY': 'PYG',
-  };
-  
-  return countryToCurrency[countryCode] || 'USD';
+};
+
+/** Map an ISO country code (e.g. "PK") to its currency code, defaulting to USD. */
+export const currencyForCountry = (countryCode?: string): string => {
+  if (!countryCode) return 'USD';
+  return COUNTRY_TO_CURRENCY[countryCode.toUpperCase()] || 'USD';
+};
+
+export const getDefaultCurrency = (): string => {
+  // Try to detect user's locale and return appropriate currency
+  const locale = navigator.language || 'en-US';
+  const countryCode = locale.split('-')[1];
+  return currencyForCountry(countryCode);
 };

@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
-import { Icon, Btn, IconName } from '../ui';
+import { Icon, Btn, IconName, Sheet } from '../ui';
+import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from './sheets';
+
+type ProfileSheet = 'edit' | 'notifications' | 'privacy' | null;
 
 function SettingRow({
   icon,
@@ -55,12 +60,172 @@ function Group({ title, children }: { title?: string; children: React.ReactNode 
   );
 }
 
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className="relative shrink-0 transition-colors"
+      style={{
+        width: 46,
+        height: 28,
+        borderRadius: 999,
+        background: on ? 'var(--accent)' : 'var(--line)',
+      }}
+    >
+      <span
+        className="absolute bg-paper transition-all"
+        style={{ width: 22, height: 22, borderRadius: 999, top: 3, left: on ? 21 : 3 }}
+      />
+    </button>
+  );
+}
+
+function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const app = useApp();
+  const { updateProfile } = useAuth();
+  const [name, setName] = useState(app.user.name);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setName(app.user.name);
+      setError('');
+    }
+  }, [open, app.user.name]);
+
+  const save = async () => {
+    const next = name.trim();
+    if (!next) {
+      setError('Please enter your name.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    const { error } = await updateProfile({ full_name: next });
+    setSaving(false);
+    if (error) {
+      setError(error.message || 'Could not save changes.');
+      return;
+    }
+    onClose();
+  };
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Edit profile">
+      <Field label="Full name">
+        <TextIn value={name} autoFocus onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+      </Field>
+      <Field label="Email" hint="Your email can’t be changed here.">
+        <TextIn value={app.user.email} disabled className="opacity-60" />
+      </Field>
+      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'oklch(0.55 0.16 25)' }}>{error}</div>}
+      <Btn full onClick={save} disabled={saving}>
+        {saving ? 'Saving…' : 'Save changes'}
+      </Btn>
+    </Sheet>
+  );
+}
+
+function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { settings, updateSettings } = useSettings();
+
+  const Row = ({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) => (
+    <div className="flex items-center gap-3" style={{ padding: '14px 0' }}>
+      <div className="flex-1">
+        <div className="font-semibold text-[15px]">{label}</div>
+        <div className="text-[12.5px] text-ink-faint leading-snug mt-0.5">{desc}</div>
+      </div>
+      <Toggle on={value} onChange={onChange} />
+    </div>
+  );
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Notifications">
+      <div className="text-[13px] text-ink-faint -mt-1 mb-2">Choose what SpendLess can notify you about.</div>
+      <div className="divide-y divide-line">
+        <Row
+          label="Push notifications"
+          desc="Price drops and deals on products you track."
+          value={settings.notifications}
+          onChange={(v) => updateSettings({ notifications: v })}
+        />
+      </div>
+      <Btn full onClick={onClose} className="mt-4">
+        Done
+      </Btn>
+    </Sheet>
+  );
+}
+
+function PrivacySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { updatePassword } = useAuth();
+  const [pw, setPw] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setPw('');
+      setConfirm('');
+      setError('');
+      setDone(false);
+    }
+  }, [open]);
+
+  const save = async () => {
+    if (pw.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (pw !== confirm) {
+      setError('Passwords don’t match.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    const { error } = await updatePassword(pw);
+    setSaving(false);
+    if (error) {
+      setError(error.message || 'Could not update password.');
+      return;
+    }
+    setDone(true);
+    setPw('');
+    setConfirm('');
+  };
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Privacy & security">
+      <div className="text-[13px] text-ink-faint -mt-1 mb-3">Update the password you use to sign in.</div>
+      <Field label="New password">
+        <TextIn type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="At least 6 characters" />
+      </Field>
+      <Field label="Confirm new password">
+        <TextIn type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" />
+      </Field>
+      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'oklch(0.55 0.16 25)' }}>{error}</div>}
+      {done && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'var(--accent-ink)' }}>Password updated.</div>}
+      <Btn full onClick={save} disabled={saving}>
+        {saving ? 'Updating…' : 'Update password'}
+      </Btn>
+    </Sheet>
+  );
+}
+
 export default function ProfileScreen() {
   const app = useApp();
+  const { settings } = useSettings();
   const { compact } = useBreakpoint();
   const big = !compact;
   const u = app.user;
   const initials = u.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
+  const [sheet, setSheet] = useState<ProfileSheet>(null);
 
   return (
     <div style={{ paddingBottom: big ? 0 : 24 }}>
@@ -100,9 +265,9 @@ export default function ProfileScreen() {
         </Group>
 
         <Group title="Account">
-          <SettingRow icon="user" label="Edit profile" onClick={() => {}} />
-          <SettingRow icon="bell" label="Notifications" value="On" onClick={() => {}} />
-          <SettingRow icon="lock" label="Privacy & security" onClick={() => {}} last />
+          <SettingRow icon="user" label="Edit profile" onClick={() => setSheet('edit')} />
+          <SettingRow icon="bell" label="Notifications" value={settings.notifications ? 'On' : 'Off'} onClick={() => setSheet('notifications')} />
+          <SettingRow icon="lock" label="Privacy & security" onClick={() => setSheet('privacy')} last />
         </Group>
 
         <Group title="Catalogue">
@@ -126,6 +291,10 @@ export default function ProfileScreen() {
         </div>
         <div className="text-center mt-[18px] font-mono text-[11px] text-ink-faint">SpendLess · v1.0.0</div>
       </div>
+
+      <EditProfileSheet open={sheet === 'edit'} onClose={() => setSheet(null)} />
+      <NotificationsSheet open={sheet === 'notifications'} onClose={() => setSheet(null)} />
+      <PrivacySheet open={sheet === 'privacy'} onClose={() => setSheet(null)} />
     </div>
   );
 }

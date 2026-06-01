@@ -15,7 +15,8 @@ export type ScreenName =
   | 'profile'
   | 'mproducts'
   | 'mstores'
-  | 'mprices';
+  | 'mprices'
+  | 'mcategories';
 
 export type Mode = 'shop' | 'manage';
 export type SheetName = 'currency' | 'location' | null;

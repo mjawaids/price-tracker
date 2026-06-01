@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getDefaultCurrency } from '../utils/currency';
 import { useTheme } from './ThemeContext';
 
 interface UserSettings {
@@ -17,7 +16,7 @@ interface SettingsContextType {
 }
 
 const defaultSettings: UserSettings = {
-  currency: getDefaultCurrency(),
+  currency: 'PKR',
   theme: 'light',
   notifications: true,
   language: 'en',
