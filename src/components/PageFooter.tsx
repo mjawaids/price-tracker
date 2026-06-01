@@ -22,13 +22,22 @@ const PageFooter: React.FC = () => {
           <div className="text-center">
             <p className="text-white/60 text-sm mb-2">
               Made with <span className="text-red-500 animate-pulse">❤️</span> by{' '}
-              <a 
-                href="https://jawaid.dev" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <a
+                href="https://jawaid.dev/?utm_source=spendless&utm_medium=referral&utm_campaign=footer_credit"
+                target="_blank"
+                rel="noopener"
                 className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
               >
-                Muhammad Jawaid Shamshad
+                Jawaid
+              </a>{' '}
+              &mdash; Powered by 🚀{' '}
+              <a
+                href="https://ibexoft.com/?utm_source=spendless&utm_medium=referral&utm_campaign=footer_credit"
+                target="_blank"
+                rel="noopener"
+                className="text-white/80 hover:text-white font-medium transition-colors duration-200 hover:underline"
+              >
+                Ibexoft
               </a>
             </p>
             <p className="text-white/50 text-xs">
