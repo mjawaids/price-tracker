@@ -4,6 +4,7 @@ export interface Product {
   category: string;
   brand?: string;
   unit?: string;
+  imageUrl?: string;
   prices: Price[];
   createdAt: Date;
   updatedAt: Date;

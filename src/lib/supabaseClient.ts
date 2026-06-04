@@ -47,5 +47,12 @@ if (url && key) {
       updateUser: noop,
     },
     from: (_table: string) => queryBuilder(),
+    storage: {
+      from: (_bucket: string) => ({
+        upload: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+        remove: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+        getPublicUrl: (_path: string) => ({ data: { publicUrl: '' } }),
+      }),
+    },
   } as any;
 }
