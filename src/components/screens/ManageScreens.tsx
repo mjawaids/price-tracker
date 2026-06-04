@@ -51,13 +51,13 @@ export function ManageProducts() {
   );
 }
 
-function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null; onClose: () => void }) {
+function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onClose: () => void }) {
   const app = useApp();
-  const isNew = target === ‘new’;
+  const isNew = target === 'new';
   const p = isNew ? null : (target as Product | null);
   const defaultCat = CATEGORIES[0].name;
-  const [name, setName] = useState(‘’);
-  const [unit, setUnit] = useState(‘’);
+  const [name, setName] = useState('');
+  const [unit, setUnit] = useState('');
   const [cat, setCat] = useState(defaultCat);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -68,12 +68,12 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
   useEffect(() => {
     if (p) {
       setName(p.name);
-      setUnit(p.unit || ‘’);
+      setUnit(p.unit || '');
       setCat(resolveCategory(p.category).name);
       setImagePreview(p.imageUrl ?? null);
     } else {
-      setName(‘’);
-      setUnit(‘’);
+      setName('');
+      setUnit('');
       setCat(defaultCat);
       setImagePreview(null);
     }
@@ -87,15 +87,15 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (imagePreview?.startsWith(‘blob:’)) URL.revokeObjectURL(imagePreview);
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
     setIsRemoving(false);
-    if (fileInputRef.current) fileInputRef.current.value = ‘’;
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleRemoveImage = () => {
-    if (imagePreview?.startsWith(‘blob:’)) URL.revokeObjectURL(imagePreview);
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
     setImagePreview(null);
     setIsRemoving(true);
@@ -109,7 +109,7 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
         const created = await app.addProduct({
           name: name.trim(),
           category: cat,
-          unit: unit.trim() || ‘1 unit’,
+          unit: unit.trim() || '1 unit',
           prices: [],
         });
         if (!created) return;
@@ -126,10 +126,10 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
           const url = await app.uploadProductImage(p.id, imageFile);
           if (url) {
             if (p.imageUrl) {
-              const marker = ‘/product-images/’;
+              const marker = '/product-images/';
               const idx = p.imageUrl.indexOf(marker);
               if (idx !== -1) {
-                await supabase.storage.from(‘product-images’).remove([p.imageUrl.slice(idx + marker.length)]);
+                await supabase.storage.from('product-images').remove([p.imageUrl.slice(idx + marker.length)]);
               }
             }
             nextImageUrl = url;
@@ -139,7 +139,7 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
       }
       onClose();
     } catch (err) {
-      console.error(‘ProductSheet save error:’, err);
+      console.error('ProductSheet save error:', err);
     } finally {
       setSaving(false);
     }
@@ -151,7 +151,7 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
   };
 
   return (
-    <Sheet open={!!target} onClose={onClose} title={isNew ? ‘New product’ : ‘Edit product’}>
+    <Sheet open={!!target} onClose={onClose} title={isNew ? 'New product' : 'Edit product'}>
       {/* Image picker */}
       <div className="flex items-end gap-4 mb-5">
         <div className="relative shrink-0" style={{ width: 80, height: 80 }}>
@@ -161,8 +161,8 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
             className="w-full h-full overflow-hidden"
             style={{
               borderRadius: 18,
-              background: imagePreview ? ‘transparent’ : ‘var(--surface)’,
-              boxShadow: ‘inset 0 0 0 1.5px var(--line)’,
+              background: imagePreview ? 'transparent' : 'var(--surface)',
+              boxShadow: 'inset 0 0 0 1.5px var(--line)',
             }}
             aria-label="Choose product image"
           >
@@ -170,7 +170,7 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
               <img
                 src={imagePreview}
                 alt="Preview"
-                style={{ width: ‘100%’, height: ‘100%’, objectFit: ‘cover’, display: ‘block’ }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-ink-faint">
@@ -207,7 +207,7 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
       <Field label="Name">
         <TextIn value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Whole Milk" />
       </Field>
-      <Field label="Unit / size" hint="How it’s sold — shown next to the price.">
+      <Field label="Unit / size" hint="How it's sold — shown next to the price.">
         <TextIn value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="e.g. 1 gal, dozen, 500 g" />
       </Field>
       <Field label="Category">
@@ -226,7 +226,7 @@ function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null;
           </Btn>
         )}
         <Btn full onClick={save} disabled={saving}>
-          {saving ? ‘Saving…’ : isNew ? ‘Add product’ : ‘Save changes’}
+          {saving ? 'Saving…' : isNew ? 'Add product' : 'Save changes'}
         </Btn>
       </div>
     </Sheet>
@@ -488,7 +488,7 @@ function PriceSheet({ target, onClose }: { target: Product | null; onClose: () =
   return (
     <Sheet open={!!target} onClose={onClose} title={target.name}>
       <div className="text-[13px] text-ink-faint -mt-1 mb-3.5">
-        Leave a store blank if {target.name} isn’t sold there.
+        Leave a store blank if {target.name} isn't sold there.
       </div>
       {app.stores.length === 0 ? (
         <div className="text-sm text-ink-faint py-6 text-center">Add stores first in Manage › Stores.</div>
