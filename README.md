@@ -102,14 +102,58 @@ You can find the Supabase values in your project dashboard under **Settings > AP
 
 The application uses Supabase as the backend. The core schema includes:
 
-- **profiles**: User profile information
 - **products**: Product catalog with flattened per-store pricing
 - **stores**: Store information (physical and online) with delivery rules
 - **shopping_lists**: User shopping lists and plan items
 
+User profile data (name, avatar) is stored in Supabase Auth `user_metadata`,
+so no separate profiles table is required by the app.
+
 Migrations live in `supabase/migrations` and are applied when you connect to Supabase. They include proper RLS policies for every table.
 
-### 5. Start Development Server
+### 5. Google Sign-In & Auth Security
+
+Users can register and sign in with **email/password** or **Google**. A Google
+login automatically links to an existing account with the same address via
+Supabase's built-in identity linking (only when the email is verified), so users
+don't end up with duplicate accounts.
+
+The frontend uses only the **public anon key** — all data access is gated by
+Row-Level Security, so the anon key cannot read or modify anyone's data on its
+own. Never put the `service_role` key in the frontend.
+
+#### One-time configuration
+
+Google OAuth requires provider setup in the Google Cloud and Supabase dashboards
+(these are not stored in this repo):
+
+1. **Google Cloud Console** → APIs & Services → Credentials → create an OAuth
+   client ID (type: *Web application*). Configure the consent screen, then set
+   the **Authorized redirect URI** to your Supabase callback:
+   `https://<PROJECT_REF>.supabase.co/auth/v1/callback`. Copy the **Client ID**
+   and **Client Secret**.
+2. **Supabase** → Authentication → Providers → **Google**: enable it and paste
+   the Client ID + Secret.
+3. **Supabase** → Authentication → URL Configuration:
+   - **Site URL**: your production URL (e.g. `https://spendless.ibexoft.com`)
+   - **Redirect URLs**: add only your own domains (e.g.
+     `https://spendless.ibexoft.com/**` and `http://localhost:5173/**`).
+
+#### Security checklist (verify before going live)
+
+- [ ] **Google redirect URI** is restricted to the Supabase callback only — this
+      stops anyone from reusing your Google credentials in a different app.
+- [ ] **Supabase Redirect URLs** list contains only your domains (no broad
+      wildcards) — prevents OAuth open-redirect / session-token theft.
+- [ ] **Confirm email** is ON (Authentication → Providers → Email) — required for
+      safe automatic account linking; blocks account pre-hijacking.
+- [ ] **RLS** is enabled on every table (it is, by default in the migrations).
+- [ ] **CAPTCHA + rate limits** enabled (Authentication → Attack Protection) to
+      deter abuse of the public anon key.
+- [ ] The `service_role` key is **never** referenced in frontend code or `.env`
+      files prefixed with `VITE_`.
+
+### 6. Start Development Server
 
 ```bash
 npm run dev
@@ -117,7 +161,7 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
-### 6. Build for Production
+### 7. Build for Production
 
 ```bash
 npm run build
@@ -125,7 +169,7 @@ npm run build
 
 This creates an optimized production build in the `dist` directory.
 
-### 7. Regenerate App Icons (optional)
+### 8. Regenerate App Icons (optional)
 
 Favicons and PWA icons are generated from the SVG sources in `public/`
 (`favicon.svg` and `icon-maskable.svg`). After editing a source SVG, run:
