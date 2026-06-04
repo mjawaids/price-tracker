@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, GoogleIcon, Btn, IconName } from '../ui';
 
@@ -51,7 +50,7 @@ function BrandPanel({ big }: { big?: boolean }) {
 }
 
 function AuthForm() {
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -88,10 +87,13 @@ function AuthForm() {
   };
 
   const google = async () => {
-    try {
-      await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-    } catch {
-      setMsg({ kind: 'err', text: 'Google sign-in is not configured.' });
+    setMsg(null);
+    setBusy(true);
+    const { error } = await signInWithGoogle();
+    // On success the browser redirects to Google, so we only reach here on error.
+    if (error) {
+      setBusy(false);
+      setMsg({ kind: 'err', text: error.message || 'Google sign-in is not configured.' });
     }
   };
 
@@ -122,7 +124,7 @@ function AuthForm() {
         ))}
       </div>
 
-      <Btn full size="lg" variant="ghost" onClick={google} className="mb-3.5">
+      <Btn full size="lg" variant="ghost" onClick={google} disabled={busy} className="mb-3.5">
         <GoogleIcon /> Continue with Google
       </Btn>
       <div className="flex items-center gap-3 text-ink-faint text-[12.5px]" style={{ margin: '4px 0 16px' }}>

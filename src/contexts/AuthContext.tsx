@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: AuthError | null }>
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signInWithGoogle: () => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
@@ -74,21 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })
 
     if (!error && data.user) {
-      // Track successful sign up
+      // Track successful sign up. The full name is stored in user_metadata
+      // (options.data above), which is what the UI reads.
       trackAuth('sign_up');
-      
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          full_name: fullName,
-          email: email,
-        })
-
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-      }
     }
 
     return { error }
@@ -104,6 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       trackAuth('sign_in');
     }
     
+    return { error }
+  }
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: { prompt: 'select_account' },
+      },
+    })
     return { error }
   }
 
@@ -143,15 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(authData.user)
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id)
-
-    return { error: error || authError }
+    return { error: authError }
   }
 
   const value = {
@@ -160,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     resetPassword,
     updatePassword,
