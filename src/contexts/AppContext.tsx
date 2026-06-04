@@ -28,7 +28,7 @@ interface StackEntry {
 
 export interface AppApi {
   // identity
-  user: { name: string; email: string };
+  user: { name: string; email: string; avatarUrl?: string };
   // data (shared catalogue)
   products: Product[];
   stores: Store[];
@@ -168,6 +168,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user: {
         name: (authUser?.user_metadata?.full_name as string) || authUser?.email?.split('@')[0] || 'Guest',
         email: authUser?.email || '',
+        // Custom upload takes precedence, then the Google-provided photo, then initials.
+        avatarUrl:
+          (authUser?.user_metadata?.avatar_url as string) ||
+          (authUser?.user_metadata?.picture as string) ||
+          undefined,
       },
       products: data.products,
       stores: data.stores,

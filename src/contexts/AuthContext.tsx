@@ -14,6 +14,8 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
   updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<{ error: any }>
+  uploadAvatar: (file: File) => Promise<{ error: any }>
+  removeAvatar: () => Promise<{ error: any }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -146,6 +148,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error: authError }
   }
 
+  // Stored avatars live in the public `avatars` storage bucket under the
+  // user's folder. Google-provided photos (user_metadata.picture or a remote
+  // avatar_url) are NOT in this bucket and must never be deleted from storage.
+  const AVATAR_MARKER = '/avatars/'
+
+  const removeStoredAvatarFile = async (avatarUrl?: string) => {
+    if (!avatarUrl) return
+    const idx = avatarUrl.indexOf(AVATAR_MARKER)
+    if (idx === -1) return // not a stored avatar (e.g. Google URL)
+    const { error } = await supabase.storage
+      .from('avatars')
+      .remove([avatarUrl.slice(idx + AVATAR_MARKER.length)])
+    if (error) console.error('Error deleting avatar from storage:', error)
+  }
+
+  const uploadAvatar = async (file: File) => {
+    if (!user) return { error: new Error('No user') }
+    const ext = file.name.split('.').pop() || 'jpg'
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: false, contentType: file.type })
+    if (uploadError) {
+      console.error('Error uploading avatar:', uploadError)
+      return { error: uploadError }
+    }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    const publicUrl = data.publicUrl as string
+
+    // Persist the new URL first; only remove the previous stored file once the
+    // metadata update succeeds, so a failure never leaves the user without an avatar.
+    const prevAvatar = user.user_metadata?.avatar_url as string | undefined
+    const { error } = await updateProfile({ avatar_url: publicUrl })
+    if (error) {
+      await removeStoredAvatarFile(publicUrl)
+      return { error }
+    }
+    if (prevAvatar && prevAvatar !== publicUrl) await removeStoredAvatarFile(prevAvatar)
+    return { error: null }
+  }
+
+  const removeAvatar = async () => {
+    if (!user) return { error: new Error('No user') }
+    const prevAvatar = user.user_metadata?.avatar_url as string | undefined
+    // Clear the custom avatar so the UI falls back to the Google photo (picture)
+    // and then to initials.
+    const { error } = await updateProfile({ avatar_url: null as unknown as string })
+    if (error) return { error }
+    await removeStoredAvatarFile(prevAvatar)
+    return { error: null }
+  }
+
   const value = {
     user,
     session,
@@ -157,6 +212,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
+    uploadAvatar,
+    removeAvatar,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

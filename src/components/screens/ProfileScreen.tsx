@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -86,17 +86,64 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const app = useApp();
-  const { updateProfile } = useAuth();
+  const { updateProfile, uploadAvatar, removeAvatar } = useAuth();
   const [name, setName] = useState(app.user.name);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  // A stored avatar lives in our `avatars` bucket; a Google photo does not.
+  // Only stored/uploaded avatars can be meaningfully removed (a Google photo
+  // would simply reappear as the fallback).
+  const isStoredAvatar = !!app.user.avatarUrl?.includes('/avatars/');
+  const showRemove = !!avatarPreview && (!!avatarFile || isStoredAvatar);
+
+  const clearObjectUrl = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (open) {
       setName(app.user.name);
       setError('');
+      clearObjectUrl();
+      setAvatarFile(null);
+      setAvatarPreview(app.user.avatarUrl ?? null);
+      setIsRemoving(false);
     }
-  }, [open, app.user.name]);
+  }, [open, app.user.name, app.user.avatarUrl]);
+
+  // Revoke any preview object URL when the sheet unmounts.
+  useEffect(() => () => clearObjectUrl(), []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    clearObjectUrl();
+    const url = URL.createObjectURL(file);
+    objectUrlRef.current = url;
+    setAvatarFile(file);
+    setAvatarPreview(url);
+    setIsRemoving(false);
+  };
+
+  const handleRemoveAvatar = () => {
+    clearObjectUrl();
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setIsRemoving(true);
+  };
+
+  const initials = app.user.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
 
   const save = async () => {
     const next = name.trim();
@@ -106,19 +153,92 @@ function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => voi
     }
     setSaving(true);
     setError('');
-    const { error } = await updateProfile({ full_name: next });
-    setSaving(false);
-    if (error) {
-      setError(error.message || 'Could not save changes.');
-      return;
+
+    // Name change first.
+    if (next !== app.user.name) {
+      const { error: nameError } = await updateProfile({ full_name: next });
+      if (nameError) {
+        setSaving(false);
+        setError(nameError.message || 'Could not save changes.');
+        return;
+      }
     }
+
+    // Avatar change.
+    if (avatarFile) {
+      const { error: avatarError } = await uploadAvatar(avatarFile);
+      if (avatarError) {
+        setSaving(false);
+        setError(avatarError.message || 'Could not upload photo.');
+        return;
+      }
+    } else if (isRemoving) {
+      const { error: removeError } = await removeAvatar();
+      if (removeError) {
+        setSaving(false);
+        setError(removeError.message || 'Could not remove photo.');
+        return;
+      }
+    }
+
+    setSaving(false);
     onClose();
   };
 
   return (
     <Sheet open={open} onClose={onClose} title="Edit profile">
+      {/* Avatar picker */}
+      <div className="flex items-end gap-4 mb-5">
+        <div className="relative shrink-0" style={{ width: 80, height: 80 }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full h-full overflow-hidden grid place-items-center"
+            style={{
+              borderRadius: 999,
+              background: avatarPreview ? 'transparent' : 'var(--accent)',
+              boxShadow: 'inset 0 0 0 1.5px var(--line)',
+            }}
+            aria-label="Choose profile photo"
+          >
+            {avatarPreview ? (
+              <img
+                src={avatarPreview}
+                alt="Avatar preview"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            ) : (
+              <span className="text-accent-on font-display font-extrabold" style={{ fontSize: 30 }}>
+                {initials}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute grid place-items-center bg-ink text-paper rounded-full shadow-md"
+            style={{ width: 26, height: 26, bottom: -2, right: -2 }}
+            aria-label="Change photo"
+          >
+            <Icon name="camera" size={13} stroke={2.2} />
+          </button>
+        </div>
+        {showRemove && (
+          <Btn variant="ghost" size="sm" icon="trash" onClick={handleRemoveAvatar}>
+            Remove
+          </Btn>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+
       <Field label="Full name">
-        <TextIn value={name} autoFocus onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+        <TextIn value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
       </Field>
       <Field label="Email" hint="Your email can’t be changed here.">
         <TextIn value={app.user.email} disabled className="opacity-60" />
@@ -247,12 +367,19 @@ export default function ProfileScreen() {
 
       <div className="w-full mx-auto box-border" style={{ maxWidth: big ? 720 : '100%', padding: big ? '8px 28px 40px' : '18px 18px 0' }}>
         <div className="flex items-center gap-4 mt-1.5 mb-1">
-          <div
-            className="grid place-items-center bg-accent text-accent-on font-display font-extrabold shrink-0 rounded-full"
+          <button
+            type="button"
+            onClick={() => setSheet('edit')}
+            className="grid place-items-center bg-accent text-accent-on font-display font-extrabold shrink-0 rounded-full overflow-hidden"
             style={{ width: big ? 76 : 64, height: big ? 76 : 64, fontSize: big ? 30 : 26 }}
+            aria-label="Edit profile photo"
           >
-            {initials}
-          </div>
+            {u.avatarUrl ? (
+              <img src={u.avatarUrl} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              initials
+            )}
+          </button>
           <div className="min-w-0">
             <h1 className="m-0 font-display font-extrabold tracking-[-0.02em]" style={{ fontSize: big ? 30 : 25 }}>
               {u.name}
