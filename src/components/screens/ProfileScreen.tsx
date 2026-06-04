@@ -272,20 +272,6 @@ export default function ProfileScreen() {
           <SettingRow icon="lock" label="Privacy & security" onClick={() => setSheet('privacy')} last />
         </Group>
 
-        <Group title="Catalogue">
-          <div className="flex gap-2.5 items-start" style={{ padding: '14px 16px' }}>
-            <span className="grid place-items-center bg-paper shrink-0 shadow-[inset_0_0_0_1px_var(--line)]" style={{ width: 38, height: 38, borderRadius: 11 }}>
-              <Icon name="globe" size={19} color="var(--ink-soft)" stroke={2} />
-            </span>
-            <div className="flex-1">
-              <div className="font-semibold text-[15px]">Shared catalogue</div>
-              <div className="text-[13px] text-ink-faint leading-snug mt-0.5">
-                Products, stores &amp; prices are shared across everyone. Your cart and shopping lists stay private to you.
-              </div>
-            </div>
-          </div>
-        </Group>
-
         <Group title="Help">
           <SettingRow icon="spark" label="App walkthrough" value="Replay" onClick={onboarding.start} last />
         </Group>

@@ -25,8 +25,8 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     icon: 'tag',
     title: 'Track prices',
-    body: 'Add stores and the prices you’ve spotted under the Catalogue — products, stores and prices. Keep them fresh to get the best comparisons.',
-    tip: 'The catalogue is shared, so prices help everyone.',
+    body: 'Add your stores and the prices you’ve spotted under the Catalogue — products, stores and prices. Keep them fresh to get the best comparisons.',
+    tip: 'Your catalogue is private — only you can see it.',
   },
   {
     icon: 'cart',
