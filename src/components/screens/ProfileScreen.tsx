@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, Btn, IconName, Sheet } from '../ui';
 import { Field, TextIn } from './manageParts';
@@ -222,6 +223,7 @@ export default function ProfileScreen() {
   const app = useApp();
   const { settings } = useSettings();
   const { compact } = useBreakpoint();
+  const onboarding = useOnboarding();
   const big = !compact;
   const u = app.user;
   const initials = u.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
@@ -270,18 +272,8 @@ export default function ProfileScreen() {
           <SettingRow icon="lock" label="Privacy & security" onClick={() => setSheet('privacy')} last />
         </Group>
 
-        <Group title="Catalogue">
-          <div className="flex gap-2.5 items-start" style={{ padding: '14px 16px' }}>
-            <span className="grid place-items-center bg-paper shrink-0 shadow-[inset_0_0_0_1px_var(--line)]" style={{ width: 38, height: 38, borderRadius: 11 }}>
-              <Icon name="globe" size={19} color="var(--ink-soft)" stroke={2} />
-            </span>
-            <div className="flex-1">
-              <div className="font-semibold text-[15px]">Shared catalogue</div>
-              <div className="text-[13px] text-ink-faint leading-snug mt-0.5">
-                Products, stores &amp; prices are shared across everyone. Your cart and shopping lists stay private to you.
-              </div>
-            </div>
-          </div>
+        <Group title="Help">
+          <SettingRow icon="spark" label="App walkthrough" value="Replay" onClick={onboarding.start} last />
         </Group>
 
         <div className="mt-[18px]">
