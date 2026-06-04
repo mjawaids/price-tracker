@@ -136,8 +136,12 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
           boxShadow: app.screen === 'profile' ? 'none' : 'inset 0 0 0 1px var(--line)',
         }}
       >
-        <span className="grid place-items-center bg-accent text-accent-on font-display font-extrabold shrink-0 rounded-full" style={{ width: 34, height: 34, fontSize: 14 }}>
-          {initials}
+        <span className="grid place-items-center bg-accent text-accent-on font-display font-extrabold shrink-0 rounded-full overflow-hidden" style={{ width: 34, height: 34, fontSize: 14 }}>
+          {app.user.avatarUrl ? (
+            <img src={app.user.avatarUrl} alt={app.user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            initials
+          )}
         </span>
         {!mini && (
           <span className="min-w-0 text-left">

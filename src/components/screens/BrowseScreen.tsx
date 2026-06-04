@@ -55,10 +55,14 @@ function BrowseHeader({ cat, setCat }: { cat: string; setCat: (c: string) => voi
             <button
               type="button"
               onClick={() => app.go('profile')}
-              className="grid place-items-center rounded-full bg-accent text-accent-on font-display font-extrabold text-[15px]"
+              className="grid place-items-center rounded-full bg-accent text-accent-on font-display font-extrabold text-[15px] overflow-hidden"
               style={{ width: 44, height: 44 }}
             >
-              {initials}
+              {app.user.avatarUrl ? (
+                <img src={app.user.avatarUrl} alt={app.user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                initials
+              )}
             </button>
           </div>
         )}
