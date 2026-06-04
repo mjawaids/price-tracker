@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Product, Store, ShoppingList } from '../types';
-import { trackProduct, trackStore, trackShoppingList } from '../utils/analytics';
+import { trackProduct, trackShoppingList } from '../utils/analytics';
 
 export const useSupabaseData = () => {
   const { user } = useAuth();

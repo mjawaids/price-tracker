@@ -23,6 +23,14 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // The Supabase no-op stub and gtag shim are intentionally untyped; keep
+      // these as warnings rather than build-breaking errors.
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // Allow deliberately-unused placeholder params/vars prefixed with `_`.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   }
 );

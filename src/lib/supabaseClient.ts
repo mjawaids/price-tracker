@@ -19,7 +19,6 @@ if (url && key) {
 
   // Minimal no-op stub to prevent runtime crashes when supabase is not configured
   const noop = async () => ({ data: null, error: { message: 'Supabase not configured' } });
-  const noopSync = () => ({ data: null, error: { message: 'Supabase not configured' } });
 
   const queryBuilder = () => {
     const chain = {
