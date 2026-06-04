@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, Btn, IconName, Sheet } from '../ui';
 import { Field, TextIn } from './manageParts';
@@ -222,6 +223,7 @@ export default function ProfileScreen() {
   const app = useApp();
   const { settings } = useSettings();
   const { compact } = useBreakpoint();
+  const onboarding = useOnboarding();
   const big = !compact;
   const u = app.user;
   const initials = u.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
@@ -282,6 +284,10 @@ export default function ProfileScreen() {
               </div>
             </div>
           </div>
+        </Group>
+
+        <Group title="Help">
+          <SettingRow icon="spark" label="App walkthrough" value="Replay" onClick={onboarding.start} last />
         </Group>
 
         <div className="mt-[18px]">

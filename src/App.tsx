@@ -2,6 +2,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
+import { OnboardingProvider } from './contexts/OnboardingContext';
 import { AppProvider } from './contexts/AppContext';
 import AuthScreen from './components/screens/AuthScreen';
 import Shell from './components/shell/Shell';
@@ -41,7 +42,9 @@ function App() {
       <AuthProvider>
         <ThemeProvider>
           <SettingsProvider>
-            <AppContent />
+            <OnboardingProvider>
+              <AppContent />
+            </OnboardingProvider>
           </SettingsProvider>
         </ThemeProvider>
       </AuthProvider>
