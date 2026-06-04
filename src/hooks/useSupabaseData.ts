@@ -68,6 +68,7 @@ export const useSupabaseData = () => {
       category: item.category,
       brand: item.brand,
       unit: item.unit || '',
+      imageUrl: item.image_url ?? undefined,
       prices: item.prices || [],
       createdAt: new Date(item.created_at),
       updatedAt: new Date(item.updated_at)
@@ -144,8 +145,8 @@ export const useSupabaseData = () => {
     }
   };
 
-  const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!user) return;
+  const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product | undefined> => {
+    if (!user) return undefined;
 
     const newProduct = {
       user_id: user.id,
@@ -153,7 +154,8 @@ export const useSupabaseData = () => {
       category: productData.category,
       brand: productData.brand,
       unit: productData.unit || '',
-      prices: productData.prices || []
+      prices: productData.prices || [],
+      image_url: productData.imageUrl ?? null
     };
 
     const { data, error } = await supabase
@@ -164,7 +166,7 @@ export const useSupabaseData = () => {
 
     if (error) {
       console.error('Error adding product:', error);
-      return;
+      return undefined;
     }
 
     const formattedProduct: Product = {
@@ -173,6 +175,7 @@ export const useSupabaseData = () => {
       category: data.category,
       brand: data.brand,
       unit: data.unit || '',
+      imageUrl: data.image_url ?? undefined,
       prices: data.prices || [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
@@ -182,6 +185,7 @@ export const useSupabaseData = () => {
 
     // Track product creation
     trackProduct('create', formattedProduct.id, formattedProduct.category);
+    return formattedProduct;
   };
 
   const updateProduct = async (updatedProduct: Product) => {
@@ -195,6 +199,7 @@ export const useSupabaseData = () => {
         brand: updatedProduct.brand,
         unit: updatedProduct.unit || '',
         prices: updatedProduct.prices,
+        image_url: updatedProduct.imageUrl ?? null,
         updated_at: new Date().toISOString()
       })
       .eq('id', updatedProduct.id)
@@ -223,6 +228,43 @@ export const useSupabaseData = () => {
     }
 
     setProducts(prev => prev.filter(p => p.id !== id));
+  };
+
+  const uploadProductImage = async (productId: string, file: File): Promise<string | undefined> => {
+    if (!user) return undefined;
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${user.id}/${productId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('product-images')
+      .upload(path, file, { upsert: false, contentType: file.type });
+    if (error) {
+      console.error('Error uploading product image:', error);
+      return undefined;
+    }
+    const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+    return data.publicUrl as string;
+  };
+
+  const deleteProductImage = async (productId: string, imageUrl: string): Promise<void> => {
+    if (!user) return;
+    const marker = '/product-images/';
+    const idx = imageUrl.indexOf(marker);
+    if (idx !== -1) {
+      const { error } = await supabase.storage
+        .from('product-images')
+        .remove([imageUrl.slice(idx + marker.length)]);
+      if (error) console.error('Error deleting product image from storage:', error);
+    }
+    const { error: dbError } = await supabase
+      .from('products')
+      .update({ image_url: null, updated_at: new Date().toISOString() })
+      .eq('id', productId)
+      .eq('user_id', user.id);
+    if (dbError) {
+      console.error('Error clearing image_url:', dbError);
+      return;
+    }
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, imageUrl: undefined } : p));
   };
 
   const addStore = async (storeData: Omit<Store, 'id' | 'createdAt'>) => {
@@ -421,6 +463,8 @@ export const useSupabaseData = () => {
     addProduct,
     updateProduct,
     deleteProduct,
+    uploadProductImage,
+    deleteProductImage,
     addStore,
     updateStore,
     deleteStore,

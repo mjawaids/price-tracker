@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Product, Store, Price, DeliveryRule } from '../../types';
+import { supabase } from '../../lib/supabase';
 import { CATEGORIES, resolveCategory, storeHue } from '../../lib/categories';
 import { priceMap, priceRange, deliveryLabel, deliveryRuleOf } from '../../utils/optimizer';
 import { Icon, Thumb, Chip, Btn, Sheet, StoreDot } from '../ui';
@@ -50,45 +51,159 @@ export function ManageProducts() {
   );
 }
 
-function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onClose: () => void }) {
+function ProductSheet({ target, onClose }: { target: ‘new’ | Product | null; onClose: () => void }) {
   const app = useApp();
-  const isNew = target === 'new';
+  const isNew = target === ‘new’;
   const p = isNew ? null : (target as Product | null);
   const defaultCat = CATEGORIES[0].name;
-  const [name, setName] = useState('');
-  const [unit, setUnit] = useState('');
+  const [name, setName] = useState(‘’);
+  const [unit, setUnit] = useState(‘’);
   const [cat, setCat] = useState(defaultCat);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (p) {
       setName(p.name);
-      setUnit(p.unit || '');
+      setUnit(p.unit || ‘’);
       setCat(resolveCategory(p.category).name);
+      setImagePreview(p.imageUrl ?? null);
     } else {
-      setName('');
-      setUnit('');
+      setName(‘’);
+      setUnit(‘’);
       setCat(defaultCat);
+      setImagePreview(null);
     }
+    setImageFile(null);
+    setIsRemoving(false);
+    setSaving(false);
   }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!target) return null;
 
-  const save = () => {
-    if (!name.trim()) return;
-    if (isNew) {
-      app.addProduct({ name: name.trim(), category: cat, unit: unit.trim() || '1 unit', prices: [] });
-    } else if (p) {
-      app.updateProduct({ ...p, name: name.trim(), category: cat, unit: unit.trim() });
-    }
-    onClose();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (imagePreview?.startsWith(‘blob:’)) URL.revokeObjectURL(imagePreview);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setIsRemoving(false);
+    if (fileInputRef.current) fileInputRef.current.value = ‘’;
   };
+
+  const handleRemoveImage = () => {
+    if (imagePreview?.startsWith(‘blob:’)) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+    setIsRemoving(true);
+  };
+
+  const save = async () => {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      if (isNew) {
+        const created = await app.addProduct({
+          name: name.trim(),
+          category: cat,
+          unit: unit.trim() || ‘1 unit’,
+          prices: [],
+        });
+        if (!created) return;
+        if (imageFile) {
+          const url = await app.uploadProductImage(created.id, imageFile);
+          if (url) await app.updateProduct({ ...created, imageUrl: url });
+        }
+      } else if (p) {
+        let nextImageUrl = p.imageUrl;
+        if (isRemoving && p.imageUrl) {
+          await app.deleteProductImage(p.id, p.imageUrl);
+          nextImageUrl = undefined;
+        } else if (imageFile) {
+          const url = await app.uploadProductImage(p.id, imageFile);
+          if (url) {
+            if (p.imageUrl) {
+              const marker = ‘/product-images/’;
+              const idx = p.imageUrl.indexOf(marker);
+              if (idx !== -1) {
+                await supabase.storage.from(‘product-images’).remove([p.imageUrl.slice(idx + marker.length)]);
+              }
+            }
+            nextImageUrl = url;
+          }
+        }
+        await app.updateProduct({ ...p, name: name.trim(), category: cat, unit: unit.trim(), imageUrl: nextImageUrl });
+      }
+      onClose();
+    } catch (err) {
+      console.error(‘ProductSheet save error:’, err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const del = () => {
     if (p) app.deleteProduct(p.id);
     onClose();
   };
 
   return (
-    <Sheet open={!!target} onClose={onClose} title={isNew ? 'New product' : 'Edit product'}>
+    <Sheet open={!!target} onClose={onClose} title={isNew ? ‘New product’ : ‘Edit product’}>
+      {/* Image picker */}
+      <div className="flex items-end gap-4 mb-5">
+        <div className="relative shrink-0" style={{ width: 80, height: 80 }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full h-full overflow-hidden"
+            style={{
+              borderRadius: 18,
+              background: imagePreview ? ‘transparent’ : ‘var(--surface)’,
+              boxShadow: ‘inset 0 0 0 1.5px var(--line)’,
+            }}
+            aria-label="Choose product image"
+          >
+            {imagePreview ? (
+              <img
+                src={imagePreview}
+                alt="Preview"
+                style={{ width: ‘100%’, height: ‘100%’, objectFit: ‘cover’, display: ‘block’ }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-ink-faint">
+                <Icon name="camera" size={26} stroke={1.8} />
+              </div>
+            )}
+          </button>
+          {imagePreview && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute grid place-items-center bg-ink text-paper rounded-full shadow-md"
+              style={{ width: 26, height: 26, bottom: -6, right: -6 }}
+              aria-label="Replace image"
+            >
+              <Icon name="camera" size={13} stroke={2.2} />
+            </button>
+          )}
+        </div>
+        {imagePreview && (
+          <Btn variant="ghost" size="sm" icon="trash" onClick={handleRemoveImage}>
+            Remove
+          </Btn>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+
       <Field label="Name">
         <TextIn value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Whole Milk" />
       </Field>
@@ -110,8 +225,8 @@ function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onC
             Delete
           </Btn>
         )}
-        <Btn full onClick={save}>
-          {isNew ? 'Add product' : 'Save changes'}
+        <Btn full onClick={save} disabled={saving}>
+          {saving ? ‘Saving…’ : isNew ? ‘Add product’ : ‘Save changes’}
         </Btn>
       </div>
     </Sheet>

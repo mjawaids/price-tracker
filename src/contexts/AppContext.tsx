@@ -36,6 +36,8 @@ export interface AppApi {
   addProduct: ReturnType<typeof useSupabaseData>['addProduct'];
   updateProduct: ReturnType<typeof useSupabaseData>['updateProduct'];
   deleteProduct: ReturnType<typeof useSupabaseData>['deleteProduct'];
+  uploadProductImage: ReturnType<typeof useSupabaseData>['uploadProductImage'];
+  deleteProductImage: ReturnType<typeof useSupabaseData>['deleteProductImage'];
   addStore: ReturnType<typeof useSupabaseData>['addStore'];
   updateStore: ReturnType<typeof useSupabaseData>['updateStore'];
   deleteStore: ReturnType<typeof useSupabaseData>['deleteStore'];
@@ -173,6 +175,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addProduct: data.addProduct,
       updateProduct: data.updateProduct,
       deleteProduct: data.deleteProduct,
+      uploadProductImage: data.uploadProductImage,
+      deleteProductImage: data.deleteProductImage,
       addStore: data.addStore,
       updateStore: data.updateStore,
       deleteStore: data.deleteStore,

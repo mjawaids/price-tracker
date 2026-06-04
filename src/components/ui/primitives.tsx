@@ -23,16 +23,34 @@ export function Thumb({
   const ink = catInk(cat.hue);
   const fs = fill ? 13 : Math.max(8, size * 0.13);
   const shortId = (product.id || '').slice(0, 6);
+
+  const containerStyle: React.CSSProperties = {
+    width: fill ? '100%' : size,
+    height: fill ? 'auto' : size,
+    aspectRatio: fill ? '1 / 1' : undefined,
+    borderRadius: radius,
+    border: `1px solid oklch(0.86 0.03 ${cat.hue})`,
+    overflow: 'hidden',
+  };
+
+  if (product.imageUrl) {
+    return (
+      <div className="relative shrink-0" style={containerStyle}>
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
-      className="flex items-center justify-center overflow-hidden relative shrink-0"
+      className="flex items-center justify-center relative shrink-0"
       style={{
-        width: fill ? '100%' : size,
-        height: fill ? 'auto' : size,
-        aspectRatio: fill ? '1 / 1' : undefined,
-        borderRadius: radius,
+        ...containerStyle,
         background: `repeating-linear-gradient(135deg, ${bg} 0 9px, ${stripe} 9px 18px)`,
-        border: `1px solid oklch(0.86 0.03 ${cat.hue})`,
       }}
     >
       {label && (

@@ -32,6 +32,7 @@ import {
   LogOut,
   Coins,
   Bell,
+  Camera,
   LucideProps,
 } from 'lucide-react';
 import { ComponentType } from 'react';
@@ -71,6 +72,7 @@ const MAP: Record<string, ComponentType<LucideProps>> = {
   logout: LogOut,
   coin: Coins,
   bell: Bell,
+  camera: Camera,
 };
 
 export type IconName = keyof typeof MAP | string;
