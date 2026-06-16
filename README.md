@@ -1,4 +1,4 @@
-# SpendLess - Smart Shopping Price Comparison App
+# SpendLess - Smart Shopping List and Price Comparison App
 
 A modern, mobile-first price comparison and shopping management application built with React, TypeScript, and Supabase. Track prices across multiple stores, build smart shopping plans, and never overpay again.
 
