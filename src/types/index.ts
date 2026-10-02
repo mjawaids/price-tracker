@@ -67,6 +67,40 @@ export interface ShoppingList {
   updatedAt: Date;
 }
 
+/**
+ * A quick list ("Groceries", "Pharmacy", …) in the Lists section.
+ * Timestamps are ISO strings so rows round-trip through IndexedDB unchanged.
+ */
+export interface GroceryList {
+  id: string;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+/** One free-text item on a list. Everything except the name is optional. */
+export interface ListItem {
+  id: string;
+  listId: string;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  note: string | null;
+  /** Canonical category id from src/lib/categories.ts, or 'other'. */
+  category: string | null;
+  done: boolean;
+  doneAt: string | null;
+  /** Set by "Clear": hidden from the list but kept for suggestions. */
+  clearedAt: string | null;
+  sortOrder: number;
+  productId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
 /** Per-user cart: { [productId]: quantity } */
 export type Cart = Record<string, number>;
 
