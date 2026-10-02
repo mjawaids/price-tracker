@@ -79,9 +79,67 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 - **Error handling**: try/catch with `console.error`; graceful fallbacks to empty arrays
 - **Analytics**: always guard with `window.gtag` check before calling
 
+## Design & UX Standards
+The bar is a modern, polished, top-tier app experience. Every UI change should look
+and feel like it came from a strong product design team, not a default template.
+
+### Principles
+- **Mobile-first, app-like**: design for a phone in one hand first, then scale up to
+  tablet and desktop. Keep primary actions within thumb reach; no hover-only behavior.
+- **Clarity over decoration**: clear visual hierarchy, generous whitespace, one primary
+  action per screen, scannable prices and savings (savings are the hero of the product).
+- **Consistency**: use the existing tokens and primitives; never hard-code colors,
+  radii, shadows or fonts. Extend the token set (`src/index.css` +
+  `tailwind.config.js`) rather than adding one-off values.
+- **Every state is designed**: loading (skeletons over spinners), empty (helpful copy
+  + next action), error (plain-language message + recovery), and success feedback for
+  every async action.
+- **Motion with purpose**: short, subtle transitions (150–300ms) that explain change;
+  respect `prefers-reduced-motion`.
+- **Accessibility is non-negotiable**: WCAG 2.2 AA contrast, visible focus states,
+  semantic HTML, labelled controls and icon buttons, keyboard navigable, screen-reader
+  friendly; 48px touch targets and 16px input text (see Conventions).
+- **Performance is UX**: fast first paint, no layout shift, optimistic updates where
+  safe, lazy-load heavy screens.
+- **Copy**: short, friendly, specific microcopy; money always formatted via `useFmt()`.
+
+### Design System in Code
+- **Tokens**: `src/index.css` (`--paper`, `--surface`, `--ink`/`--ink-soft`/`--ink-faint`,
+  `--line`, `--accent` family, `--r-card`, `--r-btn`, `--shadow-card`)
+- **Tailwind mapping**: `tailwind.config.js` (`bg-paper`, `text-ink-soft`, `rounded-card`,
+  `rounded-btn`, `shadow-card`, `font-display`, `animate-slide-up`, …)
+- **Typography**: `font-display` (Bricolage Grotesque) for headings, `font-sans`
+  (Hanken Grotesk) for body, `font-mono` (Space Mono) for figures where it helps
+- **Primitives**: reuse `src/components/ui/` (`primitives.tsx`, `Sheet.tsx`, `Icon.tsx`)
+  before creating new components; put new shared pieces there
+
+### Using Claude Design
+Involve **Claude Design** whenever the work is design-led rather than a small tweak:
+- New screens, flows or features with UI
+- Significant redesigns of existing screens, navigation or layout
+- New visual language: components, iconography, illustrations, empty states,
+  onboarding, marketing/landing pages
+- Any time the right look or interaction is unclear and options should be compared
+
+Workflow: explore and agree the design in Claude Design (mockups/prototypes, mobile
+first, then tablet/desktop) → confirm the direction with the user → implement it with
+the project's tokens and primitives → check the build against the design at 375px,
+768px and 1024px+. Small fixes that stay inside the existing design system don't need
+a Claude Design pass.
+
+### UI Change Checklist
+- [ ] Uses tokens/primitives only; no hard-coded colors, radii or shadows
+- [ ] Looks right at mobile (375px), tablet (768px) and desktop (1024px+)
+- [ ] Loading, empty, error and success states covered
+- [ ] Contrast, focus, labels and keyboard access checked
+- [ ] Motion is subtle and honours reduced-motion
+- [ ] `npm run lint` and `npm run build` pass
+
 ## What to Avoid
 - Don't add a test framework — no tests exist and none are expected
 - Don't introduce CSS Modules or styled-components
 - Don't create a separate `prices` table — prices live in `products.prices` jsonb
 - Don't add dark mode — `ThemeContext` is light-only by design
 - Don't add Redux/Zustand — the context pattern is intentional
+- Don't ship UI with hard-coded colors/sizes, unstyled default controls, or missing
+  loading/empty/error states
