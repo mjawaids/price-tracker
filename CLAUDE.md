@@ -1,7 +1,10 @@
 # SpendLess (price-tracker)
 
-Mobile-first price comparison and shopping optimizer. Users track product prices
-across stores, build a cart, and get an optimized multi-store shopping plan.
+Mobile-first shopping app with two sections:
+- **Lists** (default): quick grocery/shopping lists — type "bread" or "2 milk" and
+  go; no brand/size needed. Works fully offline and syncs when back online.
+- **Compare**: users track product prices across stores, build a cart, and get an
+  optimized multi-store shopping plan.
 Live at https://spendless.ibexoft.com
 
 ## Tech Stack
@@ -14,6 +17,7 @@ Live at https://spendless.ibexoft.com
 - `npm run build` — production build (output: `dist/`)
 - `npm run lint` — ESLint (no test framework; manual testing only)
 - `npm run generate:icons` — regenerate PWA/favicon icons
+- `node scripts/check-contrast.mjs` — WCAG contrast check for the colour tokens (run after editing them)
 
 ## Environment Variables (`.env`)
 ```
@@ -26,9 +30,11 @@ VITE_GA_ENABLE_IN_DEV=false
 ## Architecture
 
 ### State Management
-Context-based (no Redux). Five providers in `src/contexts/`:
-- `AuthContext` — session, login/logout
-- `AppContext` — navigation stack, cart (`Record<productId, qty>`), screen enum
+Context-based (no Redux). Providers in `src/contexts/`:
+- `AuthContext` — session, login/logout; caches the last identity so the app opens offline
+- `ListsContext` — Lists section: lists/items, quick add, suggestions, sync status (offline-first)
+- `AppContext` — navigation stack, section, Compare cart (`Record<productId, qty>`), screen enum
+- `OnboardingContext` — Compare walkthrough + contextual tips (`useHint`)
 - `SettingsContext` — currency + location (persisted to localStorage)
 - `ThemeContext` — light-only
 - `AnalyticsContext` — gtag wrappers
@@ -37,13 +43,25 @@ Context-based (no Redux). Five providers in `src/contexts/`:
 - `useSupabaseData()` — CRUD for products/stores/shopping lists; 30s TTL cache
 - `useBreakpoint()` — returns `{ compact, isTablet }` for responsive logic
 - `useFmt()` — currency formatting
+- `useHint(id, when)` — one-at-a-time contextual tips (copy in `src/lib/hints.ts`)
+
+### Offline (Lists)
+- `src/lib/offline/db.ts` — IndexedDB (`idb`) per user: `lists`, `items`, `outbox`, `meta`
+- `src/lib/offline/sync.ts` — every change is a full-row upsert queued in `outbox`;
+  `flush()` pushes (lists before items), `pull()` fetches rows with `updated_at` >
+  cursor. Last write wins; rows with unsent local edits are never overwritten.
+- Ids are generated on the device; deletes are soft (`deleted_at`).
+- Service worker (vite-plugin-pwa) precaches the app shell and caches Google Fonts.
+- Compare still needs a network; it shows an offline notice instead of breaking.
 
 ### Navigation
-Stack-based within `AppContext`. Screen enum values: `browse`, `search`, `detail`,
-`cart`, `plan`, `profile`, `mproducts`, `mstores`, `mprices`.
-- Mobile (<768px): bottom tab bar
-- Tablet (768–1023px): collapsed sidebar
-- Desktop (≥1024px): full sidebar
+Stack-based within `AppContext`. Screen enum values: `lists`, `browse`, `search`,
+`detail`, `cart`, `plan`, `profile`, `mproducts`, `mstores`, `mprices`.
+Sections (`app.section` / `app.openSection`): `lists` (default), `compare`, `profile`.
+- Mobile (<768px): bottom tab bar **Lists · Compare · Profile**; Compare has a
+  Browse · Cart · Catalogue segmented control (Catalogue → Products/Stores/Prices)
+- Tablet (768–1099px): collapsed sidebar
+- Desktop (≥1100px): full sidebar (your lists on top, then Compare and Catalogue)
 
 ## Database (Supabase — all tables have RLS, data is per-user)
 
@@ -51,7 +69,9 @@ Stack-based within `AppContext`. Screen enum values: `browse`, `search`, `detail
 |-------|------------|
 | `products` | id, user_id, name, category, brand, unit, **prices** (jsonb array) |
 | `stores` | id, user_id, name, type ('physical'\|'online'), location (jsonb), **delivery_rule** (jsonb) |
-| `shopping_lists` | id, user_id, name, items (jsonb array) — "My Cart" is auto-created |
+| `shopping_lists` | id, user_id, name, items (jsonb array) — Compare's "My Cart" (auto-created) |
+| `lists` | id (device-generated), user_id, name, sort_order, updated_at (server-set), deleted_at |
+| `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id?, updated_at (server-set), deleted_at |
 
 `prices` is a **jsonb column on `products`** (not a separate table). Each entry:
 `{ storeId, price, currency, lastUpdated, isAvailable, discountPercentage? }`
@@ -69,7 +89,11 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
-| `supabase/migrations/` | Schema history (7 migrations) |
+| `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`) |
+| `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
+| `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |
+| `src/lib/groceryDictionary.ts` | Item → aisle (English + romanized Urdu) |
+| `supabase/migrations/` | Schema history |
 
 ## Conventions
 - **Naming**: PascalCase components/types, camelCase hooks/utils, kebab-case CSS vars
@@ -141,5 +165,7 @@ a Claude Design pass.
 - Don't create a separate `prices` table — prices live in `products.prices` jsonb
 - Don't add dark mode — `ThemeContext` is light-only by design
 - Don't add Redux/Zustand — the context pattern is intentional
+- Don't make Lists depend on the network — all list reads/writes go through
+  `ListsContext` (IndexedDB first, then sync)
 - Don't ship UI with hard-coded colors/sizes, unstyled default controls, or missing
   loading/empty/error states
