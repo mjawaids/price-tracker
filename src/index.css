@@ -109,6 +109,44 @@ body {
 .animate-sl-pop { animation: slPop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
 .animate-sl-spin { animation: slSpin 1s linear infinite; }
 
+/* Lists micro-interactions */
+@keyframes slItemIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slCheck {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes slNudge {
+  0%, 100% { transform: translateX(0); }
+  35% { transform: translateX(-36px); }
+  65% { transform: translateX(0); }
+}
+@keyframes slShimmer {
+  from { background-position: -200px 0; }
+  to { background-position: calc(200px + 100%) 0; }
+}
+.animate-sl-item { animation: slItemIn 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.animate-sl-check { animation: slCheck 0.28s ease; }
+.animate-sl-nudge { animation: slNudge 1.1s ease 0.5s 1; }
+.skeleton {
+  background: linear-gradient(90deg, var(--line) 0, var(--paper) 50%, var(--line) 100%) var(--line);
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  animation: slShimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

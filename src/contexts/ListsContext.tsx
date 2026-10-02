@@ -288,7 +288,8 @@ export const ListsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [],
   );
 
-  const openNames = useMemo(() => new Set(todo.map((i) => normalizeName(i.name))), [todo]);
+  // Everything visible on the active list (incl. ticked) — don't suggest re-adding it.
+  const openNames = useMemo(() => new Set(items.map((i) => normalizeName(i.name))), [items]);
 
   const addItems = useCallback(
     (texts: string[]): AddResult => {

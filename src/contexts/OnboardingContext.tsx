@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { OnboardingTour } from '../components/onboarding/OnboardingTour';
 
@@ -37,6 +37,8 @@ interface OnboardingContextType {
   open: boolean;
   start: () => void;
   dismiss: () => void;
+  /** Show the Compare walkthrough once, the first time Compare is opened. */
+  maybeStartCompareTour: () => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
@@ -51,14 +53,18 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
 
-  // Auto-show on first login (or once after a version bump). Keyed on the
-  // user id so it only evaluates when the signed-in user changes — dismissing
-  // within a session won't retrigger it.
+  // Lists teach themselves (empty state + hints), so the walkthrough — which is
+  // about price comparison — waits until the user first opens Compare. Checked
+  // once per signed-in user per session.
+  const checkedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (loading || !user) return;
+    if (!user) checkedFor.current = null;
+  }, [user]);
+  const maybeStartCompareTour = useCallback(() => {
+    if (loading || !user || checkedFor.current === user.id) return;
+    checkedFor.current = user.id;
     if (readStoredVersion() < ONBOARDING_VERSION) setOpen(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, loading]);
+  }, [loading, user]);
 
   const start = useCallback(() => setOpen(true), []);
 
@@ -71,7 +77,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   return (
-    <OnboardingContext.Provider value={{ open, start, dismiss }}>
+    <OnboardingContext.Provider value={{ open, start, dismiss, maybeStartCompareTour }}>
       {children}
       <OnboardingTour open={open} onClose={dismiss} />
     </OnboardingContext.Provider>

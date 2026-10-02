@@ -2,11 +2,13 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState,
 import { useAuth } from './AuthContext';
 import { useSettings } from './SettingsContext';
 import { useSupabaseData } from '../hooks/useSupabaseData';
+import { useLists } from './ListsContext';
 import { useFmt } from '../hooks/useFmt';
 import { Product, Store, Cart, ShoppingListItem } from '../types';
 import { CartLine, priceRange } from '../utils/optimizer';
 
 export type ScreenName =
+  | 'lists'
   | 'browse'
   | 'search'
   | 'detail'
@@ -18,6 +20,11 @@ export type ScreenName =
   | 'mprices';
 
 export type Mode = 'shop' | 'manage';
+/** Top-level app sections: quick Lists (default) and price Compare. */
+export type Section = 'lists' | 'compare' | 'profile';
+
+export const sectionOf = (screen: ScreenName): Section =>
+  screen === 'lists' ? 'lists' : screen === 'profile' ? 'profile' : 'compare';
 export type SheetName = 'currency' | 'location' | null;
 export type ScreenParams = Record<string, unknown>;
 
@@ -63,15 +70,17 @@ export interface AppApi {
   params: ScreenParams;
   mode: Mode;
   setMode: (m: Mode) => void;
+  section: Section;
+  openSection: (s: Section) => void;
   go: (screen: ScreenName, params?: ScreenParams) => void;
   back: () => void;
-  tab: (screen: ScreenName) => void;
+  tab: (screen: ScreenName, params?: ScreenParams) => void;
   canGoBack: boolean;
   // sheets
   sheet: SheetName;
   openSheet: (s: SheetName) => void;
   // auth
-  signOut: () => void;
+  signOut: () => Promise<void>;
 }
 
 const AppContext = createContext<AppApi | undefined>(undefined);
@@ -90,7 +99,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fmt = useFmt();
   const data = useSupabaseData();
 
-  const [stack, setStack] = useState<StackEntry[]>([{ screen: 'browse', params: {} }]);
+  const { clearLocalData: clearLocalLists } = useLists();
+  const [stack, setStack] = useState<StackEntry[]>([{ screen: 'lists', params: {} }]);
   const [mode, setMode] = useState<Mode>('shop');
   const [sheet, setSheet] = useState<SheetName>(null);
   const [cart, setCart] = useState<Cart>({});
@@ -218,19 +228,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       params: cur.params,
       mode,
       setMode,
+      section: sectionOf(cur.screen),
+      openSection: (s: Section) => {
+        if (s === 'compare') {
+          setMode('shop');
+          setStack([{ screen: 'browse', params: {} }]);
+        } else setStack([{ screen: s, params: {} }]);
+      },
       go: (screen: ScreenName, params: ScreenParams = {}) =>
         setStack((s) => [...s, { screen, params }]),
       back: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
-      tab: (screen: ScreenName) => setStack([{ screen, params: {} }]),
+      tab: (screen: ScreenName, params: ScreenParams = {}) => setStack([{ screen, params }]),
       canGoBack: stack.length > 1,
 
       sheet,
       openSheet: (s: SheetName) => setSheet(s),
 
-      signOut: () => {
-        setStack([{ screen: 'browse', params: {} }]);
+      signOut: async () => {
+        setStack([{ screen: 'lists', params: {} }]);
         setMode('shop');
-        authSignOut();
+        await clearLocalLists();
+        await authSignOut();
       },
     };
   }, [
@@ -248,6 +266,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storeById,
     updateSettings,
     authSignOut,
+    clearLocalLists,
   ]);
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>;
