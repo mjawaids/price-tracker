@@ -147,8 +147,8 @@ function AuthForm() {
         <div
           className="text-[13px] rounded-[12px] px-3.5 py-2.5 mb-3"
           style={{
-            background: msg.kind === 'err' ? 'oklch(0.95 0.04 25)' : 'var(--accent-wash)',
-            color: msg.kind === 'err' ? 'oklch(0.5 0.16 25)' : 'var(--accent-ink)',
+            background: msg.kind === 'err' ? 'var(--danger-wash)' : 'var(--accent-wash)',
+            color: msg.kind === 'err' ? 'var(--danger)' : 'var(--accent-ink)',
           }}
         >
           {msg.text}

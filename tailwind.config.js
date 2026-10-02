@@ -21,6 +21,14 @@ export default {
           ink: 'var(--accent-ink)',
           wash: 'var(--accent-wash)',
         },
+        danger: {
+          DEFAULT: 'var(--danger)',
+          wash: 'var(--danger-wash)',
+        },
+        warn: {
+          ink: 'var(--warn-ink)',
+          wash: 'var(--warn-wash)',
+        },
       },
       borderRadius: {
         card: 'var(--r-card)',

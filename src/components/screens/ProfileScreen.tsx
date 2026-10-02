@@ -243,7 +243,7 @@ function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => voi
       <Field label="Email" hint="Your email can’t be changed here.">
         <TextIn value={app.user.email} disabled className="opacity-60" />
       </Field>
-      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'oklch(0.55 0.16 25)' }}>{error}</div>}
+      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'var(--danger)' }}>{error}</div>}
       <Btn full onClick={save} disabled={saving}>
         {saving ? 'Saving…' : 'Save changes'}
       </Btn>
@@ -330,7 +330,7 @@ function PrivacySheet({ open, onClose }: { open: boolean; onClose: () => void })
       <Field label="Confirm new password">
         <TextIn type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" />
       </Field>
-      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'oklch(0.55 0.16 25)' }}>{error}</div>}
+      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'var(--danger)' }}>{error}</div>}
       {done && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'var(--accent-ink)' }}>Password updated.</div>}
       <Btn full onClick={save} disabled={saving}>
         {saving ? 'Updating…' : 'Update password'}
@@ -404,7 +404,7 @@ export default function ProfileScreen() {
         </Group>
 
         <div className="mt-[18px]">
-          <Btn full variant="ghost" icon="logout" onClick={app.signOut} style={{ color: 'oklch(0.55 0.16 25)' }}>
+          <Btn full variant="ghost" icon="logout" onClick={app.signOut} style={{ color: 'var(--danger)' }}>
             Sign out
           </Btn>
         </div>

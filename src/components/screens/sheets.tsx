@@ -181,7 +181,7 @@ export function LocationSheet() {
         </span>
       </button>
       {error && (
-        <div className="text-[12.5px] -mt-2 mb-4" style={{ color: 'oklch(0.55 0.16 25)' }}>
+        <div className="text-[12.5px] -mt-2 mb-4" style={{ color: 'var(--danger)' }}>
           {error}
         </div>
       )}
