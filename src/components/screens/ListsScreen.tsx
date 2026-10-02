@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
+import { useOnboarding } from '../../contexts/OnboardingContext';
+import { useHint } from '../../hooks/useHint';
+import { ADD_PLACEHOLDERS } from '../../lib/hints';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { ListItem } from '../../types';
 import { STARTER_ITEMS, normalizeName } from '../../lib/groceryDictionary';
 import { formatQty, parseQuickAdd } from '../../utils/quickAdd';
 import { trackUserAction } from '../../utils/analytics';
-import { Icon, Toast } from '../ui';
+import { CoachMark, Icon, TipRow, Toast } from '../ui';
 import {
   AddBar,
   AllDone,
@@ -25,6 +28,8 @@ import {
 import { ItemSheet, ListSwitcherSheet } from './listSheets';
 
 const TOAST_MS = 4500;
+const PLACEHOLDER_MS = 3800;
+const isTouch = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 
 interface ToastState {
   id: number;
@@ -49,6 +54,10 @@ export default function ListsScreen() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
+  const onboarding = useOnboarding();
+  const { markHintSeen } = onboarding;
+  const [inputFocused, setInputFocused] = useState(false);
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
 
   useEffect(() => {
     if (!toast) return;
@@ -85,12 +94,13 @@ export default function ListsScreen() {
   const toggle = useCallback(
     (item: ListItem) => {
       const prev = lists.toggle(item.id);
+      markHintSeen('tick');
       if (prev && !prev.done) {
         track('list_item_ticked');
         showToast(`${item.name} is in your cart`, [prev]);
       }
     },
-    [lists, showToast],
+    [lists, showToast, markHintSeen],
   );
 
   const remove = useCallback(
@@ -103,9 +113,24 @@ export default function ListsScreen() {
   );
 
   const clearDone = useCallback(() => {
+    markHintSeen('clear');
     const prev = lists.clearDone();
     if (prev.length) showToast(`Cleared ${prev.length} ${prev.length === 1 ? 'item' : 'items'}`, prev);
-  }, [lists, showToast]);
+  }, [lists, showToast, markHintSeen]);
+
+  const openDetails = (id: string) => {
+    markHintSeen('details');
+    markHintSeen('aisles');
+    setOpenId(id);
+  };
+  const openSwitcher = () => {
+    markHintSeen('switcher');
+    setSwitcherOpen(true);
+  };
+  const pickOften = (n: string) => {
+    markHintSeen('often');
+    add([n]);
+  };
 
   const undo = () => {
     if (toast?.undo) lists.restore(toast.undo);
@@ -136,13 +161,32 @@ export default function ListsScreen() {
   const offline = lists.syncStatus === 'offline';
   const listName = lists.activeList?.name || 'Groceries';
 
+  // ── Tips (one at a time; order = priority) ──────────────────────────────────
+  const firstGroup = groups[0];
+  const hPaste = useHint('paste', !compact && lists.ready);
+  const hTick = useHint('tick', lists.ready && lists.todo.length >= 1 && doneCount === 0);
+  const hAisles = useHint('aisles', groups.length >= 2);
+  const hDetails = useHint('details', lists.todo.length >= 3);
+  const hClear = useHint('clear', doneCount >= 1);
+  const hSwipe = useHint('swipe', compact && isTouch() && lists.todo.length >= 5);
+  const hOften = useHint('often', often.length > 0 && total > 0 && !parsed);
+  const hSwitcher = useHint('switcher', lists.lists.length === 1 && lists.todo.length >= 6);
+
+  // Rotating placeholder teaches quick-add tricks (paused while typing/focused).
+  const rotate = onboarding.tipsOn && !inputFocused && !draft;
+  useEffect(() => {
+    if (!rotate) return;
+    const t = setInterval(() => setPlaceholderIdx((i) => (i + 1) % ADD_PLACEHOLDERS.length), PLACEHOLDER_MS);
+    return () => clearInterval(t);
+  }, [rotate]);
+
   const header = (
     <header className="flex flex-col gap-1.5" style={{ padding: compact ? '18px 16px 10px 20px' : '26px 0 8px' }}>
       <div className="flex items-center justify-between gap-2">
         <h1 className="m-0 min-w-0">
           <button
             type="button"
-            onClick={() => setSwitcherOpen(true)}
+            onClick={openSwitcher}
             aria-label={`${listName}. Switch list`}
             className="flex items-center gap-1.5 bg-transparent text-ink font-display font-extrabold tracking-[-0.03em] max-w-full"
             style={{ fontSize: compact ? 30 : 34, minHeight: 44 }}
@@ -154,7 +198,7 @@ export default function ListsScreen() {
         <button
           type="button"
           aria-label="List options"
-          onClick={() => setSwitcherOpen(true)}
+          onClick={openSwitcher}
           className="shrink-0 grid place-items-center rounded-[14px] bg-surface text-ink-soft shadow-[inset_0_0_0_1px_var(--line)]"
           style={{ width: 44, height: 44 }}
         >
@@ -176,6 +220,9 @@ export default function ListsScreen() {
           <OfflineBanner pending={lists.pending} />
         </div>
       )}
+      {hSwitcher.show && (
+        <CoachMark className="mt-2" text={hSwitcher.text} onDismiss={hSwitcher.dismiss} onHideAll={hSwitcher.hideAll} arrowLeft={60} />
+      )}
     </header>
   );
 
@@ -195,7 +242,8 @@ export default function ListsScreen() {
           />
         </div>
       )}
-      {!parsed && compact && often.length > 0 && total > 0 && <OftenStrip names={often} onPick={(n) => add([n])} />}
+      {hOften.show && compact && <TipRow icon="history" text={hOften.text} onDismiss={hOften.dismiss} />}
+      {!parsed && compact && often.length > 0 && total > 0 && <OftenStrip names={often} onPick={pickOften} />}
       <AddBar
         value={draft}
         onChange={(v) => {
@@ -203,42 +251,65 @@ export default function ListsScreen() {
           if (v) setToast(null);
         }}
         onSubmit={() => add([draft])}
-        onPasteLines={(lines) => add(lines)}
-        placeholder="Add an item — try “2 milk”"
+        onPasteLines={(lines) => {
+          markHintSeen('paste');
+          add(lines);
+        }}
+        onFocusChange={setInputFocused}
+        placeholder={rotate ? ADD_PLACEHOLDERS[placeholderIdx] : ADD_PLACEHOLDERS[0]}
         inputRef={inputRef}
         trailingHint="Enter ↵"
       />
-      {!parsed && !compact && often.length > 0 && <OftenStrip names={often} onPick={(n) => add([n])} label="Often bought" />}
+      {hPaste.show && <TipRow text={hPaste.text} onDismiss={hPaste.dismiss} />}
+      {!parsed && !compact && often.length > 0 && <OftenStrip names={often} onPick={pickOften} label="Often bought" />}
+      {hOften.show && !compact && <TipRow icon="history" text={hOften.text} onDismiss={hOften.dismiss} />}
     </div>
   );
+
+  // Tips that point at the first group render right under it.
+  const groupCoach = hTick.show ? (
+    <CoachMark text={hTick.text} onDismiss={hTick.dismiss} onHideAll={hTick.hideAll} arrowLeft={22} />
+  ) : hDetails.show ? (
+    <CoachMark text={hDetails.text} onDismiss={hDetails.dismiss} onHideAll={hDetails.hideAll} arrowLeft={90} />
+  ) : hSwipe.show ? (
+    <CoachMark text={hSwipe.text} onDismiss={hSwipe.dismiss} onHideAll={hSwipe.hideAll} arrowLeft={160} />
+  ) : hAisles.show ? (
+    <TipRow text={hAisles.text} onDismiss={hAisles.dismiss} />
+  ) : null;
 
   const groupsEl = (
     <div className={isDesktop ? 'columns-2 gap-[18px]' : 'flex flex-col gap-[18px]'}>
       {groups.map((g) => (
         <div key={g.id} className={isDesktop ? 'break-inside-avoid mb-[18px]' : ''}>
           <ItemGroup name={g.name} dot={g.dot} count={g.items.length}>
-            {g.items.map((item) => (
+            {g.items.map((item, idx) => (
               <ItemRow
                 key={item.id}
                 item={item}
                 fresh={fresh.has(item.id)}
+                nudge={hSwipe.show && g === firstGroup && idx === 0}
                 onToggle={() => toggle(item)}
-                onOpen={() => setOpenId(item.id)}
+                onOpen={() => openDetails(item.id)}
                 onDelete={() => remove(item)}
+                onSwiped={() => markHintSeen('swipe')}
               />
             ))}
           </ItemGroup>
+          {g === firstGroup && groupCoach && <div className="mt-3">{groupCoach}</div>}
         </div>
       ))}
     </div>
   );
 
   const doneEl = doneCount > 0 && (
-    <DoneSection count={doneCount} open={doneOpen} onToggleOpen={() => setDoneOpen((o) => !o)} onClear={clearDone}>
-      {lists.done.map((item) => (
-        <ItemRow key={item.id} item={item} onToggle={() => toggle(item)} onOpen={() => setOpenId(item.id)} onDelete={() => remove(item)} />
-      ))}
-    </DoneSection>
+    <div className="flex flex-col gap-2.5">
+      {hClear.show && <TipRow icon="checkCircle" text={hClear.text} onDismiss={hClear.dismiss} />}
+      <DoneSection count={doneCount} open={doneOpen} onToggleOpen={() => setDoneOpen((o) => !o)} onClear={clearDone}>
+        {lists.done.map((item) => (
+          <ItemRow key={item.id} item={item} onToggle={() => toggle(item)} onOpen={() => openDetails(item.id)} onDelete={() => remove(item)} />
+        ))}
+      </DoneSection>
+    </div>
   );
 
   const body = !lists.ready ? (

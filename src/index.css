@@ -27,6 +27,12 @@
   --danger-wash: oklch(0.95 0.035 25);
   --warn-ink: oklch(0.45 0.1 65);
   --warn-wash: oklch(0.96 0.045 75);
+  --warn-chip: oklch(0.92 0.07 75);
+
+  /* Coach marks (on --ink) */
+  --coach-chip: oklch(0.32 0.03 350);
+  --coach-chip-ink: oklch(0.85 0.1 350);
+  --coach-muted: oklch(0.82 0.01 70);
 
   /* Corners — Rounded */
   --r-card: 22px;

@@ -58,7 +58,7 @@ export function SyncBadge({ status, pending }: { status: SyncStatus; pending: nu
 export function OfflineBanner({ pending }: { pending: number }) {
   return (
     <div role="status" className="flex gap-3 items-start rounded-btn bg-warn-wash animate-sl-fade" style={{ padding: '12px 14px' }}>
-      <span className="shrink-0 grid place-items-center rounded-[10px] text-warn-ink" style={{ width: 32, height: 32, background: 'oklch(0.92 0.07 75)' }}>
+      <span className="shrink-0 grid place-items-center rounded-[10px] text-warn-ink" style={{ width: 32, height: 32, background: 'var(--warn-chip)' }}>
         <Icon name="wifiOff" size={17} stroke={2.4} />
       </span>
       <span className="flex flex-col gap-0.5">
@@ -98,11 +98,14 @@ export function ItemRow({
   onDelete,
   nudge,
   fresh,
+  onSwiped,
 }: {
   item: ListItem;
   onToggle: () => void;
   onOpen: () => void;
   onDelete: () => void;
+  /** Called after a swipe action (for the swipe tip). */
+  onSwiped?: () => void;
   /** One-time swipe demonstration (hint). */
   nudge?: boolean;
   /** Just added — animate in. */
@@ -139,9 +142,11 @@ export function ItemRow({
       if (dx >= SWIPE_TRIGGER) {
         buzz();
         onToggle();
+        onSwiped?.();
       } else if (dx <= -SWIPE_TRIGGER) {
         buzz();
         onDelete();
+        onSwiped?.();
       }
     }
     start.current = null;
@@ -289,6 +294,7 @@ export function AddBar({
   placeholder,
   inputRef,
   trailingHint,
+  onFocusChange,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -297,6 +303,7 @@ export function AddBar({
   placeholder: string;
   inputRef?: React.Ref<HTMLInputElement>;
   trailingHint?: string;
+  onFocusChange?: (focused: boolean) => void;
 }) {
   const active = value.trim().length > 0;
   return (
@@ -321,6 +328,8 @@ export function AddBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && onChange('')}
+        onFocus={() => onFocusChange?.(true)}
+        onBlur={() => onFocusChange?.(false)}
         onPaste={(e) => {
           const text = e.clipboardData.getData('text');
           if (text.includes('\n')) {

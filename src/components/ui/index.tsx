@@ -5,7 +5,7 @@ export { Icon, GoogleIcon } from './Icon';
 export type { IconName } from './Icon';
 export { Thumb, Chip, Btn, Stepper, EmptyState } from './primitives';
 export { Sheet } from './Sheet';
-export { Toast, SegmentedControl } from './feedback';
+export { Toast, SegmentedControl, CoachMark, TipRow } from './feedback';
 
 /** Store kind dot: rounded-square for online, circle for physical. */
 export function StoreDot({ store, size = 11 }: { store: Store; size?: number }) {

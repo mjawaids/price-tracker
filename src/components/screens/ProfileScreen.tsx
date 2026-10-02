@@ -408,6 +408,13 @@ export default function ProfileScreen() {
         </Group>
 
         <Group title="Help">
+          <SettingRow
+            icon="bulb"
+            label="Tips"
+            value={onboarding.tipsOn ? 'On' : 'Off'}
+            onClick={() => onboarding.setTipsOn(!onboarding.tipsOn)}
+          />
+          <SettingRow icon="refresh" label="Show tips again" value="Reset" onClick={onboarding.resetTips} />
           <SettingRow icon="spark" label="Compare walkthrough" value="Replay" onClick={onboarding.start} last />
         </Group>
 

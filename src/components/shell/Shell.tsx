@@ -4,7 +4,8 @@ import { useLists } from '../../contexts/ListsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackPageView } from '../../utils/analytics';
-import { Chip, Icon, IconName, SegmentedControl } from '../ui';
+import { Chip, Icon, IconName, SegmentedControl, TipRow } from '../ui';
+import { useHint } from '../../hooks/useHint';
 import { currencyChipLabel, CurrencySheet, LocationSheet } from '../screens/sheets';
 
 import ListsScreen from '../screens/ListsScreen';
@@ -216,6 +217,7 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
 function CompareNav() {
   const app = useApp();
   const tab = compareTabOf(app.screen);
+  const catalogueTip = useHint('catalogue', tab === 'catalogue');
   const pick = (t: CompareTab) => {
     if (t === 'catalogue') {
       app.setMode('manage');
@@ -252,6 +254,7 @@ function CompareNav() {
           ))}
         </div>
       )}
+      {catalogueTip.show && <TipRow text={catalogueTip.text} onDismiss={catalogueTip.dismiss} />}
     </div>
   );
 }
