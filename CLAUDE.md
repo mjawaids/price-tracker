@@ -135,7 +135,7 @@ Docs are part of every change, not an afterthought:
 - Any change to behaviour, features, setup, env vars, commands, scripts, database
   schema/migrations, project structure or UX updates the affected docs **in the
   same commit**: `README.md`, `CLAUDE.md`, `QUICK_START.md`, `TESTING_GUIDE.md`,
-  `MOBILE_IMPROVEMENTS.md`, `GA_TROUBLESHOOTING.md` and `docs/`.
+  `GA_TROUBLESHOOTING.md` and `docs/` (and any new doc you add).
 - `CLAUDE.md` must always describe the code as it is now (architecture, key files,
   tables, conventions). `README.md` must always match what users and contributors see.
 - Rewrite or delete docs that have gone stale rather than leaving them wrong.

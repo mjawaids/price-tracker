@@ -1,5 +1,11 @@
 # Remove Product Variants — Migration & Deployment Guide
 
+> **Historical.** This migration has already been applied (May 2026). Some files
+> listed below (e.g. `AddProduct.tsx`, `EditProduct.tsx`) were later replaced by
+> the screens in `src/components/screens/`. Since October 2026 the tables live in
+> the **`spendless`** schema, so prefix table names in the SQL below with
+> `spendless.` (e.g. `spendless.products`) if you ever run them again.
+
 ## Overview
 
 This change flattens the product/variant data model. Previously each **Product** contained an array of **Variants**, where each variant held its own per-store prices. That made simple product management unnecessarily complex.
