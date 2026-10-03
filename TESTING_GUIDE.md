@@ -52,6 +52,8 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
 - [ ] The Compare walkthrough appears the first time Compare is opened (not on sign-in).
 - [ ] Catalogue → Products / Stores / Prices: add, edit and delete work.
 - [ ] Cart → **Build my cheapest plan** produces a plan.
+- [ ] Catalogue → Products: add, replace and remove a product photo (stored in the
+      `spendless-product-images` bucket).
 - [ ] Offline, Compare shows the "prices may be out of date" notice instead of breaking.
 
 ## Data separation (Supabase)
@@ -59,6 +61,8 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
 - [ ] Network requests to `/rest/v1/…` send `Accept-Profile: spendless` /
       `Content-Profile: spendless` headers (the client is pinned to the `spendless` schema).
 - [ ] `node scripts/check-migrations.mjs` passes (no migration touches `public`).
+- [ ] Profile: upload a new photo, then remove it. Uploads go to `spendless-avatars`
+      under your own `<user id>/` folder; a Google photo is never deleted.
 
 ## After a production deploy
 

@@ -19,6 +19,7 @@ Live at https://spendless.ibexoft.com
 - `npm run generate:icons` — regenerate PWA/favicon icons
 - `node scripts/check-contrast.mjs` — WCAG contrast check for the colour tokens (run after editing them)
 - `node scripts/check-migrations.mjs` — fails if a migration touches anything outside the `spendless` schema
+  (only exception: `spendless-…` policies on `storage.objects`)
 - `SUPABASE_DB_URL=… scripts/db-migrate.sh [--dry-run] <dir>` — apply migrations (CI does this on deploy)
 
 ## Environment Variables (`.env`)
@@ -90,8 +91,13 @@ are in `public`). SpendLess data must never mix with theirs:
   adds it automatically), or the API can't see it.
 - `auth.users` is shared by all apps in the project (that can't be split without a
   separate project). Keep app data in `spendless` tables, not in other apps' tables.
-- Storage buckets are project-wide: name new ones `spendless-…`. (Existing
-  `avatars` and `product-images` predate this rule.)
+- Storage buckets are project-wide, so SpendLess's are named `spendless-…`
+  (`spendless-avatars`, `spendless-product-images`; names live in
+  `src/lib/storage.ts`), and so are their policies on `storage.objects`
+  (`"spendless-avatars: owner insert"`). Both are public (files are read by URL);
+  users may only write, list and delete inside their own `<user id>/` folder.
+  Creating them is a migration (`INSERT INTO storage.buckets`); deleting one needs
+  `SET LOCAL storage.allow_delete_query = 'true'` and an empty bucket.
 - Schema changes ship **only through the deploy pipeline** (merge to `main`): add a
   migration file, never change the live database by hand. Before writing one, check
   what's live (Supabase MCP `list_tables`, read-only SQL). Applying anything to the
@@ -122,6 +128,7 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 |------|---------|
 | `src/types/index.ts` | All TypeScript types (Product, Store, Price, DeliveryRule, etc.) |
 | `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
+| `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
 | `src/hooks/useSupabaseData.ts` | All Supabase CRUD + caching |
 | `src/utils/optimizer.ts` | Cart optimization (brute-force ≤300k combos, else greedy) |
 | `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |

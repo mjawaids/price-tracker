@@ -9,6 +9,7 @@ import { Icon, Btn, IconName, Sheet } from '../ui';
 import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from './sheets';
 import { versionLabel } from '../../lib/version';
+import { AVATARS_BUCKET, storagePathFromUrl } from '../../lib/storage';
 
 type ProfileSheet = 'edit' | 'notifications' | 'privacy' | null;
 
@@ -99,10 +100,10 @@ function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => voi
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
 
-  // A stored avatar lives in our `avatars` bucket; a Google photo does not.
+  // A stored avatar lives in our avatars bucket; a Google photo does not.
   // Only stored/uploaded avatars can be meaningfully removed (a Google photo
   // would simply reappear as the fallback).
-  const isStoredAvatar = !!app.user.avatarUrl?.includes('/avatars/');
+  const isStoredAvatar = !!storagePathFromUrl(app.user.avatarUrl, AVATARS_BUCKET);
   const showRemove = !!avatarPreview && (!!avatarFile || isStoredAvatar);
 
   const clearObjectUrl = () => {

@@ -2,6 +2,10 @@
 // migration must only create/alter/drop objects in the `spendless` schema.
 // Usage: node scripts/check-migrations.mjs   (exits 1 on a violation)
 //
+// Storage is the one exception: buckets are project-wide, so SpendLess's are named
+// `spendless-…`, and so are their policies on storage.objects, e.g.
+//   CREATE POLICY "spendless-avatars: owner insert" ON storage.objects …
+//
 // A file may opt out ONLY with an explicit marker comment explaining why:
 //   -- migration-guard: allow-public <reason>
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
@@ -38,7 +42,11 @@ for (const dir of DIRS) {
       let ok;
       if (k === 'schema') {
         ok = /^\s*(?:if\s+(?:not\s+)?exists\s+)?spendless\b/i.test(rest);
-      } else if (k === 'index' || k === 'policy' || k === 'trigger') {
+      } else if (k === 'policy') {
+        ok =
+          /\bon\s+(?:only\s+)?spendless\./i.test(rest) ||
+          /^\s*(?:if\s+exists\s+)?"spendless-[^"]+"\s+on\s+storage\.objects\b/i.test(rest);
+      } else if (k === 'index' || k === 'trigger') {
         ok = /\bon\s+(?:only\s+)?spendless\./i.test(rest);
       } else {
         const n = rest.match(NAME_AFTER);

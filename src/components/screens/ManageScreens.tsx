@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Product, Store, Price, DeliveryRule } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { PRODUCT_IMAGES_BUCKET, storagePathFromUrl } from '../../lib/storage';
 import { CATEGORIES, resolveCategory, storeHue } from '../../lib/categories';
 import { priceMap, priceRange, deliveryLabel, deliveryRuleOf } from '../../utils/optimizer';
 import { Icon, Thumb, Chip, Btn, Sheet, StoreDot } from '../ui';
@@ -125,12 +126,9 @@ function ProductSheet({ target, onClose }: { target: 'new' | Product | null; onC
         } else if (imageFile) {
           const url = await app.uploadProductImage(p.id, imageFile);
           if (url) {
-            if (p.imageUrl) {
-              const marker = '/product-images/';
-              const idx = p.imageUrl.indexOf(marker);
-              if (idx !== -1) {
-                await supabase.storage.from('product-images').remove([p.imageUrl.slice(idx + marker.length)]);
-              }
+            const oldPath = storagePathFromUrl(p.imageUrl, PRODUCT_IMAGES_BUCKET);
+            if (oldPath) {
+              await supabase.storage.from(PRODUCT_IMAGES_BUCKET).remove([oldPath]);
             }
             nextImageUrl = url;
           }

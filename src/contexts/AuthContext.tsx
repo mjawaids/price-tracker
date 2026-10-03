@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { AVATARS_BUCKET, storagePathFromUrl } from '../lib/storage'
 import { trackAuth } from '../utils/analytics'
 
 interface AuthContextType {
@@ -208,18 +209,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error: authError }
   }
 
-  // Stored avatars live in the public `avatars` storage bucket under the
+  // Stored avatars live in the public avatars storage bucket under the
   // user's folder. Google-provided photos (user_metadata.picture or a remote
   // avatar_url) are NOT in this bucket and must never be deleted from storage.
-  const AVATAR_MARKER = '/avatars/'
-
   const removeStoredAvatarFile = async (avatarUrl?: string) => {
-    if (!avatarUrl) return
-    const idx = avatarUrl.indexOf(AVATAR_MARKER)
-    if (idx === -1) return // not a stored avatar (e.g. Google URL)
+    const path = storagePathFromUrl(avatarUrl, AVATARS_BUCKET)
+    if (!path) return // not a stored avatar (e.g. Google URL)
     const { error } = await supabase.storage
-      .from('avatars')
-      .remove([avatarUrl.slice(idx + AVATAR_MARKER.length)])
+      .from(AVATARS_BUCKET)
+      .remove([path])
     if (error) console.error('Error deleting avatar from storage:', error)
   }
 
@@ -228,14 +226,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const ext = file.name.split('.').pop() || 'jpg'
     const path = `${user.id}/avatar-${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from(AVATARS_BUCKET)
       .upload(path, file, { upsert: false, contentType: file.type })
     if (uploadError) {
       console.error('Error uploading avatar:', uploadError)
       return { error: uploadError }
     }
 
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    const { data } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(path)
     const publicUrl = data.publicUrl as string
 
     // Persist the new URL first; only remove the previous stored file once the
