@@ -63,9 +63,35 @@ Sections (`app.section` / `app.openSection`): `lists` (default), `compare`, `pro
 - Tablet (768–1099px): collapsed sidebar
 - Desktop (≥1100px): full sidebar (your lists on top, then Compare and Catalogue)
 
-## Database (Supabase — all tables have RLS, data is per-user)
+## Database (Supabase — schema `spendless`, all tables have RLS, data is per-user)
 
-| Table | Key Columns |
+### Own schema — the Supabase project is shared with other apps
+SpendLess lives in the Supabase project "Universal Project for Apps", which other
+apps also use (their tables, e.g. `accounts`, `goals`, `profiles`, `transactions`,
+are in `public`). SpendLess data must never mix with theirs:
+- **Every SpendLess database object lives in the `spendless` schema** — tables,
+  functions, triggers, views. Migrations schema-qualify everything
+  (`spendless.products`, `CREATE SCHEMA IF NOT EXISTS spendless`); never rely on the
+  default `public`.
+- **Never create, alter or drop anything in `public` or another app's schema**, and
+  never touch other apps' tables or functions (`accounts`, `goals`, `profiles`,
+  `transactions`, `public.handle_new_user`, `public.update_updated_at_column`).
+  The only exception is the temporary rollout views from
+  `20261003000000_spendless_schema.sql`, removed by `20261003000200_*`.
+- The client is pinned to the schema in `src/lib/supabaseClient.ts`
+  (`createClient(url, key, { db: { schema: DB_SCHEMA } })`, `DB_SCHEMA = 'spendless'`);
+  don't create other clients without it.
+- New tables need grants in their migration (`GRANT ALL ON spendless.<t> TO anon,
+  authenticated, service_role`) plus RLS. `spendless` must stay listed in Dashboard →
+  Settings → API → **Exposed schemas**, or the API can't see it.
+- `auth.users` is shared by all apps in the project (that can't be split without a
+  separate project). Keep app data in `spendless` tables, not in other apps' tables.
+- Storage buckets are project-wide: name new ones `spendless-…`. (Existing
+  `avatars` and `product-images` predate this rule.)
+- Before any database change, check what's live (Supabase MCP `list_tables` /
+  `list_migrations`) and ask before applying migrations to the shared project.
+
+| Table (`spendless.*`) | Key Columns |
 |-------|------------|
 | `products` | id, user_id, name, category, brand, unit, **prices** (jsonb array) |
 | `stores` | id, user_id, name, type ('physical'\|'online'), location (jsonb), **delivery_rule** (jsonb) |
@@ -84,6 +110,7 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | Path | Purpose |
 |------|---------|
 | `src/types/index.ts` | All TypeScript types (Product, Store, Price, DeliveryRule, etc.) |
+| `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
 | `src/hooks/useSupabaseData.ts` | All Supabase CRUD + caching |
 | `src/utils/optimizer.ts` | Cart optimization (brute-force ≤300k combos, else greedy) |
 | `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |
@@ -102,6 +129,18 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 - **Touch**: 48px min touch targets, 16px font on inputs (prevents iOS zoom)
 - **Error handling**: try/catch with `console.error`; graceful fallbacks to empty arrays
 - **Analytics**: always guard with `window.gtag` check before calling
+
+## Keep Docs in Sync
+Docs are part of every change, not an afterthought:
+- Any change to behaviour, features, setup, env vars, commands, scripts, database
+  schema/migrations, project structure or UX updates the affected docs **in the
+  same commit**: `README.md`, `CLAUDE.md`, `QUICK_START.md`, `TESTING_GUIDE.md`,
+  `MOBILE_IMPROVEMENTS.md`, `GA_TROUBLESHOOTING.md` and `docs/`.
+- `CLAUDE.md` must always describe the code as it is now (architecture, key files,
+  tables, conventions). `README.md` must always match what users and contributors see.
+- Rewrite or delete docs that have gone stale rather than leaving them wrong.
+- Before finishing a task, search the docs for anything that mentions what you changed
+  (`grep -rn "<thing>" *.md docs/`) and fix every hit.
 
 ## Design & UX Standards
 The bar is a modern, polished, top-tier app experience. Every UI change should look
@@ -165,6 +204,8 @@ a Claude Design pass.
 - Don't create a separate `prices` table — prices live in `products.prices` jsonb
 - Don't add dark mode — `ThemeContext` is light-only by design
 - Don't add Redux/Zustand — the context pattern is intentional
+- Don't create SpendLess tables/functions in `public` or touch other apps' objects —
+  everything goes in the `spendless` schema (shared Supabase project)
 - Don't make Lists depend on the network — all list reads/writes go through
   `ListsContext` (IndexedDB first, then sync)
 - Don't ship UI with hard-coded colors/sizes, unstyled default controls, or missing

@@ -1,5 +1,10 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// The Supabase project is shared with other apps; all SpendLess tables live in
+// their own schema. Every table query goes through this client, so pinning the
+// schema here keeps SpendLess out of `public` (Storage and Auth are unaffected).
+export const DB_SCHEMA = 'spendless';
+
 export let isSupabaseReady = false;
 export let supabase: SupabaseClient | any = null;
 
@@ -9,7 +14,7 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 if (url && key) {
   try {
     const parsed = new URL(url);
-    supabase = createClient(parsed.toString(), key);
+    supabase = createClient(parsed.toString(), key, { db: { schema: DB_SCHEMA } });
     isSupabaseReady = true;
   } catch {
     console.error('[Supabase] Invalid VITE_SUPABASE_URL. Expected https://YOUR_PROJECT_ID.supabase.co');
