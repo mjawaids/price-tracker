@@ -62,9 +62,23 @@ Try locally against any Postgres: `SUPABASE_DB_URL=… scripts/db-migrate.sh --d
    *Connection string* → **Session pooler** (GitHub's runners need IPv4, which the
    direct connection doesn't offer) → copy the URI and put the database password in
    place of `[YOUR-PASSWORD]`. Save as `SUPABASE_DB_URL`.
-   *If you don't know the password and need to reset it (Project Settings → Database),
-   remember every app in this shared project that connects to the database directly
-   uses the same password.*
+
+   **Where's the password?** Supabase never shows it again after it's set, and the
+   SpendLess app never needed it (it uses the anon key; Bolt used its own Supabase
+   connection), so it isn't in this repo. Look in:
+   - other apps in this shared project that connect to Postgres directly (servers,
+     ORMs like Prisma/Drizzle, scripts) — their `.env` or hosting env vars, usually
+     `DATABASE_URL`, `POSTGRES_URL`, `DIRECT_URL` or `SUPABASE_DB_URL`. The password is
+     the part between `postgres.xutrdyjoqthxqwejarpz:` and `@`;
+   - your password manager / browser's saved passwords for supabase.com.
+
+   If you can't find it, **reset it**: left sidebar **Database** → **Settings** →
+   *Reset database password* (it's not under Project Settings). Only apps that use
+   the password directly (above) need the new one; apps using API keys or
+   supabase-js aren't affected. A new password can take a few minutes to work through
+   the pooler (brief "password authentication failed" errors are expected). Letters
+   and numbers only avoids URL-encoding it in the connection string. A wrong password
+   is harmless: the deploy stops at the first migration step before changing anything.
 3. **API values** — Project Settings → **API Keys**: the `anon` / publishable key →
    `VITE_SUPABASE_ANON_KEY`. Project URL (`https://xutrdyjoqthxqwejarpz.supabase.co`,
    also on Project Settings → Integrations → **Data API**) → `VITE_SUPABASE_URL`.
@@ -97,8 +111,17 @@ Try locally against any Postgres: `SUPABASE_DB_URL=… scripts/db-migrate.sh --d
      (optional), `PRODUCTION_URL` (optional, defaults to `https://spendless.ibexoft.com`)
 3. *Actions → General → Workflow permissions*: if the release step fails with a
    permissions error, choose **Read and write permissions**.
-4. Recommended: *Branches* → add a rule (or ruleset) for `main` that requires the
-   **Checks** status to pass before merging.
+4. **Protect `main`** (free for public repos): *Settings* → *Rules* → **Rulesets** →
+   *New ruleset* → **New branch ruleset**:
+   - Ruleset name `Protect main`, Enforcement status **Active**
+   - Target branches → *Add target* → **Include default branch**
+   - ☑ **Restrict deletions** and ☑ **Block force pushes**
+   - ☑ **Require a pull request before merging** — Required approvals **0** (you
+     can't approve your own PRs; the PR still runs the checks)
+   - ☑ **Require status checks to pass** → *Add checks* → **Checks** (it appears in
+     the list once the workflow has run at least once, e.g. on the first PR)
+   - Optional: *Bypass list* → *Repository admin*, so you can still push in an emergency
+   - **Create**
 
 ### 4. Leave Bolt
 1. In Bolt, open the SpendLess project's settings/integrations and disconnect
