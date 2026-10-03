@@ -8,6 +8,7 @@ import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, Btn, IconName, Sheet } from '../ui';
 import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from './sheets';
+import { versionLabel } from '../../lib/version';
 
 type ProfileSheet = 'edit' | 'notifications' | 'privacy' | null;
 
@@ -437,7 +438,7 @@ export default function ProfileScreen() {
             </div>
           </Sheet>
         </div>
-        <div className="text-center mt-[18px] font-mono text-[11px] text-ink-faint">SpendLess · v1.0.0</div>
+        <div className="text-center mt-[18px] font-mono text-[11px] text-ink-faint">SpendLess · {versionLabel()}</div>
         <div className="text-center mt-[6px] font-mono text-[11px] text-ink-faint">
           Made with ❤️ by{' '}
           <a

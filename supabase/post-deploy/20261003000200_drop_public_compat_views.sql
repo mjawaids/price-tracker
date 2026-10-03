@@ -1,13 +1,15 @@
 /*
   # Drop the temporary SpendLess rollout views from `public`
 
-  Run ONLY after the app build that queries the `spendless` schema is deployed
+  Lives in supabase/post-deploy: the pipeline runs it only AFTER the build that
+  queries the `spendless` schema is deployed
   (src/lib/supabaseClient.ts → db.schema = 'spendless'). After this, SpendLess
   has nothing left in `public`.
 
   Only drops views whose comment marks them as SpendLess rollout views, so a
   table or view another app owns with the same name is never touched.
 */
+-- migration-guard: allow-public removes SpendLess's own temporary rollout views
 
 DO $$
 DECLARE

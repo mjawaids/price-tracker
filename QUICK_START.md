@@ -16,7 +16,8 @@ Node.js 18+ is required.
 ## 2. Configure
 
 Copy `.env.example` to `.env` and fill in your Supabase project values
-(Dashboard → Settings → API):
+(Project Settings → **API Keys** for the anon key; the project URL is on
+Project Settings → Integrations → **Data API**):
 
 ```env
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
@@ -32,10 +33,15 @@ Without these the marketing/legal pages still load, but sign-in and data are dis
 SpendLess keeps all of its tables in its own Postgres schema, **`spendless`**,
 because the Supabase project can be shared with other apps.
 
-1. Apply the migrations in `supabase/migrations/` in filename order (Supabase CLI
-   `supabase db push`, or paste each file into the SQL editor).
-2. In the Supabase dashboard go to **Settings → API → Exposed schemas** and add
-   `spendless`. The app's client is pinned to this schema
+1. For your own (empty) Supabase project, apply the migrations with the runner:
+   ```bash
+   SUPABASE_DB_URL="postgresql://…" scripts/db-migrate.sh --from-scratch supabase/migrations
+   SUPABASE_DB_URL="postgresql://…" scripts/db-migrate.sh supabase/post-deploy
+   ```
+   (Production is migrated automatically on every push to `main` — see
+   [docs/deployment.md](docs/deployment.md).)
+2. In the Supabase dashboard go to **Project Settings → Integrations → Data API** and
+   add `spendless` to **Exposed schemas**. The app's client is pinned to this schema
    (`src/lib/supabaseClient.ts`), so without this step every request fails.
 
 ## 4. Run
@@ -56,7 +62,8 @@ npm run preview    # serve the build (service worker + offline work here, not in
 | Compare (prices, cart, plan) | `src/components/screens/` (Browse, Cart, Plan, Manage…) |
 | Navigation shell | `src/components/shell/Shell.tsx` |
 | Design tokens | `src/index.css`, `tailwind.config.js` |
-| Database migrations | `supabase/migrations/` |
+| Database migrations | `supabase/migrations/` (pre-deploy), `supabase/post-deploy/` |
+| Deploy pipeline | `.github/workflows/ci-cd.yml`, [docs/deployment.md](docs/deployment.md) |
 | Conventions & rules for contributors/AI | `CLAUDE.md` |
 
 ## Tips

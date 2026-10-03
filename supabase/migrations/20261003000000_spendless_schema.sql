@@ -18,6 +18,7 @@
 
   Idempotent: safe to run more than once.
 */
+-- migration-guard: allow-public moves tables out of public and adds temporary rollout views there
 
 CREATE SCHEMA IF NOT EXISTS spendless;
 

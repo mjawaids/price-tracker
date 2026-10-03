@@ -73,7 +73,7 @@ Visit the live application: [https://spendless.ibexoft.com](https://spendless.ib
 - **Icons**: Lucide React
 - **Build Tool**: Vite
 - **Analytics**: Google Analytics (gtag, optional)
-- **Deployment**: Netlify
+- **Deployment**: GitHub Actions → Netlify (app) + Supabase (database migrations)
 
 ## 📋 Prerequisites
 
@@ -128,19 +128,26 @@ so no separate profiles table is required by the app.
 
 Setup:
 
-1. Apply the migrations in `supabase/migrations/` in filename order
-   (`supabase db push`, or paste each file into the SQL editor). They create the
-   `spendless` schema, grants and RLS policies for every table.
-2. In the Supabase dashboard, open **Settings → API → Exposed schemas** and add
-   `spendless`. The app's client is pinned to this schema
-   (`src/lib/supabaseClient.ts`), so the API must expose it.
+1. Apply the migrations with the project's runner (it tracks them in
+   `spendless.schema_migrations`):
+   ```bash
+   SUPABASE_DB_URL="postgresql://…" scripts/db-migrate.sh --from-scratch supabase/migrations
+   SUPABASE_DB_URL="postgresql://…" scripts/db-migrate.sh supabase/post-deploy
+   ```
+   They create the `spendless` schema, grants and RLS policies for every table.
+   (Don't use `supabase db push`: the project is shared with other apps — see
+   [docs/deployment.md](docs/deployment.md).)
+2. In the Supabase dashboard, open **Project Settings → Integrations → Data API**
+   and add `spendless` to **Exposed schemas** (production does this automatically).
+   The app's client is pinned to this schema (`src/lib/supabaseClient.ts`), so the
+   API must expose it.
 
 > **Upgrading an existing install** (tables previously in `public`):
 > `20261003000000_spendless_schema.sql` moves `products`, `stores` and
 > `shopping_lists` into `spendless` with their data and policies, and leaves
-> temporary views in `public` so the old build keeps working. Order:
-> run the migrations → expose `spendless` → deploy the new build → run
-> `20261003000200_drop_public_compat_views.sql`.
+> temporary views in `public` so the old build keeps working. The deploy pipeline
+> handles the order: migrations → expose `spendless` → deploy the new build →
+> `supabase/post-deploy/20261003000200_drop_public_compat_views.sql`.
 
 ### 5. Google Sign-In & Auth Security
 
@@ -179,7 +186,8 @@ Google OAuth requires provider setup in the Google Cloud and Supabase dashboards
 - [ ] **Confirm email** is ON (Authentication → Providers → Email) — required for
       safe automatic account linking; blocks account pre-hijacking.
 - [ ] **RLS** is enabled on every table (it is, by default in the migrations).
-- [ ] **`spendless`** is listed under Settings → API → Exposed schemas.
+- [ ] **`spendless`** is listed under Project Settings → Integrations → Data API →
+      Exposed schemas.
 - [ ] **CAPTCHA + rate limits** enabled (Authentication → Attack Protection) to
       deter abuse of the public anon key.
 - [ ] The `service_role` key is **never** referenced in frontend code or `.env`
@@ -215,44 +223,36 @@ icons used by `index.html` and `public/site.webmanifest`.
 
 ## 🚀 Deployment
 
-### Deploy to Netlify (Recommended)
+Production deploys are fully automated with **GitHub Actions**
+(`.github/workflows/ci-cd.yml`). Every push to `main`:
 
-1. **Build the project**:
-   ```bash
-   npm run build
-   ```
+1. runs the checks (lint, colour contrast, migration guard, build),
+2. applies new database migrations to Supabase (`supabase/migrations/`),
+3. makes sure the `spendless` schema is exposed in the Data API,
+4. builds and deploys `dist/` to Netlify (spendless.ibexoft.com),
+5. smoke-tests the live site,
+6. runs post-deploy migrations (`supabase/post-deploy/`),
+7. tags the release and publishes GitHub Release notes.
 
-2. **Deploy to Netlify**:
-   - Connect your repository to Netlify
-   - Set build command: `npm run build`
-   - Set publish directory: `dist`
-   - Add environment variables in the Netlify dashboard
+Pull requests run the checks only. Releases use **CalVer `YYYY.M.N`** (e.g.
+`2026.10.0`), shown in the app under Profile.
 
-3. **Environment Variables**:
-   Add the following in your Netlify dashboard:
-   ```
-   VITE_SUPABASE_URL=your_supabase_project_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
-   ```
-
-### Deploy to Other Platforms
-
-The application can be deployed to any static hosting service:
-
-- **Vercel**: Connect repository and deploy
-- **GitHub Pages**: Use GitHub Actions for automated deployment
-- **AWS S3 + CloudFront**: Upload build files to S3 bucket
-- **Firebase Hosting**: Use Firebase CLI to deploy
+One-time setup (tokens, GitHub `production` environment, leaving Bolt), rollback and
+how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 
 ## 📁 Project Structure
 
 ```
-public/                     # Static assets (favicons, PWA icons, manifest)
+.github/workflows/ci-cd.yml # CI checks + production deploy pipeline
+public/                     # Static assets (favicons, PWA icons, manifest, _redirects)
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
-└── check-contrast.mjs      # WCAG contrast check for the colour tokens
-supabase/migrations/        # Database schema history (schema: spendless)
+├── check-contrast.mjs      # WCAG contrast check for the colour tokens
+├── check-migrations.mjs    # Guard: migrations may only touch the spendless schema
+├── db-migrate.sh           # Applies migrations (tracked in spendless.schema_migrations)
+└── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
+supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless
+supabase/post-deploy/       # Post-deploy (cleanup) migrations
 src/
 ├── App.tsx                 # App root (auth gate + shell)
 ├── main.tsx                # Entry point + React Router routes
@@ -299,6 +299,7 @@ src/
 │   ├── offline/                # IndexedDB store + sync engine for Lists
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy
+│   ├── version.ts              # Release version (CalVer, set by CI)
 │   └── categories.ts           # Product categories
 ├── utils/                  # Utility functions
 │   ├── currency.ts             # Currency formatting

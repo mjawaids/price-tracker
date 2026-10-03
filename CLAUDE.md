@@ -18,6 +18,8 @@ Live at https://spendless.ibexoft.com
 - `npm run lint` — ESLint (no test framework; manual testing only)
 - `npm run generate:icons` — regenerate PWA/favicon icons
 - `node scripts/check-contrast.mjs` — WCAG contrast check for the colour tokens (run after editing them)
+- `node scripts/check-migrations.mjs` — fails if a migration touches anything outside the `spendless` schema
+- `SUPABASE_DB_URL=… scripts/db-migrate.sh [--dry-run] <dir>` — apply migrations (CI does this on deploy)
 
 ## Environment Variables (`.env`)
 ```
@@ -77,19 +79,28 @@ are in `public`). SpendLess data must never mix with theirs:
   never touch other apps' tables or functions (`accounts`, `goals`, `profiles`,
   `transactions`, `public.handle_new_user`, `public.update_updated_at_column`).
   The only exception is the temporary rollout views from
-  `20261003000000_spendless_schema.sql`, removed by `20261003000200_*`.
+  `20261003000000_spendless_schema.sql`, removed by
+  `supabase/post-deploy/20261003000200_*`.
 - The client is pinned to the schema in `src/lib/supabaseClient.ts`
   (`createClient(url, key, { db: { schema: DB_SCHEMA } })`, `DB_SCHEMA = 'spendless'`);
   don't create other clients without it.
 - New tables need grants in their migration (`GRANT ALL ON spendless.<t> TO anon,
   authenticated, service_role`) plus RLS. `spendless` must stay listed in Dashboard →
-  Settings → API → **Exposed schemas**, or the API can't see it.
+  Project Settings → Integrations → **Data API** → *Exposed schemas* (the pipeline
+  adds it automatically), or the API can't see it.
 - `auth.users` is shared by all apps in the project (that can't be split without a
   separate project). Keep app data in `spendless` tables, not in other apps' tables.
 - Storage buckets are project-wide: name new ones `spendless-…`. (Existing
   `avatars` and `product-images` predate this rule.)
-- Before any database change, check what's live (Supabase MCP `list_tables` /
-  `list_migrations`) and ask before applying migrations to the shared project.
+- Schema changes ship **only through the deploy pipeline** (merge to `main`): add a
+  migration file, never change the live database by hand. Before writing one, check
+  what's live (Supabase MCP `list_tables`, read-only SQL). Applying anything to the
+  shared project outside the pipeline needs the user's explicit OK.
+- Migration files: `<YYYYMMDDHHMMSS>_<name>.sql`, never edited once deployed.
+  `supabase/migrations/` = additive, runs before the new app goes live;
+  `supabase/post-deploy/` = destructive cleanup the old app still needed, runs after.
+  Tracked in `spendless.schema_migrations` by `scripts/db-migrate.sh` (not
+  `supabase db push` — the shared project's history includes other apps).
 
 | Table (`spendless.*`) | Key Columns |
 |-------|------------|
@@ -120,7 +131,10 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
 | `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |
 | `src/lib/groceryDictionary.ts` | Item → aisle (English + romanized Urdu) |
-| `supabase/migrations/` | Schema history |
+| `supabase/migrations/`, `supabase/post-deploy/` | Schema history (pre-/post-deploy) |
+| `.github/workflows/ci-cd.yml` | CI checks + production deploy pipeline |
+| `scripts/db-migrate.sh` | Migration runner (tracks `spendless.schema_migrations`) |
+| `docs/deployment.md` | Deployment runbook, setup, rollback |
 
 ## Conventions
 - **Naming**: PascalCase components/types, camelCase hooks/utils, kebab-case CSS vars
@@ -129,6 +143,18 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 - **Touch**: 48px min touch targets, 16px font on inputs (prevents iOS zoom)
 - **Error handling**: try/catch with `console.error`; graceful fallbacks to empty arrays
 - **Analytics**: always guard with `window.gtag` check before calling
+
+## Deployment (CI/CD)
+- `.github/workflows/ci-cd.yml`: PRs and pushes run checks (lint, contrast, migration
+  guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
+  build → Netlify → smoke test → post-deploy migrations → tag + GitHub Release.
+- Versions are **CalVer `YYYY.M.N`** from git tags, injected as `VITE_APP_VERSION` /
+  `VITE_APP_COMMIT` (`src/lib/version.ts`, shown in Profile). Don't hand-edit versions
+  or commit version bumps.
+- Secrets/variables live in the GitHub `production` environment; runbook, setup and
+  rollback in `docs/deployment.md`. Bolt is no longer used — don't add Bolt files.
+- New services go in as steps of the `deploy` job (see `docs/deployment.md`).
+- SPA routing on Netlify comes from `public/_redirects`; keep it.
 
 ## Keep Docs in Sync
 Docs are part of every change, not an afterthought:

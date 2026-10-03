@@ -5,6 +5,8 @@
 > the screens in `src/components/screens/`. Since October 2026 the tables live in
 > the **`spendless`** schema, so prefix table names in the SQL below with
 > `spendless.` (e.g. `spendless.products`) if you ever run them again.
+> Migrations are no longer applied with `supabase db push` or by hand — they ship
+> through the deploy pipeline (see [deployment.md](deployment.md)).
 
 ## Overview
 

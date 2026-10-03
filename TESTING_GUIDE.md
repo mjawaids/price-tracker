@@ -58,7 +58,15 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
 
 - [ ] Network requests to `/rest/v1/…` send `Accept-Profile: spendless` /
       `Content-Profile: spendless` headers (the client is pinned to the `spendless` schema).
-- [ ] No SpendLess table is created in `public` by any new migration.
+- [ ] `node scripts/check-migrations.mjs` passes (no migration touches `public`).
+
+## After a production deploy
+
+- [ ] The GitHub Actions run is green and a `vYYYY.M.N` release was created.
+- [ ] Profile shows the same version (`SpendLess · v2026.10.N (commit)`).
+- [ ] https://spendless.ibexoft.com/privacy loads directly (SPA redirect works).
+- [ ] Sign in, add a list item on one device, see it on another.
+- [ ] Compare data (products, stores, cart) is still there.
 
 ## Accessibility & design
 
