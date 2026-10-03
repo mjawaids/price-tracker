@@ -19,11 +19,12 @@
     - RLS: users can only read and write their own rows.
 
   4. Notes
+    - Lives in the `spendless` schema (see 20261003000000_spendless_schema.sql).
     - Idempotent: safe to run multiple times.
-    - `shopping_lists` ("My Cart" for Compare) is unchanged.
+    - `spendless.shopping_lists` ("My Cart" for Compare) is unchanged.
 */
 
-CREATE TABLE IF NOT EXISTS lists (
+CREATE TABLE IF NOT EXISTS spendless.lists (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 60),
@@ -33,9 +34,9 @@ CREATE TABLE IF NOT EXISTS lists (
   deleted_at timestamptz
 );
 
-CREATE TABLE IF NOT EXISTS list_items (
+CREATE TABLE IF NOT EXISTS spendless.list_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  list_id uuid NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+  list_id uuid NOT NULL REFERENCES spendless.lists(id) ON DELETE CASCADE,
   user_id uuid NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 120),
   quantity numeric CHECK (quantity IS NULL OR quantity > 0),
@@ -46,53 +47,59 @@ CREATE TABLE IF NOT EXISTS list_items (
   done_at timestamptz,
   cleared_at timestamptz,
   sort_order double precision NOT NULL DEFAULT 0,
-  product_id uuid REFERENCES products(id) ON DELETE SET NULL,
+  product_id uuid REFERENCES spendless.products(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   deleted_at timestamptz
 );
 
-ALTER TABLE lists ENABLE ROW LEVEL SECURITY;
-ALTER TABLE list_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spendless.lists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spendless.list_items ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can manage their own lists" ON lists;
+DROP POLICY IF EXISTS "Users can manage their own lists" ON spendless.lists;
 CREATE POLICY "Users can manage their own lists"
-  ON lists
+  ON spendless.lists
   FOR ALL
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can manage their own list items" ON list_items;
+DROP POLICY IF EXISTS "Users can manage their own list items" ON spendless.list_items;
 CREATE POLICY "Users can manage their own list items"
-  ON list_items
+  ON spendless.list_items
   FOR ALL
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (
     auth.uid() = user_id
-    AND EXISTS (SELECT 1 FROM lists l WHERE l.id = list_id AND l.user_id = auth.uid())
+    AND EXISTS (SELECT 1 FROM spendless.lists l WHERE l.id = list_id AND l.user_id = auth.uid())
   );
 
 -- Server-authoritative updated_at on every insert and update (sync cursor).
-CREATE OR REPLACE FUNCTION set_server_updated_at()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION spendless.set_server_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-DROP TRIGGER IF EXISTS lists_set_updated_at ON lists;
+DROP TRIGGER IF EXISTS lists_set_updated_at ON spendless.lists;
 CREATE TRIGGER lists_set_updated_at
-  BEFORE INSERT OR UPDATE ON lists
-  FOR EACH ROW EXECUTE FUNCTION set_server_updated_at();
+  BEFORE INSERT OR UPDATE ON spendless.lists
+  FOR EACH ROW EXECUTE FUNCTION spendless.set_server_updated_at();
 
-DROP TRIGGER IF EXISTS list_items_set_updated_at ON list_items;
+DROP TRIGGER IF EXISTS list_items_set_updated_at ON spendless.list_items;
 CREATE TRIGGER list_items_set_updated_at
-  BEFORE INSERT OR UPDATE ON list_items
-  FOR EACH ROW EXECUTE FUNCTION set_server_updated_at();
+  BEFORE INSERT OR UPDATE ON spendless.list_items
+  FOR EACH ROW EXECUTE FUNCTION spendless.set_server_updated_at();
 
-CREATE INDEX IF NOT EXISTS lists_user_updated_idx ON lists(user_id, updated_at);
-CREATE INDEX IF NOT EXISTS list_items_user_updated_idx ON list_items(user_id, updated_at);
-CREATE INDEX IF NOT EXISTS list_items_list_id_idx ON list_items(list_id);
+CREATE INDEX IF NOT EXISTS lists_user_updated_idx ON spendless.lists(user_id, updated_at);
+CREATE INDEX IF NOT EXISTS list_items_user_updated_idx ON spendless.list_items(user_id, updated_at);
+CREATE INDEX IF NOT EXISTS list_items_list_id_idx ON spendless.list_items(list_id);
+
+GRANT ALL ON spendless.lists, spendless.list_items TO anon, authenticated, service_role;
+GRANT ALL ON FUNCTION spendless.set_server_updated_at() TO anon, authenticated, service_role;
