@@ -131,32 +131,47 @@ jobs:
         run: npm run build
 
       - name: Deploy to Netlify
+        id: netlify
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
         run: |
+          # --json prints only the deploy details on stdout.
           npx --yes "netlify-cli@${NETLIFY_CLI_VERSION}" deploy \
             --dir=dist --prod --no-build \
             --site="$NETLIFY_SITE_ID" \
-            --message="v${{ steps.version.outputs.version }} (${GITHUB_SHA::7})"
+            --message="v${{ steps.version.outputs.version }} (${GITHUB_SHA::7})" \
+            --json > netlify-deploy.json
+          site_name="$(jq -er '.site_name' netlify-deploy.json)"
+          deploy_url="$(jq -er '.deploy_url' netlify-deploy.json)"
+          echo "origin_url=https://${site_name}.netlify.app" >> "$GITHUB_OUTPUT"
+          echo "Netlify deploy: ${deploy_url}" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Smoke test production
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          ORIGIN_URL: ${{ steps.netlify.outputs.origin_url }}
         run: |
           fetch() { curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "$@"; }
-          fetch -o /dev/null "$PRODUCTION_URL/"
-          fetch -o /dev/null "$PRODUCTION_URL/privacy"   # SPA redirect (public/_redirects)
-          html="$(fetch "$PRODUCTION_URL/")"
+          # Checked on Netlify itself: the public domain sits behind Cloudflare, which
+          # answers GitHub's runners with 403.
+          fetch -o /dev/null "$ORIGIN_URL/"
+          fetch -o /dev/null "$ORIGIN_URL/privacy"   # SPA redirect (public/_redirects)
+          html="$(fetch "$ORIGIN_URL/")"
           bundle="$(grep -m1 -oE '/assets/index-[A-Za-z0-9_-]+\.js' <<<"$html" || true)"
           if [ -z "$bundle" ]; then echo "::error::Could not find the app bundle in index.html"; exit 1; fi
-          fetch -o bundle.js "$PRODUCTION_URL$bundle"
+          fetch -o bundle.js "$ORIGIN_URL$bundle"
           # Vite inlines the version as a quoted string literal.
           if ! grep -qF "\"$VERSION\"" bundle.js; then
             echo "::error::Production is not serving v$VERSION"
             exit 1
           fi
           echo "Production is serving v$VERSION ✔" | tee -a "$GITHUB_STEP_SUMMARY"
+          # The public domain, best effort only (see above).
+          code="$(curl -sS -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/" || true)"
+          if [ "$code" != "200" ]; then
+            echo "::warning::$PRODUCTION_URL answered HTTP $code to the runner (Cloudflare blocks GitHub's runners). Netlify itself is serving v$VERSION."
+          fi
 
       # Destructive/cleanup changes that the previous app version still needed.
       - name: Database migrations (post-deploy)

@@ -15,7 +15,7 @@ build system any more.
 | 4 | **Expose the `spendless` schema** in the Data API | Only adds it if missing; never removes other apps' schemas |
 | 5 | Build with the production `VITE_*` values and the version | Same build that's tested below |
 | 6 | **Netlify deploy** (`netlify deploy --prod --no-build --dir dist`) | Publishes `dist/` to spendless.ibexoft.com |
-| 7 | **Smoke test**: `/` and `/privacy` return 200, live bundle contains the new version | Proves the deploy is live and SPA routing works |
+| 7 | **Smoke test** on Netlify (`<site>.netlify.app`): `/` and `/privacy` return 200, the bundle contains the new version; then the public domain, as a warning only | Proves the deploy is live and SPA routing works. The public domain is behind Cloudflare, which answers GitHub's runners with 403 |
 | 8 | **Post-deploy migrations** — `scripts/db-migrate.sh supabase/post-deploy` | Cleanup the old app still needed (e.g. dropping old views) |
 | 9 | Tag `vYYYY.M.N` + GitHub Release with auto-generated notes | Release history |
 
@@ -59,11 +59,13 @@ Try locally against any Postgres: `SUPABASE_DB_URL=… scripts/db-migrate.sh --d
 1. **Access token** — <https://supabase.com/dashboard/account/tokens> → *Generate new
    token* (name it `spendless-github-actions`). Save as `SUPABASE_ACCESS_TOKEN`.
    If Supabase offers permission scopes (scoped tokens, `sbp_fc…`), scope it to this
-   project only and grant just **Data API Config → Read-write**: the pipeline only
-   reads and updates the Data API's exposed schemas. Without the scope picker you get
-   a classic token with your account's full access; that works too. A `401` in the
-   *Expose the spendless schema* step means the token itself is wrong (copy it again);
-   a `403` means it's missing that permission.
+   project only and grant just **Data API Config → Read**: the pipeline only checks
+   that `spendless` is in the exposed schemas (step 4 below), and adds it only when
+   it's missing, which needs **Read-write** (and a role in the organization that may
+   change project settings). Without the scope picker you get a classic token with
+   your account's full access; that works too. In the *Expose the spendless schema*
+   step a `401` means the token itself is wrong (copy it again); a `403` means it
+   lacks the permission — add the schema by hand (step 4) and re-run.
 2. **Database connection string** — open the project → **Connect** (top bar) →
    *Connection string* → **Session pooler** (GitHub's runners need IPv4, which the
    direct connection doesn't offer) → copy the URI and put the database password in
@@ -88,9 +90,11 @@ Try locally against any Postgres: `SUPABASE_DB_URL=… scripts/db-migrate.sh --d
 3. **API values** — Project Settings → **API Keys**: the `anon` / publishable key →
    `VITE_SUPABASE_ANON_KEY`. Project URL (`https://xutrdyjoqthxqwejarpz.supabase.co`,
    also on Project Settings → Integrations → **Data API**) → `VITE_SUPABASE_URL`.
-4. **Exposed schemas** — nothing to do: step 4 of the pipeline adds `spendless`.
-   To check by hand: Project Settings → Integrations → **Data API** → *Exposed
-   schemas* should list `spendless` alongside the existing ones.
+4. **Exposed schemas** — Project Settings → Integrations → **Data API** → *Exposed
+   schemas* must list `spendless` alongside the existing ones (it does in production
+   since the first deploy). The pipeline checks this after the migrations and adds it
+   if the token may; otherwise add it here and re-run the failed job. Only add it once
+   the schema exists: exposing a missing schema breaks the Data API for every app.
 
 ### 2. Netlify (project `velvety-rabanadas-f4e189`, spendless.ibexoft.com)
 1. **Personal access token** — avatar → *User settings* → *Applications* → *Personal
