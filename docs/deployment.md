@@ -58,6 +58,12 @@ Try locally against any Postgres: `SUPABASE_DB_URL=… scripts/db-migrate.sh --d
 ### 1. Supabase (project "Universal Project for Apps", ref `xutrdyjoqthxqwejarpz`)
 1. **Access token** — <https://supabase.com/dashboard/account/tokens> → *Generate new
    token* (name it `spendless-github-actions`). Save as `SUPABASE_ACCESS_TOKEN`.
+   If Supabase offers permission scopes (scoped tokens, `sbp_fc…`), scope it to this
+   project only and grant just **Data API Config → Read-write**: the pipeline only
+   reads and updates the Data API's exposed schemas. Without the scope picker you get
+   a classic token with your account's full access; that works too. A `401` in the
+   *Expose the spendless schema* step means the token itself is wrong (copy it again);
+   a `403` means it's missing that permission.
 2. **Database connection string** — open the project → **Connect** (top bar) →
    *Connection string* → **Session pooler** (GitHub's runners need IPv4, which the
    direct connection doesn't offer) → copy the URI and put the database password in
