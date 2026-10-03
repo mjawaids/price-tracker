@@ -33,6 +33,16 @@ import {
   Coins,
   Bell,
   Camera,
+  ListChecks,
+  WifiOff,
+  Cloud,
+  CloudOff,
+  History,
+  MoreHorizontal,
+  Undo2,
+  Lightbulb,
+  RefreshCw,
+  CheckCircle2,
   LucideProps,
 } from 'lucide-react';
 import { ComponentType } from 'react';
@@ -73,6 +83,16 @@ const MAP: Record<string, ComponentType<LucideProps>> = {
   coin: Coins,
   bell: Bell,
   camera: Camera,
+  lists: ListChecks,
+  wifiOff: WifiOff,
+  cloud: Cloud,
+  cloudOff: CloudOff,
+  history: History,
+  more: MoreHorizontal,
+  undo: Undo2,
+  bulb: Lightbulb,
+  refresh: RefreshCw,
+  checkCircle: CheckCircle2,
 };
 
 export type IconName = keyof typeof MAP | string;

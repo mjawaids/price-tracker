@@ -3,10 +3,12 @@ import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
+import { useLists } from '../../contexts/ListsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, Btn, IconName, Sheet } from '../ui';
 import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from './sheets';
+import { versionLabel } from '../../lib/version';
 
 type ProfileSheet = 'edit' | 'notifications' | 'privacy' | null;
 
@@ -243,7 +245,7 @@ function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => voi
       <Field label="Email" hint="Your email can’t be changed here.">
         <TextIn value={app.user.email} disabled className="opacity-60" />
       </Field>
-      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'oklch(0.55 0.16 25)' }}>{error}</div>}
+      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'var(--danger)' }}>{error}</div>}
       <Btn full onClick={save} disabled={saving}>
         {saving ? 'Saving…' : 'Save changes'}
       </Btn>
@@ -330,7 +332,7 @@ function PrivacySheet({ open, onClose }: { open: boolean; onClose: () => void })
       <Field label="Confirm new password">
         <TextIn type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" />
       </Field>
-      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'oklch(0.55 0.16 25)' }}>{error}</div>}
+      {error && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'var(--danger)' }}>{error}</div>}
       {done && <div className="text-[12.5px] -mt-2 mb-3" style={{ color: 'var(--accent-ink)' }}>Password updated.</div>}
       <Btn full onClick={save} disabled={saving}>
         {saving ? 'Updating…' : 'Update password'}
@@ -348,19 +350,26 @@ export default function ProfileScreen() {
   const u = app.user;
   const initials = u.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
   const [sheet, setSheet] = useState<ProfileSheet>(null);
+  const lists = useLists();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  // Signing out wipes this device's copy of the lists, so warn about unsynced edits.
+  const signOut = () => (lists.pending > 0 ? setConfirmSignOut(true) : void app.signOut());
 
   return (
     <div style={{ paddingBottom: big ? 0 : 24 }}>
       {!big && (
         <div className="sticky top-0 z-20 bg-paper flex items-center gap-3 border-b border-line" style={{ padding: '14px 16px' }}>
-          <button
-            type="button"
-            onClick={() => (app.canGoBack ? app.back() : app.tab('browse'))}
-            className="grid place-items-center rounded-full bg-surface shadow-[inset_0_0_0_1px_var(--line)]"
-            style={{ width: 40, height: 40 }}
-          >
-            <Icon name="back" size={19} stroke={2.2} />
-          </button>
+          {app.canGoBack && (
+            <button
+              type="button"
+              onClick={app.back}
+              aria-label="Back"
+              className="grid place-items-center rounded-full bg-surface shadow-[inset_0_0_0_1px_var(--line)]"
+              style={{ width: 44, height: 44 }}
+            >
+              <Icon name="back" size={19} stroke={2.2} />
+            </button>
+          )}
           <h2 className="m-0 font-display font-extrabold text-[19px] tracking-[-0.02em]">Profile</h2>
         </div>
       )}
@@ -400,15 +409,36 @@ export default function ProfileScreen() {
         </Group>
 
         <Group title="Help">
-          <SettingRow icon="spark" label="App walkthrough" value="Replay" onClick={onboarding.start} last />
+          <SettingRow
+            icon="bulb"
+            label="Tips"
+            value={onboarding.tipsOn ? 'On' : 'Off'}
+            onClick={() => onboarding.setTipsOn(!onboarding.tipsOn)}
+          />
+          <SettingRow icon="refresh" label="Show tips again" value="Reset" onClick={onboarding.resetTips} />
+          <SettingRow icon="spark" label="Compare walkthrough" value="Replay" onClick={onboarding.start} last />
         </Group>
 
         <div className="mt-[18px]">
-          <Btn full variant="ghost" icon="logout" onClick={app.signOut} style={{ color: 'oklch(0.55 0.16 25)' }}>
+          <Btn full variant="ghost" icon="logout" onClick={signOut} style={{ color: 'var(--danger)' }}>
             Sign out
           </Btn>
+          <Sheet open={confirmSignOut} onClose={() => setConfirmSignOut(false)} title="Sign out?">
+            <p className="m-0 mb-5 text-[15px] leading-relaxed text-ink-soft">
+              {lists.pending} {lists.pending === 1 ? 'change' : 'changes'} to your lists haven’t synced yet. Connect to the internet
+              first to keep {lists.pending === 1 ? 'it' : 'them'}, or sign out and lose {lists.pending === 1 ? 'it' : 'them'}.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <Btn full size="lg" onClick={() => setConfirmSignOut(false)}>
+                Stay signed in
+              </Btn>
+              <Btn full variant="ghost" onClick={() => void app.signOut()} style={{ color: 'var(--danger)' }}>
+                Sign out anyway
+              </Btn>
+            </div>
+          </Sheet>
         </div>
-        <div className="text-center mt-[18px] font-mono text-[11px] text-ink-faint">SpendLess · v1.0.0</div>
+        <div className="text-center mt-[18px] font-mono text-[11px] text-ink-faint">SpendLess · {versionLabel()}</div>
         <div className="text-center mt-[6px] font-mono text-[11px] text-ink-faint">
           Made with ❤️ by{' '}
           <a

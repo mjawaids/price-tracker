@@ -24,3 +24,6 @@ dev-dist
 *.sln
 *.sw?
 .env
+
+# Vite writes this temp file while loading the config; never commit it
+vite.config.*.timestamp-*

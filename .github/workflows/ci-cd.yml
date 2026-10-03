@@ -1,0 +1,175 @@
+# CI/CD for SpendLess. Full runbook: docs/deployment.md
+#
+# - Every pull request and push: lint, design/migration guardrails, build.
+# - Every push to main (or a manual run on main): ship to production —
+#   database migrations → expose schema → build → Netlify → smoke test →
+#   post-deploy migrations → tag + GitHub Release (CalVer YYYY.M.N).
+#
+# Adding another service later? Add a step in the `deploy` job at the right point
+# (before "Deploy to Netlify" if the app needs it first, after the smoke test if it
+# depends on the new app), and its secrets to the `production` environment.
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  NETLIFY_CLI_VERSION: '27.10.2'
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Colour contrast (WCAG AA)
+        run: node scripts/check-contrast.mjs
+      - name: Migrations stay in the spendless schema
+        run: node scripts/check-migrations.mjs
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Deploy to production
+    needs: checks
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL || 'https://spendless.ibexoft.com' }}
+    # One production deploy at a time; never cancel one halfway through.
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      contents: write # create the release tag
+    env:
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://spendless.ibexoft.com' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check required configuration
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+        run: |
+          missing=0
+          for name in NETLIFY_AUTH_TOKEN SUPABASE_ACCESS_TOKEN SUPABASE_DB_URL VITE_SUPABASE_ANON_KEY \
+                      NETLIFY_SITE_ID SUPABASE_PROJECT_REF VITE_SUPABASE_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing $name — add it to the 'production' environment (see docs/deployment.md)."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Compute version (CalVer YYYY.M.N)
+        id: version
+        run: |
+          prefix="$(date -u +%Y).$((10#$(date -u +%m)))"
+          last="$(git tag --list "v${prefix}.*" | sed "s/^v${prefix}\.//" | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
+          version="${prefix}.$(( ${last:--1} + 1 ))"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Releasing v${version}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Version: ${version}"
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      # Additive changes only (new tables/columns); the live app keeps working.
+      - name: Database migrations (pre-deploy)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: scripts/db-migrate.sh supabase/migrations
+
+      # After the migrations: exposing a schema that doesn't exist breaks the Data API.
+      - name: Expose the spendless schema in the Data API
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: scripts/supabase-expose-schema.sh spendless
+
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GA_MEASUREMENT_ID: ${{ vars.VITE_GA_MEASUREMENT_ID }}
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
+          VITE_APP_COMMIT: ${{ github.sha }}
+        run: npm run build
+
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
+        run: |
+          npx --yes "netlify-cli@${NETLIFY_CLI_VERSION}" deploy \
+            --dir=dist --prod --no-build \
+            --site="$NETLIFY_SITE_ID" \
+            --message="v${{ steps.version.outputs.version }} (${GITHUB_SHA::7})"
+
+      - name: Smoke test production
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          fetch() { curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "$@"; }
+          fetch -o /dev/null "$PRODUCTION_URL/"
+          fetch -o /dev/null "$PRODUCTION_URL/privacy"   # SPA redirect (public/_redirects)
+          html="$(fetch "$PRODUCTION_URL/")"
+          bundle="$(grep -m1 -oE '/assets/index-[A-Za-z0-9_-]+\.js' <<<"$html" || true)"
+          if [ -z "$bundle" ]; then echo "::error::Could not find the app bundle in index.html"; exit 1; fi
+          fetch -o bundle.js "$PRODUCTION_URL$bundle"
+          # Vite inlines the version as a quoted string literal.
+          if ! grep -qF "\"$VERSION\"" bundle.js; then
+            echo "::error::Production is not serving v$VERSION"
+            exit 1
+          fi
+          echo "Production is serving v$VERSION ✔" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Destructive/cleanup changes that the previous app version still needed.
+      - name: Database migrations (post-deploy)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: scripts/db-migrate.sh supabase/post-deploy
+
+      - name: Tag and publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v${VERSION}" \
+            --target "$GITHUB_SHA" \
+            --title "v${VERSION}" \
+            --generate-notes

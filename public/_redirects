@@ -1,0 +1,2 @@
+# SPA routing: serve the app for every path (React Router handles /privacy, /terms, …).
+/*    /index.html    200

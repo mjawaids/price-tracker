@@ -4,6 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { OnboardingProvider } from './contexts/OnboardingContext';
 import { AppProvider } from './contexts/AppContext';
+import { ListsProvider } from './contexts/ListsContext';
 import AuthScreen from './components/screens/AuthScreen';
 import Shell from './components/shell/Shell';
 
@@ -30,9 +31,11 @@ function AppContent() {
   }
 
   return (
-    <AppProvider>
-      <Shell />
-    </AppProvider>
+    <ListsProvider>
+      <AppProvider>
+        <Shell />
+      </AppProvider>
+    </ListsProvider>
   );
 }
 

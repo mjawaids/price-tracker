@@ -35,8 +35,9 @@ export function Sheet({
     <button
       type="button"
       onClick={onClose}
+      aria-label="Close"
       className="grid place-items-center rounded-full bg-surface shadow-[inset_0_0_0_1px_var(--line)]"
-      style={{ width: 34, height: 34 }}
+      style={{ width: 44, height: 44 }}
     >
       <Icon name="x" size={17} stroke={2.4} />
     </button>

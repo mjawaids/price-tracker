@@ -7,20 +7,20 @@ export interface OnboardingStep {
   tip: string;
 }
 
-// Walkthrough content — introduces SpendLess's core loop:
-// find products → track prices → build cart → get an optimized plan.
+// Compare walkthrough — shown the first time someone opens Compare. Introduces
+// the price loop: find products → track prices → build cart → optimized plan.
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     icon: 'spark',
-    title: 'Welcome to SpendLess',
-    body: 'Track product prices across your stores, build a cart, and let us work out the cheapest way to shop. Here’s a quick 30-second tour.',
+    title: 'Compare prices, spend less',
+    body: 'Track prices across your stores, build a cart, and let us work out the cheapest way to shop. Here’s a quick 30-second tour.',
     tip: 'You can replay this anytime from Profile → Help.',
   },
   {
     icon: 'search',
     title: 'Find products',
     body: 'Browse the shared catalogue or use search to jump straight to what you need. Tap a product to see its price at every store.',
-    tip: 'Use the Browse tab or the search bar up top.',
+    tip: 'Use Browse, or the search button up top.',
   },
   {
     icon: 'tag',

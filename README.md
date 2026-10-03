@@ -1,12 +1,27 @@
 # SpendLess - Smart Shopping List and Price Comparison App
 
-A modern, mobile-first price comparison and shopping management application built with React, TypeScript, and Supabase. Track prices across multiple stores, build smart shopping plans, and never overpay again.
+A modern, mobile-first shopping app built with React, TypeScript, and Supabase. Jot down what you need in seconds — even offline — and, when you want to save more, track prices across stores and get the cheapest shopping plan.
 
 > Formerly referred to as "PriceTracker" — the product is now branded **SpendLess**.
 
 ## ✨ Features
 
-### 🛍️ Smart Price Tracking
+The app has two sections: **Lists** (the default) and **Compare**.
+
+### 📝 Quick Lists (default)
+- Add items the way you'd say them: `bread`, `2 milk`, `atta 10 kg` — no brand or size needed
+- Suggestions while typing (your own history first) and one-tap "often bought" chips
+- Items sorted by aisle automatically (English and romanized Urdu names)
+- Tick items as you shop, swipe to tick/delete, undo anything, see your progress
+- Several lists (Groceries, Pharmacy, …) with optional quantity, unit and notes
+- Friendly one-at-a-time tips that teach the app as you use it
+
+### 📴 Works Offline
+- Lists are stored on the device first (IndexedDB) and sync to Supabase when online
+- Changes made offline are queued and sent automatically; the app opens offline too
+- Installable PWA; the app shell and fonts are cached by a service worker
+
+### 🛍️ Smart Price Tracking (Compare)
 - Track products and their prices across multiple stores
 - Real-time price comparison with visual best-price indicators
 - Per-store availability and delivery rules
@@ -58,7 +73,7 @@ Visit the live application: [https://spendless.ibexoft.com](https://spendless.ib
 - **Icons**: Lucide React
 - **Build Tool**: Vite
 - **Analytics**: Google Analytics (gtag, optional)
-- **Deployment**: Netlify
+- **Deployment**: GitHub Actions → Netlify (app) + Supabase (database migrations)
 
 ## 📋 Prerequisites
 
@@ -100,16 +115,39 @@ You can find the Supabase values in your project dashboard under **Settings > AP
 
 ### 4. Database Setup
 
-The application uses Supabase as the backend. The core schema includes:
+SpendLess keeps **all of its tables in its own Postgres schema, `spendless`**, so it
+can share a Supabase project with other apps without mixing data. Tables:
 
-- **products**: Product catalog with flattened per-store pricing
-- **stores**: Store information (physical and online) with delivery rules
-- **shopping_lists**: User shopping lists and plan items
+- **spendless.lists / spendless.list_items**: quick lists and their items (offline-synced)
+- **spendless.products**: Product catalog with per-store pricing
+- **spendless.stores**: Store information (physical and online) with delivery rules
+- **spendless.shopping_lists**: Compare's cart ("My Cart")
 
 User profile data (name, avatar) is stored in Supabase Auth `user_metadata`,
 so no separate profiles table is required by the app.
 
-Migrations live in `supabase/migrations` and are applied when you connect to Supabase. They include proper RLS policies for every table.
+Setup:
+
+1. Apply the migrations with the project's runner (it tracks them in
+   `spendless.schema_migrations`):
+   ```bash
+   SUPABASE_DB_URL="postgresql://…" scripts/db-migrate.sh --from-scratch supabase/migrations
+   SUPABASE_DB_URL="postgresql://…" scripts/db-migrate.sh supabase/post-deploy
+   ```
+   They create the `spendless` schema, grants and RLS policies for every table.
+   (Don't use `supabase db push`: the project is shared with other apps — see
+   [docs/deployment.md](docs/deployment.md).)
+2. In the Supabase dashboard, open **Project Settings → Integrations → Data API**
+   and add `spendless` to **Exposed schemas** (production does this automatically).
+   The app's client is pinned to this schema (`src/lib/supabaseClient.ts`), so the
+   API must expose it.
+
+> **Upgrading an existing install** (tables previously in `public`):
+> `20261003000000_spendless_schema.sql` moves `products`, `stores` and
+> `shopping_lists` into `spendless` with their data and policies, and leaves
+> temporary views in `public` so the old build keeps working. The deploy pipeline
+> handles the order: migrations → expose `spendless` → deploy the new build →
+> `supabase/post-deploy/20261003000200_drop_public_compat_views.sql`.
 
 ### 5. Google Sign-In & Auth Security
 
@@ -148,6 +186,8 @@ Google OAuth requires provider setup in the Google Cloud and Supabase dashboards
 - [ ] **Confirm email** is ON (Authentication → Providers → Email) — required for
       safe automatic account linking; blocks account pre-hijacking.
 - [ ] **RLS** is enabled on every table (it is, by default in the migrations).
+- [ ] **`spendless`** is listed under Project Settings → Integrations → Data API →
+      Exposed schemas.
 - [ ] **CAPTCHA + rate limits** enabled (Authentication → Attack Protection) to
       deter abuse of the public anon key.
 - [ ] The `service_role` key is **never** referenced in frontend code or `.env`
@@ -183,42 +223,36 @@ icons used by `index.html` and `public/site.webmanifest`.
 
 ## 🚀 Deployment
 
-### Deploy to Netlify (Recommended)
+Production deploys are fully automated with **GitHub Actions**
+(`.github/workflows/ci-cd.yml`). Every push to `main`:
 
-1. **Build the project**:
-   ```bash
-   npm run build
-   ```
+1. runs the checks (lint, colour contrast, migration guard, build),
+2. applies new database migrations to Supabase (`supabase/migrations/`),
+3. makes sure the `spendless` schema is exposed in the Data API,
+4. builds and deploys `dist/` to Netlify (spendless.ibexoft.com),
+5. smoke-tests the live site,
+6. runs post-deploy migrations (`supabase/post-deploy/`),
+7. tags the release and publishes GitHub Release notes.
 
-2. **Deploy to Netlify**:
-   - Connect your repository to Netlify
-   - Set build command: `npm run build`
-   - Set publish directory: `dist`
-   - Add environment variables in the Netlify dashboard
+Pull requests run the checks only. Releases use **CalVer `YYYY.M.N`** (e.g.
+`2026.10.0`), shown in the app under Profile.
 
-3. **Environment Variables**:
-   Add the following in your Netlify dashboard:
-   ```
-   VITE_SUPABASE_URL=your_supabase_project_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
-   ```
-
-### Deploy to Other Platforms
-
-The application can be deployed to any static hosting service:
-
-- **Vercel**: Connect repository and deploy
-- **GitHub Pages**: Use GitHub Actions for automated deployment
-- **AWS S3 + CloudFront**: Upload build files to S3 bucket
-- **Firebase Hosting**: Use Firebase CLI to deploy
+One-time setup (tokens, GitHub `production` environment, leaving Bolt), rollback and
+how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 
 ## 📁 Project Structure
 
 ```
-public/                     # Static assets (favicons, PWA icons, manifest)
+.github/workflows/ci-cd.yml # CI checks + production deploy pipeline
+public/                     # Static assets (favicons, PWA icons, manifest, _redirects)
 scripts/
-└── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
+├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
+├── check-contrast.mjs      # WCAG contrast check for the colour tokens
+├── check-migrations.mjs    # Guard: migrations may only touch the spendless schema
+├── db-migrate.sh           # Applies migrations (tracked in spendless.schema_migrations)
+└── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
+supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless
+supabase/post-deploy/       # Post-deploy (cleanup) migrations
 src/
 ├── App.tsx                 # App root (auth gate + shell)
 ├── main.tsx                # Entry point + React Router routes
@@ -226,6 +260,9 @@ src/
 ├── components/
 │   ├── shell/Shell.tsx     # Adaptive app shell (sidebar/nav + screens)
 │   ├── screens/            # Feature screens
+│   │   ├── ListsScreen.tsx     # Quick lists (default section)
+│   │   ├── listParts.tsx       # List rows, add bar, suggestions, banners
+│   │   ├── listSheets.tsx      # Item details + list switcher sheets
 │   │   ├── AuthScreen.tsx      # Sign in / sign up
 │   │   ├── BrowseScreen.tsx    # Browse products
 │   │   ├── SearchScreen.tsx    # Search
@@ -234,7 +271,8 @@ src/
 │   │   ├── DetailScreen.tsx    # Product detail
 │   │   ├── ManageScreens.tsx   # Manage products / stores / prices
 │   │   └── ProfileScreen.tsx   # User profile & settings
-│   ├── ui/                 # Reusable UI primitives (Icon, Sheet, etc.)
+│   ├── onboarding/         # Compare walkthrough
+│   ├── ui/                 # Reusable UI primitives (Icon, Sheet, Toast, CoachMark, …)
 │   ├── PageHeader.tsx      # Header for marketing/legal pages
 │   └── PageFooter.tsx      # Footer with developer credits
 ├── pages/                  # Standalone routed pages
@@ -243,22 +281,30 @@ src/
 │   ├── Refund.tsx
 │   └── Terms.tsx
 ├── contexts/               # React contexts
-│   ├── AuthContext.tsx         # Authentication state
-│   ├── AppContext.tsx          # App/navigation & cart state
+│   ├── AuthContext.tsx         # Authentication state (+ offline identity)
+│   ├── ListsContext.tsx        # Lists state, quick add, offline sync
+│   ├── AppContext.tsx          # Navigation, sections & Compare cart state
+│   ├── OnboardingContext.tsx   # Walkthrough + contextual tips
 │   ├── ThemeContext.tsx        # Theme management
 │   ├── SettingsContext.tsx     # User settings
 │   └── AnalyticsContext.tsx    # Analytics wiring
 ├── hooks/                  # Custom React hooks
 │   ├── useSupabaseData.ts      # Supabase data management
 │   ├── useBreakpoint.ts        # Responsive breakpoints
+│   ├── useHint.ts              # One-at-a-time contextual tips
 │   └── useFmt.ts               # Formatting helpers
 ├── lib/                    # Library configuration & data
-│   ├── supabase.ts             # Supabase client setup
-│   ├── supabaseClient.ts       # Supabase client instance
+│   ├── supabase.ts             # Supabase client re-export
+│   ├── supabaseClient.ts       # Supabase client (pinned to the `spendless` schema)
+│   ├── offline/                # IndexedDB store + sync engine for Lists
+│   ├── groceryDictionary.ts    # Item → aisle dictionary
+│   ├── hints.ts                # Tip copy
+│   ├── version.ts              # Release version (CalVer, set by CI)
 │   └── categories.ts           # Product categories
 ├── utils/                  # Utility functions
 │   ├── currency.ts             # Currency formatting
 │   ├── optimizer.ts            # Shopping plan optimization
+│   ├── quickAdd.ts             # Parses "2 milk", "atta 10 kg", …
 │   ├── analytics.ts            # Analytics helpers
 │   └── storage.ts              # Local storage utilities
 └── types/
@@ -283,13 +329,18 @@ automatically detects user locale and sets an appropriate default currency.
 
 ### Database Schema
 Modify the schema by adding migration files in `supabase/migrations/`. Follow
-the existing naming convention and include proper RLS policies.
+the existing naming convention, create every object in the `spendless` schema
+(schema-qualified, e.g. `spendless.lists`), add grants and RLS policies, and never
+create SpendLess objects in `public`.
 
 ## 🧪 Testing
 
-Run the linter:
+There is no automated test suite; run the linter and build, then follow the manual
+checklist in [TESTING_GUIDE.md](TESTING_GUIDE.md):
 ```bash
 npm run lint
+npm run build
+node scripts/check-contrast.mjs   # after changing colour tokens
 ```
 
 ## 🤝 Contributing

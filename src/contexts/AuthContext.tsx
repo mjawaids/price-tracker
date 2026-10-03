@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { trackAuth } from '../utils/analytics'
@@ -28,32 +28,83 @@ export const useAuth = () => {
   return context
 }
 
+// The last signed-in identity, so the app (and its offline Lists) can open on a
+// cold start without a network. Only id/email/profile metadata is kept.
+const LAST_USER_KEY = 'spendless-last-user'
+
+function cacheUser(user: User | null) {
+  try {
+    if (!user) localStorage.removeItem(LAST_USER_KEY)
+    else
+      localStorage.setItem(
+        LAST_USER_KEY,
+        JSON.stringify({ id: user.id, email: user.email, user_metadata: user.user_metadata, app_metadata: {}, aud: user.aud, created_at: user.created_at }),
+      )
+  } catch (error) {
+    console.error('Error caching user:', error)
+  }
+}
+
+function readCachedUser(): User | null {
+  try {
+    const raw = localStorage.getItem(LAST_USER_KEY)
+    return raw ? (JSON.parse(raw) as User) : null
+  } catch (error) {
+    console.error('Error reading cached user:', error)
+    return null
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  // True while we're showing the cached identity because the session couldn't be
+  // restored (offline cold start). Cleared as soon as a real session arrives.
+  const offlineFallback = useRef(false)
 
   useEffect(() => {
+    const restoreCachedIdentity = () => {
+      const cached = readCachedUser()
+      if (!cached) return false
+      offlineFallback.current = true
+      setUser(prev => (prev?.id === cached.id ? prev : cached))
+      return true
+    }
+
     // Get initial session
     supabase.auth.getSession().then((response: any) => {
       const session = response?.data?.session ?? null
-      const newUser = session?.user ?? null
-      setSession(session)
-      setUser(prev => (prev?.id === newUser?.id ? prev : newUser))
+      if (!session && response?.error) {
+        // Couldn't reach the auth server (e.g. offline with an expired token):
+        // open with the last identity instead of bouncing to the sign-in screen.
+        restoreCachedIdentity()
+      } else {
+        const newUser = session?.user ?? null
+        setSession(session)
+        setUser(prev => (prev?.id === newUser?.id ? prev : newUser))
+        if (newUser) cacheUser(newUser)
+      }
       setLoading(false)
     }).catch((error: any) => {
       console.warn('Error getting session:', error)
+      restoreCachedIdentity()
       setLoading(false)
     })
 
     // Listen for auth changes
-    const authListener = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+    const authListener = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+      // While offline on the cached identity, ignore "no session yet" events;
+      // only an explicit sign-out ends it.
+      if (!session && offlineFallback.current && event !== 'SIGNED_OUT') return
+      if (session) offlineFallback.current = false
       const newUser = session?.user ?? null
       setSession(session)
       // Only update React state when the user id actually changes. This prevents
       // redundant updates triggered by Supabase reconnects (which can cause
       // components to reload data on visibility change).
       setUser(prev => (prev?.id === newUser?.id ? prev : newUser))
+      if (newUser) cacheUser(newUser)
       setLoading(false)
     })
 
@@ -111,7 +162,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     trackAuth('sign_out');
-    await supabase.auth.signOut()
+    offlineFallback.current = false
+    cacheUser(null)
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+    // Make sure the UI signs out even if the request failed (e.g. offline).
+    setSession(null)
+    setUser(null)
   }
 
   const resetPassword = async (email: string) => {
