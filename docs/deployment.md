@@ -47,7 +47,9 @@ transaction with its bookkeeping row, so a failure leaves nothing half-applied.
   has been deployed — add a new one.
 - Everything must live in the `spendless` schema. `scripts/check-migrations.mjs` (run
   in CI) fails the build otherwise; a file can opt out only with an explicit
-  `-- migration-guard: allow-public <reason>` comment.
+  `-- migration-guard: allow-public <reason>` comment. The one built-in exception is
+  storage: policies on `storage.objects` named `spendless-…` (buckets are
+  project-wide, so ours are `spendless-avatars` and `spendless-product-images`).
 - Files before `20261003000000` were applied by the old Bolt workflow; the runner
   skips them (`--from-scratch` applies everything for a brand-new database).
 

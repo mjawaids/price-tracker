@@ -248,7 +248,7 @@ public/                     # Static assets (favicons, PWA icons, manifest, _red
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
 ├── check-contrast.mjs      # WCAG contrast check for the colour tokens
-├── check-migrations.mjs    # Guard: migrations may only touch the spendless schema
+├── check-migrations.mjs    # Guard: migrations may only touch the spendless schema (+ spendless-* storage policies)
 ├── db-migrate.sh           # Applies migrations (tracked in spendless.schema_migrations)
 └── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
 supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless

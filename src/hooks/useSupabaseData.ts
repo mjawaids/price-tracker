@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { PRODUCT_IMAGES_BUCKET, storagePathFromUrl } from '../lib/storage';
 import { Product, Store, ShoppingList } from '../types';
 import { trackProduct, trackShoppingList } from '../utils/analytics';
 
@@ -235,24 +236,23 @@ export const useSupabaseData = () => {
     const ext = file.name.split('.').pop() || 'jpg';
     const path = `${user.id}/${productId}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage
-      .from('product-images')
+      .from(PRODUCT_IMAGES_BUCKET)
       .upload(path, file, { upsert: false, contentType: file.type });
     if (error) {
       console.error('Error uploading product image:', error);
       return undefined;
     }
-    const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+    const { data } = supabase.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
     return data.publicUrl as string;
   };
 
   const deleteProductImage = async (productId: string, imageUrl: string): Promise<void> => {
     if (!user) return;
-    const marker = '/product-images/';
-    const idx = imageUrl.indexOf(marker);
-    if (idx !== -1) {
+    const path = storagePathFromUrl(imageUrl, PRODUCT_IMAGES_BUCKET);
+    if (path) {
       const { error } = await supabase.storage
-        .from('product-images')
-        .remove([imageUrl.slice(idx + marker.length)]);
+        .from(PRODUCT_IMAGES_BUCKET)
+        .remove([path]);
       if (error) console.error('Error deleting product image from storage:', error);
     }
     const { error: dbError } = await supabase
