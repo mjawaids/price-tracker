@@ -31,6 +31,8 @@ export interface InstallState {
   /** This browser has installed the app before and hasn't offered to install it since. */
   installed: boolean;
   platform: InstallPlatform;
+  /** The install banner was closed with "Not now" recently. */
+  bannerSnoozed: boolean;
 }
 
 const INSTALLED_KEY = 'spendless:installed';
@@ -72,12 +74,30 @@ function detectPlatform(): InstallPlatform {
   return 'other';
 }
 
+// ── Install banner: shown once in a while until installed ────────────────────
+const BANNER_KEY = 'spendless:install-banner-dismissed-at';
+/** After "Not now", ask again only after this long. */
+const BANNER_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
+
+function readBannerSnoozed(): boolean {
+  try {
+    return Date.now() - Number(localStorage.getItem(BANNER_KEY) || 0) < BANNER_SNOOZE_MS;
+  } catch {
+    return false;
+  }
+}
+
+/** The banner shows only where installing is a tap or two away (Chromium offer, iPhone/iPad). */
+export const bannerVisible = (s: InstallState) =>
+  !s.standalone && !s.installed && !s.bannerSnoozed && (s.canPrompt || s.platform === 'ios');
+
 let deferred: BeforeInstallPromptEvent | null = null;
 let state: InstallState = {
   standalone: isStandalone(),
   canPrompt: false,
   installed: readFlag(),
   platform: detectPlatform(),
+  bannerSnoozed: readBannerSnoozed(),
 };
 if (state.standalone && !state.installed) {
   state = { ...state, installed: true };
@@ -140,22 +160,11 @@ export async function promptInstall(): Promise<'accepted' | 'dismissed' | 'unava
   }
 }
 
-// ── Install banner: shown once in a while until installed ────────────────────
-const BANNER_KEY = 'spendless:install-banner-dismissed-at';
-/** After "Not now", ask again only after this long. */
-const BANNER_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
-
-export function bannerSnoozed(): boolean {
-  try {
-    return Date.now() - Number(localStorage.getItem(BANNER_KEY) || 0) < BANNER_SNOOZE_MS;
-  } catch {
-    return false;
-  }
-}
 export function snoozeBanner() {
   try {
     localStorage.setItem(BANNER_KEY, String(Date.now()));
   } catch {
     // Storage blocked — the banner simply comes back next visit.
   }
+  set({ bannerSnoozed: true });
 }

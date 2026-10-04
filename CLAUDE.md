@@ -81,11 +81,18 @@ Context-based (no Redux). Providers in `src/contexts/`:
   context, so it works signed out too. `spendless:installed` in localStorage remembers
   an install and is cleared when the browser offers to install again (= uninstalled).
 - `src/components/shell/Install.tsx`: `InstallSheet` (one-tap install on Chromium, else
-  steps for iOS / Mac Safari / Android / desktop / other), `InstallButton` (sign-in
-  screen) and `InstallBanner` (top of the Shell; only when installing is a tap away —
-  Chromium offer or iOS — and not installed; "Not now" snoozes it 14 days).
-- Profile → **App** → *Install the app* / *Install the app again* opens the sheet;
-  everything is hidden inside the installed app.
+  steps for iOS / Mac Safari / Android / desktop / other), plus the entry points:
+  - `InstallButton` — sign-in screen (signed out).
+  - `InstallBanner` — top of the Shell; only when installing is a tap away (Chromium
+    offer or iOS) and not installed (`bannerVisible()`); "Not now" or closing the
+    steps snoozes it 14 days (`bannerSnoozed` in the store).
+  - `InstallSidebarCta` — "Get the app" card above the profile button in the
+    desktop sidebar (icon button on the tablet sidebar); always there until installed.
+  - `InstallPill` — small "Get app" pill in the mobile Lists header; steps aside
+    while the banner is showing.
+  - Profile → **App** → *Install the app* / *Install the app again*.
+- Each one opens the browser's dialog when it can, else the sheet. Everything is
+  hidden inside the installed app.
 
 ### Navigation
 Stack-based within `AppContext`. Screen enum values: `lists`, `browse`, `search`,
@@ -166,7 +173,7 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
-| `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button and banner |
+| `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
 | `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*`) |
 | `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`) |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |

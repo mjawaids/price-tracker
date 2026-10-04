@@ -57,6 +57,10 @@ service worker.
       the banner shows on first visit, and closing the sheet or **Not now** hides it.
 - [ ] Mac Safari shows File → Add to Dock; Firefox desktop shows the "other browser" tip.
 - [ ] Signed in: Profile → App → **Install the app** (or **Install the app again**) works.
+- [ ] Desktop (≥1100px): a **Get the app** card sits above the profile button; tablet
+      (768–1099px) shows a download icon button there instead. Both open the install.
+- [ ] Mobile Lists header shows a **Get app** pill next to ⋯ — but not while the banner
+      is showing; after **Not now** on the banner the pill appears.
 
 ## Offline (Lists)
 

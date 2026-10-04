@@ -7,7 +7,7 @@ import { trackPageView } from '../../utils/analytics';
 import { Chip, Icon, IconName, SegmentedControl, TipRow } from '../ui';
 import { useHint } from '../../hooks/useHint';
 import { currencyChipLabel, CurrencySheet, LocationSheet } from '../screens/sheets';
-import { InstallBanner } from './Install';
+import { InstallBanner, InstallSidebarCta } from './Install';
 
 import ListsScreen from '../screens/ListsScreen';
 import BrowseScreen from '../screens/BrowseScreen';
@@ -184,6 +184,7 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
         ))}
       </div>
       <div className="flex-1" style={{ minHeight: 16 }} />
+      <InstallSidebarCta mini={mini} />
       <button
         type="button"
         onClick={() => onPick('profile')}

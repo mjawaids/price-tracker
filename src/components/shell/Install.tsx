@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Btn, Icon, IconName, Sheet } from '../ui';
-import { bannerSnoozed, InstallPlatform, promptInstall, snoozeBanner, useInstall } from '../../lib/install';
+import { bannerVisible, InstallPlatform, promptInstall, snoozeBanner, useInstall } from '../../lib/install';
 
 const BENEFITS: [IconName, string][] = [
   ['smartphone', 'Opens from your home screen, full screen'],
@@ -193,59 +193,137 @@ export function InstallButton({ className = '' }: { className?: string }) {
 }
 
 /**
- * Slim, dismissible strip suggesting the install. Shown only where installing
- * takes a tap or two (Chromium with an install offer, iPhone/iPad), only while
- * not installed, and at most every couple of weeks after "Not now".
+ * Starts an install: the browser's dialog where there is one, otherwise the
+ * sheet with the steps. Render `sheet` once wherever the hook is used.
  */
-export function InstallBanner() {
+function useInstallFlow(onSheetClose?: () => void) {
   const install = useInstall();
-  const [hidden, setHidden] = useState(bannerSnoozed);
   const [open, setOpen] = useState(false);
-
-  const eligible = !install.standalone && !install.installed && (install.canPrompt || install.platform === 'ios');
-  if (!eligible && !open) return null;
-
-  const go = async () => {
+  const start = async () => {
     if (!install.canPrompt) {
       setOpen(true);
-      return;
+      return 'sheet' as const;
     }
     const outcome = await promptInstall();
-    // Not installed after all → show the sheet, which explains the other way in.
+    // The offer went away in the meantime → explain the other way in.
     if (outcome === 'unavailable') setOpen(true);
-    else if (outcome === 'dismissed') {
-      snoozeBanner();
-      setHidden(true);
-    }
+    return outcome;
   };
+  const sheet = (
+    <InstallSheet
+      open={open}
+      onClose={() => {
+        setOpen(false);
+        onSheetClose?.();
+      }}
+    />
+  );
+  return { install, start, sheet };
+}
 
-  const notNow = () => {
-    snoozeBanner();
-    setHidden(true);
+/**
+ * Slim, dismissible strip suggesting the install (see bannerVisible). After
+ * "Not now" or seeing the steps it stays away for a couple of weeks; the
+ * quieter InstallSidebarCta / InstallPill stay available meanwhile.
+ */
+export function InstallBanner() {
+  // They've seen the steps — don't keep nagging.
+  const { install, start, sheet } = useInstallFlow(snoozeBanner);
+  const visible = bannerVisible(install);
+
+  const go = async () => {
+    if ((await start()) === 'dismissed') snoozeBanner();
   };
 
   return (
     <>
-      {eligible && !hidden && (
+      {visible && (
         <div role="region" aria-label="Install SpendLess" className="shrink-0 flex items-center gap-3 bg-accent-wash text-accent-ink animate-sl-fade" style={{ padding: '6px 6px 6px 16px' }}>
           <Icon name="download" size={18} stroke={2.4} className="shrink-0" />
           <span className="flex-1 text-[13.5px] font-semibold leading-snug">Install SpendLess for one-tap access — lists work offline.</span>
           <button type="button" onClick={go} className="shrink-0 bg-accent text-accent-on font-extrabold text-[14px] rounded-[12px]" style={{ minHeight: 44, padding: '0 16px' }}>
             Install
           </button>
-          <button type="button" onClick={notNow} aria-label="Not now" className="shrink-0 grid place-items-center rounded-[12px] bg-transparent" style={{ width: 44, height: 44 }}>
+          <button type="button" onClick={snoozeBanner} aria-label="Not now" className="shrink-0 grid place-items-center rounded-[12px] bg-transparent" style={{ width: 44, height: 44 }}>
             <Icon name="x" size={16} stroke={2.4} />
           </button>
         </div>
       )}
-      <InstallSheet
-        open={open}
-        onClose={() => {
-          // They've seen the steps — don't keep nagging.
-          setOpen(false);
-          notNow();
-        }}
-      />
+      {sheet}
+    </>
+  );
+}
+
+/** Sidebar card above the profile button (tablet: icon only). Hidden in the installed app. */
+export function InstallSidebarCta({ mini }: { mini: boolean }) {
+  const { install, start, sheet } = useInstallFlow();
+  if (install.standalone) return null;
+  const again = install.installed && !install.canPrompt;
+  const label = again ? 'Install the app again' : 'Install the app';
+
+  if (mini) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => void start()}
+          title={label}
+          aria-label={label}
+          className="w-full grid place-items-center rounded-[13px] bg-accent-wash text-accent-ink mb-2"
+          style={{ minHeight: 48 }}
+        >
+          <Icon name="download" size={21} stroke={2.3} />
+        </button>
+        {sheet}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="rounded-[16px] bg-accent-wash text-accent-ink mb-2.5" style={{ padding: '14px 14px 12px' }}>
+        <div className="flex items-center gap-2.5">
+          <img src="/pwa-192x192.png" alt="" width={34} height={34} className="shrink-0 rounded-[10px]" />
+          <div className="min-w-0">
+            <div className="font-bold text-[14px] text-ink">{again ? 'Get the app back' : 'Get the app'}</div>
+            <div className="text-[12px] leading-snug text-ink-soft">Opens in its own window, works offline.</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void start()}
+          className="mt-2.5 w-full inline-flex items-center justify-center gap-2 rounded-[12px] bg-accent text-accent-on font-extrabold text-[14px]"
+          style={{ minHeight: 44 }}
+        >
+          <Icon name="download" size={17} stroke={2.4} />
+          {again ? 'Install again' : 'Install'}
+        </button>
+      </div>
+      {sheet}
+    </>
+  );
+}
+
+/**
+ * Small "Get app" pill for mobile headers — a quiet, always-there nudge.
+ * Steps aside while the banner is showing so the two never double up.
+ */
+export function InstallPill() {
+  const { install, start, sheet } = useInstallFlow();
+  if (install.standalone || bannerVisible(install)) return sheet;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => void start()}
+        aria-label={install.installed && !install.canPrompt ? 'Install the app again' : 'Install the app'}
+        className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-accent-wash text-accent-ink font-bold text-[13.5px] animate-sl-fade"
+        style={{ minHeight: 44, padding: '0 14px 0 12px' }}
+      >
+        <Icon name="download" size={16} stroke={2.4} />
+        Get app
+      </button>
+      {sheet}
     </>
   );
 }

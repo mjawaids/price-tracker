@@ -49,7 +49,8 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Apple touch icon and full favicon set for all devices
 - Installable to the home screen with a branded splash screen
 - **Install the app** button on the sign-in screen and in Profile (so it can be
-  reinstalled after removal), plus a dismissible banner. Chrome/Edge/Android open the
+  reinstalled after removal), a "Get the app" card in the desktop sidebar, a small
+  "Get app" pill in the mobile Lists header, plus a dismissible banner. Chrome/Edge/Android open the
   browser's install dialog in one tap; iPhone/iPad, Mac Safari and other browsers get
   step-by-step instructions
 
