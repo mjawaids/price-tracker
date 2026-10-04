@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { useHint } from '../../hooks/useHint';
 import { ADD_PLACEHOLDERS } from '../../lib/hints';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
@@ -46,6 +47,7 @@ export default function ListsScreen() {
   const app = useApp();
   const lists = useLists();
   const { compact, isDesktop } = useBreakpoint();
+  const grouped = useSettings().settings.groupListsByAisle !== false;
 
   const [draft, setDraft] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -146,7 +148,10 @@ export default function ListsScreen() {
   const parsed = parseQuickAdd(draft);
   const suggestions = useMemo(() => (parsed ? lists.suggestions(draft) : []), [parsed, draft, lists]);
   const often = useMemo(() => lists.often(compact ? 6 : 8), [lists, compact]);
-  const groups = useMemo(() => groupByCategory(lists.todo), [lists.todo]);
+  const groups = useMemo(
+    () => (grouped ? groupByCategory(lists.todo) : lists.todo.length ? [{ id: 'all', name: undefined, dot: undefined, items: lists.todo }] : []),
+    [grouped, lists.todo],
+  );
   const starters = STARTER_ITEMS.filter((n) => !lists.todo.some((i) => normalizeName(i.name) === normalizeName(n)));
 
   const total = lists.items.length;
@@ -166,7 +171,7 @@ export default function ListsScreen() {
   const firstGroup = groups[0];
   const hPaste = useHint('paste', !compact && lists.ready);
   const hTick = useHint('tick', lists.ready && lists.todo.length >= 1 && doneCount === 0);
-  const hAisles = useHint('aisles', groups.length >= 2);
+  const hAisles = useHint('aisles', grouped && groups.length >= 2);
   const hDetails = useHint('details', lists.todo.length >= 3);
   const hClear = useHint('clear', doneCount >= 1);
   const hSwipe = useHint('swipe', compact && isTouch() && lists.todo.length >= 5);
@@ -282,15 +287,16 @@ export default function ListsScreen() {
   ) : null;
 
   const groupsEl = (
-    <div className={isDesktop ? 'columns-2 gap-[18px]' : 'flex flex-col gap-[18px]'}>
+    <div className={isDesktop && grouped ? 'columns-2 gap-[18px]' : 'flex flex-col gap-[18px]'}>
       {groups.map((g) => (
-        <div key={g.id} className={isDesktop ? 'break-inside-avoid mb-[18px]' : ''}>
+        <div key={g.id} className={isDesktop && grouped ? 'break-inside-avoid mb-[18px]' : ''}>
           <ItemGroup name={g.name} dot={g.dot} count={g.items.length}>
             {g.items.map((item, idx) => (
               <ItemRow
                 key={item.id}
                 item={item}
                 fresh={fresh.has(item.id)}
+                showAisle={!grouped}
                 nudge={hSwipe.show && g === firstGroup && idx === 0}
                 onToggle={() => toggle(item)}
                 onOpen={() => openDetails(item.id)}

@@ -3,7 +3,7 @@ import { storeHue } from '../../lib/categories';
 
 export { Icon, GoogleIcon } from './Icon';
 export type { IconName } from './Icon';
-export { Thumb, Chip, Btn, Stepper, EmptyState } from './primitives';
+export { Thumb, Chip, Btn, Stepper, EmptyState, Toggle, ToggleTrack } from './primitives';
 export { Sheet } from './Sheet';
 export { Toast, SegmentedControl, CoachMark, TipRow } from './feedback';
 

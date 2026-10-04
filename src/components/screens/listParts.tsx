@@ -71,6 +71,7 @@ export function ItemRow({
   nudge,
   fresh,
   onSwiped,
+  showAisle,
 }: {
   item: ListItem;
   onToggle: () => void;
@@ -82,11 +83,14 @@ export function ItemRow({
   nudge?: boolean;
   /** Just added — animate in. */
   fresh?: boolean;
+  /** Show the aisle under the name (ungrouped list, where there are no aisle headings). */
+  showAisle?: boolean;
 }) {
   const [dx, setDx] = useState(0);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const swiping = useRef(false);
   const qty = formatQty(item.quantity, item.unit);
+  const aisle = showAisle && !item.done ? categoryMeta(item.category) : null;
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType !== 'touch') return;
@@ -179,7 +183,7 @@ export function ItemRow({
         <button
           type="button"
           onClick={() => !swiping.current && onOpen()}
-          aria-label={`Edit ${item.name}`}
+          aria-label={aisle ? `Edit ${item.name}, ${aisle.name}` : `Edit ${item.name}`}
           className="flex-1 min-w-0 text-left bg-transparent flex flex-col justify-center gap-0.5"
           style={{ minHeight: 48, padding: '8px 0' }}
         >
@@ -188,7 +192,17 @@ export function ItemRow({
           >
             {item.name}
           </span>
-          {item.note && !item.done && <span className="truncate text-[13px] text-ink-soft">{item.note}</span>}
+          {aisle ? (
+            <span className="flex items-center gap-1.5 min-w-0 text-[13px] text-ink-soft">
+              <span aria-hidden className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: aisle.dot }} />
+              <span className="truncate">
+                {aisle.name}
+                {item.note && ` · ${item.note}`}
+              </span>
+            </span>
+          ) : (
+            item.note && !item.done && <span className="truncate text-[13px] text-ink-soft">{item.note}</span>
+          )}
         </button>
         {qty &&
           (item.done ? (
@@ -203,14 +217,17 @@ export function ItemRow({
   );
 }
 
-export function ItemGroup({ name, dot, count, children }: { name: string; dot: string; count?: number; children: React.ReactNode }) {
+/** A card of item rows; without a `name` it renders headless (ungrouped list). */
+export function ItemGroup({ name, dot, count, children }: { name?: string; dot?: string; count?: number; children: React.ReactNode }) {
   return (
-    <section aria-label={name} className="flex flex-col gap-2">
-      <h3 className={`m-0 flex items-center gap-2 px-1.5 ${sectionLabel}`}>
-        <span aria-hidden className="rounded-full" style={{ width: 8, height: 8, background: dot }} />
-        {name}
-        {count != null && <span className="font-normal">{count}</span>}
-      </h3>
+    <section aria-label={name || 'To buy'} className="flex flex-col gap-2">
+      {name && (
+        <h3 className={`m-0 flex items-center gap-2 px-1.5 ${sectionLabel}`}>
+          <span aria-hidden className="rounded-full" style={{ width: 8, height: 8, background: dot }} />
+          {name}
+          {count != null && <span className="font-normal">{count}</span>}
+        </h3>
+      )}
       <ul className="list-none m-0 p-0 flex flex-col gap-px bg-[var(--line)] rounded-[18px] overflow-hidden shadow-card">{children}</ul>
     </section>
   );

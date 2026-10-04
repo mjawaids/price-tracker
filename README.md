@@ -11,7 +11,8 @@ The app has two sections: **Lists** (the default) and **Compare**.
 ### 📝 Quick Lists (default)
 - Add items the way you'd say them: `bread`, `2 milk`, `atta 10 kg` — no brand or size needed
 - Suggestions while typing (your own history first) and one-tap "often bought" chips
-- Items sorted by aisle automatically (English and romanized Urdu names)
+- Items sorted by aisle automatically (English and romanized Urdu names) — or turn off
+  **Group by aisle** in list options (⋯) to keep them in the order you added them (each item still shows its aisle)
 - Tick items as you shop, swipe to tick/delete, undo anything, see your progress
 - Several lists (Groceries, Pharmacy, …) with optional quantity, unit and notes
 - Friendly one-at-a-time tips that teach the app as you use it
@@ -280,7 +281,7 @@ src/
 │   │   ├── ManageScreens.tsx   # Manage products / stores / prices
 │   │   └── ProfileScreen.tsx   # User profile & settings
 │   ├── onboarding/         # Compare walkthrough
-│   ├── ui/                 # Reusable UI primitives (Icon, Sheet, Toast, CoachMark, …)
+│   ├── ui/                 # Reusable UI primitives (Icon, Sheet, Toast, CoachMark, Toggle, …)
 │   ├── PageHeader.tsx      # Header for marketing/legal pages
 │   └── PageFooter.tsx      # Footer with developer credits
 ├── pages/                  # Standalone routed pages
@@ -295,7 +296,7 @@ src/
 │   ├── AppContext.tsx          # Navigation, sections & Compare cart state
 │   ├── OnboardingContext.tsx   # Walkthrough + contextual tips
 │   ├── ThemeContext.tsx        # Theme management
-│   ├── SettingsContext.tsx     # User settings
+│   ├── SettingsContext.tsx     # User settings (currency, location, list grouping)
 │   └── AnalyticsContext.tsx    # Analytics wiring
 ├── hooks/                  # Custom React hooks
 │   ├── useSupabaseData.ts      # Supabase data management
