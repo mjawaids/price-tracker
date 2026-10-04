@@ -74,6 +74,19 @@ Context-based (no Redux). Providers in `src/contexts/`:
   stack, Compare cache) starts fresh.
 - Compare still needs a network; it shows an offline notice instead of breaking.
 
+### Installing the app (PWA)
+- `src/lib/install.ts` (imported first thing in `src/main.tsx`) keeps the browser's
+  `beforeinstallprompt` event, tracks `appinstalled`, detects standalone mode and the
+  platform, and exposes `useInstall()` / `promptInstall()`. It's a module store, not a
+  context, so it works signed out too. `spendless:installed` in localStorage remembers
+  an install and is cleared when the browser offers to install again (= uninstalled).
+- `src/components/shell/Install.tsx`: `InstallSheet` (one-tap install on Chromium, else
+  steps for iOS / Mac Safari / Android / desktop / other), `InstallButton` (sign-in
+  screen) and `InstallBanner` (top of the Shell; only when installing is a tap away —
+  Chromium offer or iOS — and not installed; "Not now" snoozes it 14 days).
+- Profile → **App** → *Install the app* / *Install the app again* opens the sheet;
+  everything is hidden inside the installed app.
+
 ### Navigation
 Stack-based within `AppContext`. Screen enum values: `lists`, `browse`, `search`,
 `detail`, `cart`, `plan`, `profile`, `mproducts`, `mstores`, `mprices`.
@@ -153,6 +166,7 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
+| `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button and banner |
 | `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*`) |
 | `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`) |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |

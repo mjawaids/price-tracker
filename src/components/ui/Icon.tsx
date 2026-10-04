@@ -43,6 +43,12 @@ import {
   Lightbulb,
   RefreshCw,
   CheckCircle2,
+  Download,
+  Share,
+  PlusSquare,
+  MoreVertical,
+  Smartphone,
+  MonitorDown,
   LucideProps,
 } from 'lucide-react';
 import { ComponentType } from 'react';
@@ -93,6 +99,12 @@ const MAP: Record<string, ComponentType<LucideProps>> = {
   bulb: Lightbulb,
   refresh: RefreshCw,
   checkCircle: CheckCircle2,
+  download: Download,
+  share: Share,
+  plusSquare: PlusSquare,
+  moreV: MoreVertical,
+  smartphone: Smartphone,
+  monitorDown: MonitorDown,
 };
 
 export type IconName = keyof typeof MAP | string;

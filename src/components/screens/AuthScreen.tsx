@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, GoogleIcon, Btn, IconName } from '../ui';
 import { supportUrl } from '../../lib/links';
+import { InstallButton } from '../shell/Install';
 
 const FEATURES: [IconName, string, string][] = [
   ['scan', 'Track real prices', 'Your products, your stores, your prices.'],
@@ -181,6 +182,9 @@ function AuthForm() {
           Contact support<span className="sr-only"> (opens in a new tab)</span>
         </a>
       </p>
+      <div className="flex justify-center mt-1">
+        <InstallButton />
+      </div>
     </div>
   );
 }

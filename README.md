@@ -48,6 +48,10 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Web app manifest with maskable icons for Android/Chrome
 - Apple touch icon and full favicon set for all devices
 - Installable to the home screen with a branded splash screen
+- **Install the app** button on the sign-in screen and in Profile (so it can be
+  reinstalled after removal), plus a dismissible banner. Chrome/Edge/Android open the
+  browser's install dialog in one tap; iPhone/iPad, Mac Safari and other browsers get
+  step-by-step instructions
 
 ### 🔐 Secure & Private
 - User authentication with Supabase Auth
