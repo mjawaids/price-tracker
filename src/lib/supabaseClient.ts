@@ -1,62 +1,71 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 // The Supabase project is shared with other apps; all SpendLess tables live in
 // their own schema. Every table query goes through this client, so pinning the
 // schema here keeps SpendLess out of `public` (Storage and Auth are unaffected).
 export const DB_SCHEMA = 'spendless';
 
-export let isSupabaseReady = false;
-export let supabase: SupabaseClient | any = null;
+const createSpendlessClient = (url: string, key: string) =>
+  createClient(url, key, { db: { schema: DB_SCHEMA } });
+
+export type SpendlessClient = ReturnType<typeof createSpendlessClient>;
+
+const NOT_CONFIGURED = { message: 'Supabase not configured' };
+
+// Minimal no-op stand-in so the app doesn't crash when Supabase isn't configured.
+// Only the parts of the client the app calls are stubbed.
+const createStub = (): SpendlessClient => {
+  const noop = async () => ({ data: null, error: NOT_CONFIGURED });
+
+  const queryBuilder = () => {
+    const result = { data: null, error: NOT_CONFIGURED };
+    const chain: Record<string, unknown> = {};
+    for (const method of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'gt', 'in', 'order', 'limit', 'single', 'maybeSingle']) {
+      chain[method] = () => chain;
+    }
+    chain.then = (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve);
+    chain.catch = () => chain;
+    return chain;
+  };
+
+  const stub = {
+    auth: {
+      getSession: noop,
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signUp: noop,
+      signInWithPassword: noop,
+      signInWithOAuth: noop,
+      signOut: async () => ({ error: null }),
+      resetPasswordForEmail: noop,
+      updateUser: noop,
+    },
+    from: () => queryBuilder(),
+    storage: {
+      from: () => ({
+        upload: noop,
+        remove: noop,
+        list: noop,
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+      }),
+    },
+  };
+  return stub as unknown as SpendlessClient;
+};
+
+let client: SpendlessClient | null = null;
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 if (url && key) {
   try {
-    const parsed = new URL(url);
-    supabase = createClient(parsed.toString(), key, { db: { schema: DB_SCHEMA } });
-    isSupabaseReady = true;
+    client = createSpendlessClient(new URL(url).toString(), key);
   } catch {
     console.error('[Supabase] Invalid VITE_SUPABASE_URL. Expected https://YOUR_PROJECT_ID.supabase.co');
   }
 } else {
   console.info('[Supabase] Env missing. Public pages will load; data features disabled until configured.');
-
-  // Minimal no-op stub to prevent runtime crashes when supabase is not configured
-  const noop = async () => ({ data: null, error: { message: 'Supabase not configured' } });
-
-  const queryBuilder = () => {
-    const chain = {
-      select: (_: any) => chain,
-      insert: (_: any) => chain,
-      update: (_: any) => chain,
-      delete: () => chain,
-      eq: (_: any, __: any) => chain,
-      order: (_: any, __?: any) => chain,
-      single: () => chain,
-      then: (resolve: any) => resolve({ data: null, error: { message: 'Supabase not configured' } }),
-      catch: (_: any) => chain,
-    } as any;
-    return chain;
-  };
-
-  supabase = {
-    auth: {
-      getSession: noop,
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-      signUp: noop,
-      signInWithPassword: noop,
-      signOut: async () => {},
-      resetPasswordForEmail: noop,
-      updateUser: noop,
-    },
-    from: (_table: string) => queryBuilder(),
-    storage: {
-      from: (_bucket: string) => ({
-        upload: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-        remove: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-        getPublicUrl: (_path: string) => ({ data: { publicUrl: '' } }),
-      }),
-    },
-  } as any;
 }
+
+export const isSupabaseReady = client !== null;
+export const supabase: SpendlessClient = client ?? createStub();

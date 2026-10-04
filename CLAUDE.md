@@ -102,6 +102,9 @@ Sections (`app.section` / `app.openSection`): `lists` (default), `compare`, `pro
   Browse · Cart · Catalogue segmented control (Catalogue → Products/Stores/Prices)
 - Tablet (768–1099px): collapsed sidebar
 - Desktop (≥1100px): full sidebar (your lists on top, then Compare and Catalogue)
+- Code splitting: `Shell.tsx` lazy-loads every screen except Lists (Suspense skeleton),
+  and `src/pages/lazy.ts` lazy-loads the legal/pricing pages. The service worker
+  precaches all chunks, so lazy screens still open offline.
 
 ## Database (Supabase — schema `spendless`, all tables have RLS, data is per-user)
 
@@ -175,7 +178,7 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
 | `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
 | `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*`) |
-| `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`) |
+| `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`, `listHelpers.ts`) |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
 | `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |
 | `src/lib/groceryDictionary.ts` | Item → aisle (English + romanized Urdu) |
@@ -231,8 +234,10 @@ say so and propose a safe alternative.
 - `.github/workflows/ci-cd.yml`: PRs and pushes run checks (lint, contrast, migration
   guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
   build → Netlify → smoke test → post-deploy migrations → tag + GitHub Release.
-- Versions are **CalVer `YYYY.M.N`** from git tags, injected as `VITE_APP_VERSION` /
-  `VITE_APP_COMMIT` (`src/lib/version.ts`, shown in Profile). Don't hand-edit versions
+- Versions are **CalVer `YYYY.M.N`** from git tags (`N` = release count within the
+  month, not the day), injected as `VITE_APP_VERSION` / `VITE_APP_COMMIT`
+  (`src/lib/version.ts`, shown in Profile and set on `<html data-app-version>` in
+  `src/main.tsx`, which keeps it in the entry bundle the smoke test checks). Don't hand-edit versions
   or commit version bumps.
 - Secrets/variables live in the GitHub `production` environment; runbook, setup and
   rollback in `docs/deployment.md`. Bolt is no longer used — don't add Bolt files.

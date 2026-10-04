@@ -4,16 +4,6 @@ import { priceRange } from '../../utils/optimizer';
 import { resolveCategory } from '../../lib/categories';
 import { Icon, Thumb, StoreDot } from '../ui';
 
-// Best-price + best-store summary shared by cards/rows.
-export function useBestInfo() {
-  const app = useApp();
-  return (p: Product) => {
-    const r = priceRange(p);
-    const store = r?.bestStoreId ? app.storeById(r.bestStoreId) : undefined;
-    return { r, store };
-  };
-}
-
 // ── Aisle card (fixed-width rail card) ───────────────────────────────────────
 export function AisleCard({ p, width }: { p: Product; width: number }) {
   const app = useApp();

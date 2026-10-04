@@ -161,7 +161,8 @@ jobs:
           bundle="$(grep -m1 -oE '/assets/index-[A-Za-z0-9_-]+\.js' <<<"$html" || true)"
           if [ -z "$bundle" ]; then echo "::error::Could not find the app bundle in index.html"; exit 1; fi
           fetch -o bundle.js "$ORIGIN_URL$bundle"
-          # Vite inlines the version as a quoted string literal.
+          # Vite inlines the version as a quoted string literal; src/main.tsx keeps it
+          # in the entry bundle (screens that show it are lazy-loaded chunks).
           if ! grep -qF "\"$VERSION\"" bundle.js; then
             echo "::error::Production is not serving v$VERSION"
             exit 1
@@ -170,7 +171,7 @@ jobs:
           # The public domain, best effort only (see above).
           code="$(curl -sS -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/" || true)"
           if [ "$code" != "200" ]; then
-            echo "::warning::$PRODUCTION_URL answered HTTP $code to the runner (Cloudflare blocks GitHub's runners). Netlify itself is serving v$VERSION."
+            echo "::notice::$PRODUCTION_URL answered HTTP $code to the runner (Cloudflare blocks GitHub's runners). Netlify itself is serving v$VERSION."
           fi
 
       # Destructive/cleanup changes that the previous app version still needed.

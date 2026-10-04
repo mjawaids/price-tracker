@@ -23,8 +23,8 @@ import {
   ShoppingProgress,
   SuggestionPanel,
   SyncBadge,
-  groupByCategory,
 } from './listParts';
+import { groupByCategory } from './listHelpers';
 import { ItemSheet, ListSwitcherSheet } from './listSheets';
 import { InstallPill } from '../shell/Install';
 
