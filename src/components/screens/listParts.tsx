@@ -203,14 +203,17 @@ export function ItemRow({
   );
 }
 
-export function ItemGroup({ name, dot, count, children }: { name: string; dot: string; count?: number; children: React.ReactNode }) {
+/** A card of item rows; without a `name` it renders headless (ungrouped list). */
+export function ItemGroup({ name, dot, count, children }: { name?: string; dot?: string; count?: number; children: React.ReactNode }) {
   return (
-    <section aria-label={name} className="flex flex-col gap-2">
-      <h3 className={`m-0 flex items-center gap-2 px-1.5 ${sectionLabel}`}>
-        <span aria-hidden className="rounded-full" style={{ width: 8, height: 8, background: dot }} />
-        {name}
-        {count != null && <span className="font-normal">{count}</span>}
-      </h3>
+    <section aria-label={name || 'To buy'} className="flex flex-col gap-2">
+      {name && (
+        <h3 className={`m-0 flex items-center gap-2 px-1.5 ${sectionLabel}`}>
+          <span aria-hidden className="rounded-full" style={{ width: 8, height: 8, background: dot }} />
+          {name}
+          {count != null && <span className="font-normal">{count}</span>}
+        </h3>
+      )}
       <ul className="list-none m-0 p-0 flex flex-col gap-px bg-[var(--line)] rounded-[18px] overflow-hidden shadow-card">{children}</ul>
     </section>
   );

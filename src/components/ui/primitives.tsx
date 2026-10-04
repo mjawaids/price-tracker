@@ -195,6 +195,31 @@ export function Stepper({
   );
 }
 
+// ── On/off switch ────────────────────────────────────────────────────────────
+/** The switch's track + knob, for use inside a larger `role="switch"` control. */
+export function ToggleTrack({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className="relative block shrink-0 transition-colors"
+      style={{ width: 46, height: 28, borderRadius: 999, background: on ? 'var(--accent)' : 'var(--line)' }}
+    >
+      <span
+        className="absolute bg-paper transition-all motion-reduce:transition-none"
+        style={{ width: 22, height: 22, borderRadius: 999, top: 3, left: on ? 21 : 3 }}
+      />
+    </span>
+  );
+}
+
+export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className="shrink-0 bg-transparent">
+      <ToggleTrack on={on} />
+    </button>
+  );
+}
+
 // ── Empty state ───────────────────────────────────────────────────────────────
 export function EmptyState({
   icon,

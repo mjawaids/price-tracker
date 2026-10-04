@@ -22,6 +22,9 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
 - [ ] Typing shows suggestions (your history first, then common items) with their aisle.
 - [ ] Pasting several lines (`- milk`, `1. bread`) adds them all.
 - [ ] Items are grouped by aisle; unknown items go under **Other**.
+- [ ] List options (⋯) → turning off **Group by aisle** shows one list in the order items were added
+      (no aisle headings, one column on desktop); it stays off after a reload and offline, and turning
+      it on brings the aisles back.
 - [ ] Tapping the circle ticks an item → it moves to **In cart**, with **Undo**.
 - [ ] Phone only: swipe right ticks, swipe left deletes (with Undo).
 - [ ] Tapping an item opens details: rename, quantity, unit, aisle, note, delete.

@@ -39,7 +39,8 @@ Context-based (no Redux). Providers in `src/contexts/`:
 - `ListsContext` — Lists section: lists/items, quick add, suggestions, sync status (offline-first)
 - `AppContext` — navigation stack, section, Compare cart (`Record<productId, qty>`), screen enum
 - `OnboardingContext` — Compare walkthrough + contextual tips (`useHint`)
-- `SettingsContext` — currency + location (persisted to localStorage)
+- `SettingsContext` — currency, location, `groupListsByAisle` (Lists: aisle groups vs order
+  added; switch in the list options sheet). Persisted to localStorage, read on first render
 - `ThemeContext` — light-only
 - `AnalyticsContext` — gtag wrappers
 
@@ -288,7 +289,7 @@ and feel like it came from a strong product design team, not a default template.
   `rounded-btn`, `shadow-card`, `font-display`, `animate-slide-up`, …)
 - **Typography**: `font-display` (Bricolage Grotesque) for headings, `font-sans`
   (Hanken Grotesk) for body, `font-mono` (Space Mono) for figures where it helps
-- **Primitives**: reuse `src/components/ui/` (`primitives.tsx`, `Sheet.tsx`, `Icon.tsx`)
+- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx`, `Icon.tsx`)
   before creating new components; put new shared pieces there
 
 ### Using Claude Design

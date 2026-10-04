@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ListItem } from '../../types';
 import { useLists } from '../../contexts/ListsContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { trackUserAction } from '../../utils/analytics';
 import { UNIT_CHOICES } from '../../utils/quickAdd';
-import { Btn, Icon, Sheet } from '../ui';
+import { Btn, Icon, Sheet, ToggleTrack } from '../ui';
 import { CATEGORY_ORDER, categoryMeta } from './listHelpers';
 
 const fieldLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-ink-soft';
@@ -201,6 +203,8 @@ export function ItemSheet({
 // ── Switch / create / manage lists ───────────────────────────────────────────
 export function ListSwitcherSheet({ open, onClose, startCreating = false }: { open: boolean; onClose: () => void; startCreating?: boolean }) {
   const lists = useLists();
+  const { settings, updateSettings } = useSettings();
+  const grouped = settings.groupListsByAisle !== false;
   const [creating, setCreating] = useState(startCreating);
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -222,6 +226,11 @@ export function ListSwitcherSheet({ open, onClose, startCreating = false }: { op
     const list = lists.createList(n);
     lists.setActiveList(list.id);
     onClose();
+  };
+
+  const setGrouped = (on: boolean) => {
+    updateSettings({ groupListsByAisle: on });
+    if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') trackUserAction('list_grouping_changed', { grouped: on });
   };
 
   return (
@@ -353,6 +362,23 @@ export function ListSwitcherSheet({ open, onClose, startCreating = false }: { op
           </Btn>
         )}
       </div>
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={grouped}
+        onClick={() => setGrouped(!grouped)}
+        className="mt-4 w-full flex items-center gap-3 border-t border-line bg-transparent text-left text-ink"
+        style={{ minHeight: 64, padding: '14px 4px 0' }}
+      >
+        <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <span className="font-semibold text-[15.5px]">Group by aisle</span>
+          <span className="text-[13px] leading-snug text-ink-soft">
+            {grouped ? 'Items are sorted into aisles for one pass through the store.' : 'Items stay in the order you added them.'}
+          </span>
+        </span>
+        <ToggleTrack on={grouped} />
+      </button>
     </Sheet>
   );
 }

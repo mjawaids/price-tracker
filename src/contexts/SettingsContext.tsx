@@ -7,6 +7,8 @@ interface UserSettings {
   notifications: boolean;
   language: string;
   location: string | null;
+  /** Lists: group open items by aisle (off = order added). */
+  groupListsByAisle: boolean;
 }
 
 interface SettingsContextType {
@@ -21,6 +23,7 @@ const defaultSettings: UserSettings = {
   notifications: true,
   language: 'en',
   location: null,
+  groupListsByAisle: true,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -33,31 +36,37 @@ export const useSettings = () => {
   return context;
 };
 
+const STORAGE_KEY = 'price-tracker-settings';
+
+// Read synchronously so the first render already uses the saved settings (no
+// flash of defaults, and nothing to overwrite before it loads).
+function loadSettings(): UserSettings {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return { ...defaultSettings, ...JSON.parse(saved) };
+  } catch (error) {
+    console.error('Error loading settings:', error);
+  }
+  return defaultSettings;
+}
+
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const [settings, setSettings] = useState<UserSettings>(loadSettings);
   const { setTheme } = useTheme();
 
-  // Load settings from localStorage on mount
+  // Apply the saved theme once on mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('price-tracker-settings');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings({ ...defaultSettings, ...parsed });
-        // Apply theme setting
-        if (parsed.theme) {
-          setTheme(parsed.theme);
-        }
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    }
+    setTheme(settings.theme);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array is intentional - load settings once on mount
+  }, []);
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('price-tracker-settings', JSON.stringify(settings));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
   }, [settings]);
 
   const updateSettings = (updates: Partial<UserSettings>) => {

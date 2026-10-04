@@ -5,7 +5,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
-import { Icon, Btn, IconName, Sheet } from '../ui';
+import { Icon, Btn, IconName, Sheet, Toggle } from '../ui';
 import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from '../../utils/currency';
 import { versionLabel } from '../../lib/version';
@@ -81,29 +81,6 @@ function Group({ title, children }: { title?: string; children: React.ReactNode 
       {title && <div className="font-mono text-[11px] tracking-[0.12em] text-ink-faint uppercase px-1 pb-2">{title}</div>}
       <div className="bg-surface rounded-[18px] shadow-card overflow-hidden">{children}</div>
     </div>
-  );
-}
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => onChange(!on)}
-      className="relative shrink-0 transition-colors"
-      style={{
-        width: 46,
-        height: 28,
-        borderRadius: 999,
-        background: on ? 'var(--accent)' : 'var(--line)',
-      }}
-    >
-      <span
-        className="absolute bg-paper transition-all"
-        style={{ width: 22, height: 22, borderRadius: 999, top: 3, left: on ? 21 : 3 }}
-      />
-    </button>
   );
 }
 
@@ -283,7 +260,7 @@ function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => v
         <div className="font-semibold text-[15px]">{label}</div>
         <div className="text-[12.5px] text-ink-faint leading-snug mt-0.5">{desc}</div>
       </div>
-      <Toggle on={value} onChange={onChange} />
+      <Toggle on={value} onChange={onChange} label={label} />
     </div>
   );
 
