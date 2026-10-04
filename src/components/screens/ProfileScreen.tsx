@@ -7,7 +7,7 @@ import { useLists } from '../../contexts/ListsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, Btn, IconName, Sheet } from '../ui';
 import { Field, TextIn } from './manageParts';
-import { currencyChipLabel } from './sheets';
+import { currencyChipLabel } from '../../utils/currency';
 import { versionLabel } from '../../lib/version';
 import { AVATARS_BUCKET, storagePathFromUrl } from '../../lib/storage';
 import { supportUrl } from '../../lib/links';

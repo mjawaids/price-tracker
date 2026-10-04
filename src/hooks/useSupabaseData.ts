@@ -50,17 +50,6 @@ export const useSupabaseData = () => {
   const lastLoadRef = useRef<number>(0);
   const LOAD_TTL_MS = 30 * 1000; // 30 seconds
 
-  // Load data when user changes
-  useEffect(() => {
-    if (user) {
-      loadAllData();
-    } else {
-      // Clear data when user logs out
-      setProducts([]);
-      setStores([]);
-      setShoppingLists([]);
-    }
-  }, [user]);
 
   const loadAllData = async () => {
     if (!user) return;
@@ -83,6 +72,23 @@ export const useSupabaseData = () => {
       setLoading(false);
     }
   };
+
+  // Load data when the user changes. The effect reads the latest loadAllData
+  // through a ref so it runs only on user changes, not on every render.
+  const loadAllDataRef = useRef(loadAllData);
+  loadAllDataRef.current = loadAllData;
+  useEffect(() => {
+    if (user) {
+      loadAllDataRef.current();
+    } else {
+      // Clear data when user logs out, and forget the cache so the next
+      // sign-in (possibly as someone else) loads fresh data.
+      lastLoadRef.current = 0;
+      setProducts([]);
+      setStores([]);
+      setShoppingLists([]);
+    }
+  }, [user]);
 
   const loadProducts = async () => {
     if (!user) return;
@@ -463,7 +469,7 @@ export const useSupabaseData = () => {
     ));
   };
 
-  const updateShoppingListItems = async (listId: string, items: any[]) => {
+  const updateShoppingListItems = async (listId: string, items: ShoppingListItem[]) => {
     if (!user) return;
 
     const { error } = await supabase

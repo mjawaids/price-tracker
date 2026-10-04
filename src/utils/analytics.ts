@@ -1,8 +1,8 @@
 // Google Analytics utility functions
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
-    dataLayer: any[];
+    gtag?: (...args: unknown[]) => void;
+    dataLayer: unknown[];
   }
 }
 
@@ -71,7 +71,7 @@ export const trackEvent = (action: string, category: string, label?: string, val
 };
 
 // Track user interactions
-export const trackUserAction = (action: string, details?: Record<string, any>) => {
+export const trackUserAction = (action: string, details?: Record<string, unknown>) => {
   if (typeof window.gtag !== 'undefined') {
     window.gtag('event', action, {
       event_category: 'user_interaction',

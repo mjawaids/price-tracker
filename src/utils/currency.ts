@@ -64,6 +64,12 @@ export const getCurrencyByCode = (code: string): Currency | undefined => {
   return CURRENCIES.find(currency => currency.code === code);
 };
 
+/** Short label for a currency chip, e.g. "Rs PKR". */
+export const currencyChipLabel = (code: string): string => {
+  const c = getCurrencyByCode(code);
+  return c ? `${c.symbol} ${c.code}` : code;
+};
+
 export const formatPrice = (amount: number, currencyCode: string): string => {
   const currency = getCurrencyByCode(currencyCode);
   if (!currency) return `${amount.toFixed(2)} ${currencyCode}`;

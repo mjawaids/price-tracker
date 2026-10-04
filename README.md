@@ -270,6 +270,7 @@ src/
 │   │   ├── ListsScreen.tsx     # Quick lists (default section)
 │   │   ├── listParts.tsx       # List rows, add bar, suggestions, banners
 │   │   ├── listSheets.tsx      # Item details + list switcher sheets
+│   │   ├── listHelpers.ts      # Aisle grouping/colours + haptic tap
 │   │   ├── AuthScreen.tsx      # Sign in / sign up
 │   │   ├── BrowseScreen.tsx    # Browse products
 │   │   ├── SearchScreen.tsx    # Search
@@ -286,7 +287,8 @@ src/
 │   ├── Pricing.tsx
 │   ├── Privacy.tsx
 │   ├── Refund.tsx
-│   └── Terms.tsx
+│   ├── Terms.tsx
+│   └── lazy.ts             # Lazy (code-split) exports of the pages above
 ├── contexts/               # React contexts
 │   ├── AuthContext.tsx         # Authentication state (+ offline identity)
 │   ├── ListsContext.tsx        # Lists state, quick add, offline sync

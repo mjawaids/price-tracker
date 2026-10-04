@@ -1,15 +1,17 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Privacy from './pages/Privacy';
-import Refund from './pages/Refund';
-import Terms from './pages/Terms';
-import Pricing from './pages/Pricing';
 import UpdatePrompt from './components/shell/UpdatePrompt';
 // Listens for the browser's install offer before anything renders.
 import './lib/install';
 import './index.css';
+import { Privacy, Refund, Terms, Pricing } from './pages/lazy';
+import { APP_VERSION } from './lib/version';
+
+// Expose the build on <html data-app-version> (handy for support). It also keeps
+// the version string in the entry bundle, which the deploy smoke test checks.
+document.documentElement.dataset.appVersion = APP_VERSION;
 
 // A tab still running an old build can ask for a code chunk that the new
 // deploy no longer has. Reload once onto the current build instead of breaking.
@@ -29,13 +31,15 @@ window.addEventListener('vite:preloadError', (event) => {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/refund" element={<Refund />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/pricing" element={<Pricing />} />
-      </Routes>
+      <Suspense fallback={<div className="min-h-screen bg-paper" />}>
+        <Routes>
+          <Route path="/" element={<App />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/refund" element={<Refund />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/pricing" element={<Pricing />} />
+        </Routes>
+      </Suspense>
       <UpdatePrompt />
     </BrowserRouter>
   </StrictMode>

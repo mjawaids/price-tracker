@@ -21,11 +21,20 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          // Each context file exports its provider plus the hook that reads it.
+          allowExportNames: [
+            'useAnalytics',
+            'useApp',
+            'useAuth',
+            'useLists',
+            'useOnboarding',
+            'useSettings',
+            'useTheme',
+          ],
+        },
       ],
-      // The Supabase no-op stub and gtag shim are intentionally untyped; keep
-      // these as warnings rather than build-breaking errors.
-      '@typescript-eslint/no-explicit-any': 'warn',
       // Allow deliberately-unused placeholder params/vars prefixed with `_`.
       '@typescript-eslint/no-unused-vars': [
         'error',

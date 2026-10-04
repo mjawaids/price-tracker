@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { CURRENCIES, currencyForCountry, getCurrencyByCode } from '../../utils/currency';
+import { CURRENCIES, currencyForCountry } from '../../utils/currency';
 import { Icon, Sheet } from '../ui';
 
 const REGIONS: { city: string; cc: string }[] = [
@@ -229,9 +229,4 @@ export function LocationSheet() {
       </div>
     </Sheet>
   );
-}
-
-export function currencyChipLabel(code: string) {
-  const c = getCurrencyByCode(code);
-  return c ? `${c.symbol} ${c.code}` : code;
 }

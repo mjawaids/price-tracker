@@ -15,7 +15,7 @@ build system any more.
 | 4 | **Expose the `spendless` schema** in the Data API | Only adds it if missing; never removes other apps' schemas |
 | 5 | Build with the production `VITE_*` values and the version | Same build that's tested below |
 | 6 | **Netlify deploy** (`netlify deploy --prod --no-build --dir dist`) | Publishes `dist/` to spendless.ibexoft.com |
-| 7 | **Smoke test** on Netlify (`<site>.netlify.app`): `/` and `/privacy` return 200, the bundle contains the new version; then the public domain, as a warning only | Proves the deploy is live and SPA routing works. The public domain is behind Cloudflare, which answers GitHub's runners with 403 |
+| 7 | **Smoke test** on Netlify (`<site>.netlify.app`): `/` and `/privacy` return 200, the entry bundle contains the new version; then the public domain, as a notice only | Proves the deploy is live and SPA routing works. The public domain is behind Cloudflare, which answers GitHub's runners with 403 |
 | 8 | **Post-deploy migrations** — `scripts/db-migrate.sh supabase/post-deploy` | Cleanup the old app still needed (e.g. dropping old views) |
 | 9 | Tag `vYYYY.M.N` + GitHub Release with auto-generated notes | Release history |
 
@@ -25,9 +25,10 @@ don't run. Only one production deploy runs at a time.
 ## Versioning — CalVer `YYYY.M.N`
 
 `2026.10.0`, `2026.10.1`, … then `2026.11.0` next month. `N` counts releases within
-the month. It's computed from the existing `v*` git tags, injected at build time as
+the month — it is **not** the day (the 5th release in October is `2026.10.4`,
+whatever the date). It's computed from the existing `v*` git tags, injected at build time as
 `VITE_APP_VERSION` (+ `VITE_APP_COMMIT`), shown in **Profile** (`SpendLess ·
-v2026.10.0 (a1b2c3d)`), and tagged after a successful deploy. Local builds show
+v2026.10.0 (a1b2c3d)`) and on `<html data-app-version>`, and tagged after a successful deploy. Local builds show
 `dev`. Nothing is committed back to `main`, and `package.json`'s `version` field
 isn't used.
 

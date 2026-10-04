@@ -14,9 +14,9 @@ interface AuthContextType {
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
-  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<{ error: any }>
-  uploadAvatar: (file: File) => Promise<{ error: any }>
-  removeAvatar: () => Promise<{ error: any }>
+  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<{ error: Error | null }>
+  uploadAvatar: (file: File) => Promise<{ error: Error | null }>
+  removeAvatar: () => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Get initial session
-    supabase.auth.getSession().then((response: any) => {
+    supabase.auth.getSession().then((response) => {
       const session = response?.data?.session ?? null
       if (!session && response?.error) {
         // Couldn't reach the auth server (e.g. offline with an expired token):
@@ -87,14 +87,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (newUser) cacheUser(newUser)
       }
       setLoading(false)
-    }).catch((error: any) => {
+    }).catch((error: unknown) => {
       console.warn('Error getting session:', error)
       restoreCachedIdentity()
       setLoading(false)
     })
 
     // Listen for auth changes
-    const authListener = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+    const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
       // While offline on the cached identity, ignore "no session yet" events;
       // only an explicit sign-out ends it.
       if (!session && offlineFallback.current && event !== 'SIGNED_OUT') return

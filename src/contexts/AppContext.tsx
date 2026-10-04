@@ -23,7 +23,7 @@ export type Mode = 'shop' | 'manage';
 /** Top-level app sections: quick Lists (default) and price Compare. */
 export type Section = 'lists' | 'compare' | 'profile';
 
-export const sectionOf = (screen: ScreenName): Section =>
+const sectionOf = (screen: ScreenName): Section =>
   screen === 'lists' ? 'lists' : screen === 'profile' ? 'profile' : 'compare';
 export type SheetName = 'currency' | 'location' | null;
 export type ScreenParams = Record<string, unknown>;

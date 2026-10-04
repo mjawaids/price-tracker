@@ -3,7 +3,7 @@ import { ListItem } from '../../types';
 import { useLists } from '../../contexts/ListsContext';
 import { UNIT_CHOICES } from '../../utils/quickAdd';
 import { Btn, Icon, Sheet } from '../ui';
-import { CATEGORY_ORDER, categoryMeta } from './listParts';
+import { CATEGORY_ORDER, categoryMeta } from './listHelpers';
 
 const fieldLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-ink-soft';
 const inputCls =

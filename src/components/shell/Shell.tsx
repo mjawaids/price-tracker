@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ComponentType, ReactNode, Suspense, lazy, useEffect, useRef } from 'react';
 import { useApp, ScreenName, Section } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
@@ -6,19 +6,26 @@ import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackPageView } from '../../utils/analytics';
 import { Chip, Icon, IconName, SegmentedControl, TipRow } from '../ui';
 import { useHint } from '../../hooks/useHint';
-import { currencyChipLabel, CurrencySheet, LocationSheet } from '../screens/sheets';
+import { CurrencySheet, LocationSheet } from '../screens/sheets';
+import { currencyChipLabel } from '../../utils/currency';
 import { InstallBanner, InstallSidebarCta } from './Install';
 
 import ListsScreen from '../screens/ListsScreen';
-import BrowseScreen from '../screens/BrowseScreen';
-import SearchScreen from '../screens/SearchScreen';
-import DetailScreen from '../screens/DetailScreen';
-import CartScreen from '../screens/CartScreen';
-import PlanScreen from '../screens/PlanScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import { ManageProducts, ManageStores, ManagePrices } from '../screens/ManageScreens';
 
-const SCREENS: Record<ScreenName, () => JSX.Element> = {
+// Lists (the default, offline-first section) ships in the main bundle; the other
+// screens load on first use. The service worker precaches every chunk, so they
+// still open offline.
+const BrowseScreen = lazy(() => import('../screens/BrowseScreen'));
+const SearchScreen = lazy(() => import('../screens/SearchScreen'));
+const DetailScreen = lazy(() => import('../screens/DetailScreen'));
+const CartScreen = lazy(() => import('../screens/CartScreen'));
+const PlanScreen = lazy(() => import('../screens/PlanScreen'));
+const ProfileScreen = lazy(() => import('../screens/ProfileScreen'));
+const ManageProducts = lazy(() => import('../screens/ManageScreens').then((m) => ({ default: m.ManageProducts })));
+const ManageStores = lazy(() => import('../screens/ManageScreens').then((m) => ({ default: m.ManageStores })));
+const ManagePrices = lazy(() => import('../screens/ManageScreens').then((m) => ({ default: m.ManagePrices })));
+
+const SCREENS: Record<ScreenName, ComponentType> = {
   lists: ListsScreen,
   browse: BrowseScreen,
   search: SearchScreen,
@@ -30,6 +37,17 @@ const SCREENS: Record<ScreenName, () => JSX.Element> = {
   mstores: ManageStores,
   mprices: ManagePrices,
 };
+
+/** Placeholder while a screen's code loads (first visit only). */
+function ScreenSkeleton() {
+  return (
+    <div className="p-5 flex flex-col gap-3" aria-busy="true" aria-label="Loading">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-[76px] rounded-card bg-surface shadow-card motion-safe:animate-pulse" />
+      ))}
+    </div>
+  );
+}
 
 const MANAGE_SCREENS: ScreenName[] = ['mproducts', 'mstores', 'mprices'];
 /** Compare screens that show the Browse · Cart · Catalogue switch (and the tab bar). */
@@ -325,7 +343,11 @@ export default function Shell() {
   }, [app.section, maybeStartCompareTour]);
 
   const Screen = SCREENS[app.screen] || ListsScreen;
-  const screenEl = <Screen key={app.screen + JSON.stringify(app.params)} />;
+  const screenEl = (
+    <Suspense fallback={<ScreenSkeleton />}>
+      <Screen key={app.screen + JSON.stringify(app.params)} />
+    </Suspense>
+  );
 
   const navigateSidebar = (screen: ScreenName) => {
     app.setMode(MANAGE_SCREENS.includes(screen) ? 'manage' : 'shop');
