@@ -10,6 +10,7 @@ import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from './sheets';
 import { versionLabel } from '../../lib/version';
 import { AVATARS_BUCKET, storagePathFromUrl } from '../../lib/storage';
+import { supportUrl } from '../../lib/links';
 
 type ProfileSheet = 'edit' | 'notifications' | 'privacy' | null;
 
@@ -18,6 +19,7 @@ function SettingRow({
   label,
   value,
   onClick,
+  href,
   accent,
   last,
 }: {
@@ -25,17 +27,14 @@ function SettingRow({
   label: string;
   value?: string;
   onClick?: () => void;
+  /** External link (opens in a new tab) instead of an in-app action. */
+  href?: string;
   accent?: boolean;
   last?: boolean;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!onClick}
-      className="w-full flex items-center gap-3 text-left disabled:cursor-default"
-      style={{ padding: '15px 16px', borderBottom: last ? 'none' : '1px solid var(--line)' }}
-    >
+  const style = { padding: '15px 16px', borderBottom: last ? 'none' : '1px solid var(--line)' };
+  const body = (
+    <>
       <span
         className="grid place-items-center shrink-0"
         style={{
@@ -50,7 +49,26 @@ function SettingRow({
       </span>
       <span className="flex-1 font-semibold text-[15px]">{label}</span>
       {value != null && <span className="text-sm text-ink-faint font-mono">{value}</span>}
-      {onClick && <Icon name="chevR" size={17} color="var(--ink-faint)" />}
+      {(onClick || href) && <Icon name="chevR" size={17} color="var(--ink-faint)" />}
+    </>
+  );
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener" className="w-full flex items-center gap-3 text-left text-ink no-underline" style={style}>
+        {body}
+        <span className="sr-only">(opens in a new tab)</span>
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className="w-full flex items-center gap-3 text-left disabled:cursor-default"
+      style={style}
+    >
+      {body}
     </button>
   );
 }
@@ -417,7 +435,8 @@ export default function ProfileScreen() {
             onClick={() => onboarding.setTipsOn(!onboarding.tipsOn)}
           />
           <SettingRow icon="refresh" label="Show tips again" value="Reset" onClick={onboarding.resetTips} />
-          <SettingRow icon="spark" label="Compare walkthrough" value="Replay" onClick={onboarding.start} last />
+          <SettingRow icon="spark" label="Compare walkthrough" value="Replay" onClick={onboarding.start} />
+          <SettingRow icon="mail" label="Contact support" href={supportUrl('app_profile')} last />
         </Group>
 
         <div className="mt-[18px]">
