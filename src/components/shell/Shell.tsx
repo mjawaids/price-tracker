@@ -135,12 +135,14 @@ function SidebarLabel({ mini, children }: { mini: boolean; children: ReactNode }
  * Tracks whether the sidebar nav has items hidden above/below its scroll area
  * (the scrollbar is hidden, so the UI has to say so) and scrolls to reveal them.
  */
-function useNavOverflow(itemCount: number) {
+function useNavOverflow() {
   const ref = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ above: false, below: false });
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    const content = contentRef.current;
+    if (!el || !content) return;
     const update = () => {
       const above = el.scrollTop > 2;
       const below = el.scrollHeight - el.clientHeight - el.scrollTop > 2;
@@ -149,19 +151,22 @@ function useNavOverflow(itemCount: number) {
     update();
     el.addEventListener('scroll', update, { passive: true });
     const ro = new ResizeObserver(update);
+    // The viewport (window resizes) and the content (lists added, removed or
+    // renamed onto two lines) can each change whether anything is hidden.
     ro.observe(el);
+    ro.observe(content);
     return () => {
       el.removeEventListener('scroll', update);
       ro.disconnect();
     };
-  }, [itemCount]);
+  }, []);
   const more = () => {
     const el = ref.current;
     if (!el) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollBy({ top: Math.max(el.clientHeight * 0.75, 120), behavior: reduce ? 'auto' : 'smooth' });
   };
-  return { ref, ...edges, more };
+  return { ref, contentRef, ...edges, more };
 }
 
 function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => void }) {
@@ -179,65 +184,67 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
     { id: 'mprices', icon: 'tag', label: 'Prices' },
   ];
   const onLists = app.screen === 'lists';
-  const nav = useNavOverflow(lists.lists.length);
+  const nav = useNavOverflow();
   return (
     <div className="shrink-0 border-r border-line bg-paper flex flex-col" style={{ width: mini ? 84 : 248, padding: mini ? '18px 12px' : '20px 16px' }}>
       {/* Nav scrolls on short windows / many lists; the install card and profile stay pinned below.
           Fades + a "More" button show when items are hidden, since the scrollbar is hidden. */}
       <div className="relative flex-1 min-h-0 flex flex-col">
         <div ref={nav.ref} className="flex-1 min-h-0 flex flex-col overflow-y-auto no-scrollbar">
-          <div className="shrink-0 flex items-center gap-2.5 mb-[10px]" style={{ justifyContent: mini ? 'center' : 'flex-start', padding: mini ? 0 : '0 6px' }}>
-            <span className="grid place-items-center bg-accent text-accent-on shrink-0" style={{ width: 34, height: 34, borderRadius: 11 }}>
-              <Icon name="tag" size={19} stroke={2.4} />
-            </span>
-            {!mini && <span className="font-display font-extrabold text-[20px] tracking-[-0.03em]">SpendLess</span>}
-          </div>
-          <SidebarLabel mini={mini}>Lists</SidebarLabel>
-          <div className="flex flex-col gap-[3px]">
-            {mini ? (
-              <NavItem
-                it={{ id: 'lists', icon: 'lists', label: 'Lists', badge: lists.todo.length }}
-                mini
-                on={onLists}
-                onClick={() => onPick('lists')}
-              />
-            ) : (
-              <>
-                {lists.lists.map((l) => (
-                  <NavItem
-                    key={l.id}
-                    it={{ id: 'lists', icon: 'lists', label: l.name, badge: lists.todoCountByList[l.id] || 0 }}
-                    mini={false}
-                    on={onLists && lists.activeList?.id === l.id}
-                    onClick={() => {
-                      lists.setActiveList(l.id);
-                      onPick('lists');
-                    }}
-                  />
-                ))}
-                <button
-                  type="button"
-                  onClick={() => app.tab('lists', { newList: true })}
-                  className="w-full flex items-center gap-3 rounded-[13px] bg-transparent text-accent-ink font-bold text-[14.5px]"
-                  style={{ padding: '11px 14px' }}
-                >
-                  <Icon name="plus" size={20} stroke={2.6} />
-                  New list
-                </button>
-              </>
-            )}
-          </div>
-          <SidebarLabel mini={mini}>Compare</SidebarLabel>
-          <div className="flex flex-col gap-[3px]">
-            {compare.map((it) => (
-              <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
-            ))}
-          </div>
-          <SidebarLabel mini={mini}>Catalogue</SidebarLabel>
-          <div className="flex flex-col gap-[3px]">
-            {cat.map((it) => (
-              <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
-            ))}
+          <div ref={nav.contentRef} className="shrink-0 flex flex-col">
+            <div className="shrink-0 flex items-center gap-2.5 mb-[10px]" style={{ justifyContent: mini ? 'center' : 'flex-start', padding: mini ? 0 : '0 6px' }}>
+              <span className="grid place-items-center bg-accent text-accent-on shrink-0" style={{ width: 34, height: 34, borderRadius: 11 }}>
+                <Icon name="tag" size={19} stroke={2.4} />
+              </span>
+              {!mini && <span className="font-display font-extrabold text-[20px] tracking-[-0.03em]">SpendLess</span>}
+            </div>
+            <SidebarLabel mini={mini}>Lists</SidebarLabel>
+            <div className="flex flex-col gap-[3px]">
+              {mini ? (
+                <NavItem
+                  it={{ id: 'lists', icon: 'lists', label: 'Lists', badge: lists.todo.length }}
+                  mini
+                  on={onLists}
+                  onClick={() => onPick('lists')}
+                />
+              ) : (
+                <>
+                  {lists.lists.map((l) => (
+                    <NavItem
+                      key={l.id}
+                      it={{ id: 'lists', icon: 'lists', label: l.name, badge: lists.todoCountByList[l.id] || 0 }}
+                      mini={false}
+                      on={onLists && lists.activeList?.id === l.id}
+                      onClick={() => {
+                        lists.setActiveList(l.id);
+                        onPick('lists');
+                      }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => app.tab('lists', { newList: true })}
+                    className="w-full flex items-center gap-3 rounded-[13px] bg-transparent text-accent-ink font-bold text-[14.5px]"
+                    style={{ padding: '11px 14px' }}
+                  >
+                    <Icon name="plus" size={20} stroke={2.6} />
+                    New list
+                  </button>
+                </>
+              )}
+            </div>
+            <SidebarLabel mini={mini}>Compare</SidebarLabel>
+            <div className="flex flex-col gap-[3px]">
+              {compare.map((it) => (
+                <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
+              ))}
+            </div>
+            <SidebarLabel mini={mini}>Catalogue</SidebarLabel>
+            <div className="flex flex-col gap-[3px]">
+              {cat.map((it) => (
+                <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
+              ))}
+            </div>
           </div>
         </div>
         <div
