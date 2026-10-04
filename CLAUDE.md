@@ -14,7 +14,8 @@ Live at https://spendless.ibexoft.com
 
 ## Commands
 - `npm run dev` — start dev server
-- `npm run build` — production build (output: `dist/`)
+- `npm run build` — typecheck + production build (output: `dist/`)
+- `npm run typecheck` — TypeScript check only (`vite build` alone doesn't type-check)
 - `npm run lint` — ESLint (no test framework; manual testing only)
 - `npm run generate:icons` — regenerate PWA/favicon icons
 - `node scripts/check-contrast.mjs` — WCAG contrast check for the colour tokens (run after editing them)
