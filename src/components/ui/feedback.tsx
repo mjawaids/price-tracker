@@ -1,11 +1,14 @@
 import React from 'react';
 import { Icon, IconName } from './Icon';
 
-// ── Toast / snackbar with an optional action (e.g. Undo) ─────────────────────
+// ── Toast / snackbar with an optional action (e.g. Undo) and dismiss ────────
 export function Toast({
   message,
   actionLabel,
   onAction,
+  actionDisabled,
+  onDismiss,
+  dismissLabel = 'Dismiss',
   icon,
   className = '',
   style,
@@ -13,6 +16,9 @@ export function Toast({
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionDisabled?: boolean;
+  onDismiss?: () => void;
+  dismissLabel?: string;
   icon?: IconName;
   className?: string;
   style?: React.CSSProperties;
@@ -22,7 +28,7 @@ export function Toast({
       role="status"
       aria-live="polite"
       className={`flex items-center gap-3 bg-ink text-paper rounded-btn animate-sl-pop shadow-[0_10px_30px_rgba(41,33,24,0.25)] ${className}`}
-      style={{ padding: actionLabel ? '6px 6px 6px 16px' : '13px 16px', ...style }}
+      style={{ padding: actionLabel || onDismiss ? '6px 6px 6px 16px' : '13px 16px', ...style }}
     >
       {icon && <Icon name={icon} size={18} stroke={2.4} className="shrink-0" />}
       <span className="flex-1 text-[14.5px] font-semibold leading-snug">{message}</span>
@@ -30,10 +36,22 @@ export function Toast({
         <button
           type="button"
           onClick={onAction}
-          className="shrink-0 font-extrabold text-[14.5px] rounded-[12px] bg-transparent"
+          disabled={actionDisabled}
+          className="shrink-0 font-extrabold text-[14.5px] rounded-[12px] bg-transparent disabled:opacity-60"
           style={{ minHeight: 44, padding: '0 16px', color: 'var(--accent-wash)' }}
         >
           {actionLabel}
+        </button>
+      )}
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label={dismissLabel}
+          className="shrink-0 grid place-items-center rounded-[12px] bg-transparent text-paper"
+          style={{ width: 44, height: 44 }}
+        >
+          <Icon name="x" size={16} stroke={2.4} />
         </button>
       )}
     </div>

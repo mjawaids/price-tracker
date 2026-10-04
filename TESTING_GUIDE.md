@@ -30,6 +30,18 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
       ticking everything shows **All picked up**.
 - [ ] List switcher: create, rename, delete lists; counts are right.
 
+## App updates (new deploy)
+
+- [ ] Build and serve version A (`npm run build && npm run preview`), open the app.
+- [ ] Stop the server, change anything, rebuild and serve again (version B).
+- [ ] Back in the open tab, switch away and back (or wait an hour): a toast at the top
+      says **A new version is ready** with **Update** and a close button.
+- [ ] **Update** reloads into version B (Profile shows the new version on a CI build);
+      Lists data and unsynced changes are still there.
+- [ ] Closing the toast hides it; closing every tab and reopening runs version B.
+- [ ] With an update waiting, leaving the app for 30+ min and coming back applies it
+      without a prompt.
+
 ## Offline (Lists)
 
 - [ ] Go offline (DevTools → Network → Offline): banner and "Offline" badge appear.

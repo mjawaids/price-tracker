@@ -1,0 +1,18 @@
+# Cache rules for Netlify. Files in /assets/ have a content hash in their name,
+# so they never change and can be cached forever. Everything that points at
+# them (the HTML, the service worker, the manifest) must be revalidated on every
+# load so a new deploy is picked up straight away.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/sw.js
+  Cache-Control: no-cache
+
+/site.webmanifest
+  Cache-Control: no-cache
