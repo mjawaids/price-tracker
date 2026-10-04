@@ -22,6 +22,8 @@ Live at https://spendless.ibexoft.com
 - `node scripts/check-migrations.mjs` — fails if a migration touches anything outside the `spendless` schema
   (only exception: `spendless-…` policies on `storage.objects`)
 - `SUPABASE_DB_URL=… scripts/db-migrate.sh [--dry-run] <dir>` — apply migrations (CI does this on deploy)
+- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/promote-store.ts --store-id <id> --chain <name> [--apply]`
+  — make a private store public (normally run from the manual *Catalog jobs* workflow; dry run without `--apply`)
 
 ## Environment Variables (`.env`)
 ```
@@ -158,13 +160,28 @@ are in `public`). SpendLess data must never mix with theirs:
 | `stores` | id, user_id, name, type ('physical'\|'online'), location (jsonb), **delivery_rule** (jsonb) |
 | `shopping_lists` | id, user_id, name, items (jsonb array) — Compare's "My Cart" (auto-created) |
 | `lists` | id (device-generated), user_id, name, sort_order, updated_at (server-set), deleted_at |
-| `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id?, updated_at (server-set), deleted_at |
+| `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id? (→ `catalog_products`, the pinned product), plan_store_id?, plan_product_id?, plan_price?, updated_at (server-set), deleted_at |
+| `regions` | id (slug, e.g. `karachi`), name, country_code, currency, status (`live` \| `gathering`) |
+| `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, city, lat/lng, delivery_rule (+`minOrder`), website, status |
+| `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into |
+| `price_reports` | **append-only**: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`) |
+| `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence — written only by the `refresh_current_prices` trigger |
+| `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
 
+**Compare catalogue (v2)**: `catalog_*`, `price_reports` and `current_prices` replace the
+per-user `products`/`stores` (their rows were copied in as private rows with the same
+ids). Public rows are read-only for clients; users write only their own private rows and
+their own price reports (rate-limited, outliers held as `pending`). Full model, price
+consensus and anti-spam rules: `docs/compare-data.md`. Item types are a curated vocabulary
+in `src/lib/compare/itemTypes.ts` (the column only checks the slug).
+
+Legacy (still read by the current Compare screens until they move to the catalogue):
 `prices` is a **jsonb column on `products`** (not a separate table). Each entry:
 `{ storeId, price, currency, lastUpdated, isAvailable, discountPercentage? }`
 
-`delivery_rule` union: `none | free | flat { fee } | over { threshold, fee }`
-Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes precedence.
+`delivery_rule` union: `none | free | flat { fee } | over { threshold, fee }` (catalogue
+stores may add `minOrder`). Legacy `has_delivery`/`delivery_fee` columns still exist on
+`stores`; `delivery_rule` takes precedence.
 
 ## Key Files
 
@@ -175,7 +192,10 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
 | `src/hooks/useSupabaseData.ts` | All Supabase CRUD + caching |
-| `src/utils/optimizer.ts` | Cart optimization (brute-force ≤300k combos, else greedy) |
+| `src/utils/optimizer.ts` | Legacy cart optimization for the current Compare screens (brute-force ≤300k combos, else greedy) |
+| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/size), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop + savings baseline), `types.ts` |
+| `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
+| `scripts/seed/promote-store.ts` | Make a private store + its products public (with consent); run via `.github/workflows/catalog-jobs.yml` |
 | `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
@@ -238,6 +258,8 @@ say so and propose a safe alternative.
 - `.github/workflows/ci-cd.yml`: PRs and pushes run checks (lint, contrast, migration
   guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
   build → Netlify → smoke test → post-deploy migrations → tag + GitHub Release.
+- `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue
+  (promote a store to public); dry run unless "apply" is ticked.
 - Versions are **CalVer `YYYY.M.N`** from git tags (`N` = release count within the
   month, not the day), injected as `VITE_APP_VERSION` / `VITE_APP_COMMIT`
   (`src/lib/version.ts`, shown in Profile and set on `<html data-app-version>` in

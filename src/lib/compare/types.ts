@@ -1,0 +1,79 @@
+// Client-side shapes of the Compare catalogue (spendless.catalog_* and friends).
+import type { DeliveryRule } from '../../types/index.ts';
+
+/** A store's delivery rule, plus an optional minimum order. */
+export type StoreDeliveryRule = DeliveryRule & { minOrder?: number };
+
+export interface Region {
+  id: string;
+  name: string;
+  countryCode: string;
+  currency: string;
+  status: 'live' | 'gathering';
+  sortOrder: number;
+}
+
+export interface CatalogStore {
+  id: string;
+  /** null = public (shared); otherwise private to that user. */
+  ownerId: string | null;
+  regionId: string | null;
+  chain: string | null;
+  name: string;
+  kind: 'physical' | 'online';
+  address: string | null;
+  city: string | null;
+  lat: number | null;
+  lng: number | null;
+  deliveryRule: StoreDeliveryRule;
+  website: string | null;
+  phone: string | null;
+  status: 'active' | 'closed';
+  updatedAt: string;
+}
+
+export interface CatalogProduct {
+  id: string;
+  ownerId: string | null;
+  name: string;
+  brand: string | null;
+  variant: string | null;
+  /** Item type id (src/lib/compare/itemTypes.ts). */
+  itemType: string | null;
+  category: string | null;
+  /** Size of one unit in g / ml / pieces, and how many units per pack. */
+  sizeValue: number | null;
+  sizeUnit: 'g' | 'ml' | 'pc' | null;
+  packCount: number;
+  unitLabel: string | null;
+  gtin: string | null;
+  imageUrl: string | null;
+  status: 'active' | 'merged';
+  mergedInto: string | null;
+  updatedAt: string;
+}
+
+export interface CurrentPrice {
+  storeId: string;
+  productId: string;
+  /** Price of one pack; null only when the latest report says out of stock. */
+  price: number | null;
+  currency: string | null;
+  isAvailable: boolean;
+  observedAt: string;
+  nReports: number;
+  confidence: number;
+  /** True when this is the user's own latest report (it wins for them). */
+  mine?: boolean;
+}
+
+export type PreferenceMode = 'exact' | 'brand_size' | 'any_size';
+
+/** A user's "usual" for a list item name. */
+export interface ItemPreference {
+  itemKey: string;
+  mode: PreferenceMode;
+  productIds: string[];
+  refProductId: string | null;
+  updatedAt: string;
+}

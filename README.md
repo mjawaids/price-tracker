@@ -127,9 +127,18 @@ SpendLess keeps **all of its tables in its own Postgres schema, `spendless`**, s
 can share a Supabase project with other apps without mixing data. Tables:
 
 - **spendless.lists / spendless.list_items**: quick lists and their items (offline-synced)
-- **spendless.products**: Product catalog with per-store pricing
-- **spendless.stores**: Store information (physical and online) with delivery rules
-- **spendless.shopping_lists**: Compare's cart ("My Cart")
+- **spendless.regions**: cities; shared prices are live in Karachi first
+- **spendless.catalog_stores / spendless.catalog_products**: the Compare catalogue —
+  public (shared) rows plus each user's private ones
+- **spendless.price_reports / spendless.current_prices**: append-only price
+  observations and the price derived from them (weighted median)
+- **spendless.user_stores / item_preferences / plans**: a user's stores, usual
+  products and applied plans
+- **spendless.products / spendless.stores / spendless.shopping_lists**: the original
+  per-user catalogue and Compare cart, still read by the current Compare screens
+  (copied into the catalogue as private rows)
+
+How prices are decided and protected from spam: [docs/compare-data.md](docs/compare-data.md).
 
 User profile data (name, avatar) is stored in Supabase Auth `user_metadata`,
 so no separate profiles table is required by the app.
@@ -258,7 +267,8 @@ scripts/
 ├── check-contrast.mjs      # WCAG contrast check for the colour tokens
 ├── check-migrations.mjs    # Guard: migrations may only touch the spendless schema (+ spendless-* storage policies)
 ├── db-migrate.sh           # Applies migrations (tracked in spendless.schema_migrations)
-└── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
+├── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
+└── seed/promote-store.ts   # Makes a private store + its products public (manual "Catalog jobs" workflow)
 supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless
 supabase/post-deploy/       # Post-deploy (cleanup) migrations
 src/
@@ -307,13 +317,14 @@ src/
 │   ├── supabase.ts             # Supabase client re-export
 │   ├── supabaseClient.ts       # Supabase client (pinned to the `spendless` schema)
 │   ├── offline/                # IndexedDB store + sync engine for Lists
+│   ├── compare/                # Compare v2: item types, name parser, unit prices, matching, optimizer
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy
 │   ├── version.ts              # Release version (CalVer, set by CI)
 │   └── categories.ts           # Product categories
 ├── utils/                  # Utility functions
 │   ├── currency.ts             # Currency formatting
-│   ├── optimizer.ts            # Shopping plan optimization
+│   ├── optimizer.ts            # Shopping plan optimization (current Compare screens)
 │   ├── quickAdd.ts             # Parses "2 milk", "atta 10 kg", …
 │   ├── analytics.ts            # Analytics helpers
 │   └── storage.ts              # Local storage utilities
