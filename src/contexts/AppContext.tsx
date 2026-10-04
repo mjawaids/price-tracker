@@ -124,10 +124,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     hydratedRef.current = true;
   }, [data.loading, data.shoppingLists, authUser]);
 
+  // Cart writes run one at a time (persistQueueRef), so only one "My Cart" row is
+  // ever created and an older cart can't overwrite a newer one. persistSeqRef
+  // lets a queued write skip itself once a newer cart is waiting behind it, and
+  // persistGenRef drops writes queued before the user changed.
+  const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const persistSeqRef = useRef(0);
+  const persistGenRef = useRef(0);
+
   // Reset hydration when the user changes (login/logout).
   useEffect(() => {
     hydratedRef.current = false;
     cartListIdRef.current = null;
+    persistGenRef.current += 1;
     setCart({});
   }, [authUser?.id]);
 
@@ -137,7 +146,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     (next: Cart) => {
       if (!authUser) return;
       if (persistTimer.current) clearTimeout(persistTimer.current);
-      persistTimer.current = setTimeout(async () => {
+      persistTimer.current = setTimeout(() => {
         const items: ShoppingListItem[] = Object.entries(next)
           .filter(([, q]) => q > 0)
           .map(([productId, quantity]) => ({
@@ -146,13 +155,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             quantity,
             addedAt: new Date(),
           }));
-        let listId = cartListIdRef.current;
-        if (!listId) {
-          const created = await data.createShoppingList(CART_LIST_NAME);
-          if (created) listId = created.id;
-          cartListIdRef.current = listId;
-        }
-        if (listId) await data.updateShoppingListItems(listId, items);
+        const seq = ++persistSeqRef.current;
+        const gen = persistGenRef.current;
+        const isCurrent = () => seq === persistSeqRef.current && gen === persistGenRef.current;
+        persistQueueRef.current = persistQueueRef.current
+          .then(async () => {
+            if (!isCurrent()) return; // a newer cart is queued; it will write
+            let listId = cartListIdRef.current;
+            if (!listId) {
+              const created = await data.createShoppingList(CART_LIST_NAME);
+              if (gen !== persistGenRef.current) return; // user changed meanwhile
+              listId = created?.id ?? null;
+              cartListIdRef.current = listId;
+            }
+            if (listId && gen === persistGenRef.current) await data.updateShoppingListItems(listId, items);
+          })
+          .catch((error) => console.error('Error saving cart:', error));
       }, 600);
     },
     [authUser, data],
