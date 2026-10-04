@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import PageFooter from '../components/PageFooter';
+import { supportUrl } from '../lib/links';
 
 const Refund: React.FC = () => {
   useEffect(() => {
@@ -72,11 +73,13 @@ const Refund: React.FC = () => {
                   </p>
                   <div className="flex items-center space-x-2">
                     <span className="text-blue-300">📧</span>
-                    <a 
-                      href="mailto:jawaid@jawaid.dev?subject=SpendLess Refund Request"
+                    <a
+                      href={supportUrl('refund_page')}
+                      target="_blank"
+                      rel="noopener"
                       className="text-blue-300 hover:text-blue-200 underline transition-colors font-medium"
                     >
-                      jawaid@jawaid.dev
+                      Contact support
                     </a>
                   </div>
                   <p className="text-blue-200/70 text-sm mt-3">

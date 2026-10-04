@@ -1,16 +1,23 @@
 // Outbound links. UTM tags tell us (on ibexoft.com) where in SpendLess a visit came from.
 
-const SUPPORT_BASE = 'https://ibexoft.com/contact';
+const IBEXOFT = 'https://ibexoft.com';
 
-/** Where the support link was clicked; becomes `utm_campaign`. */
-export type SupportPlacement = 'auth' | 'site_footer' | 'app_profile';
-
-export const supportUrl = (placement: SupportPlacement): string => {
+const tagged = (url: string, campaign: string, content: string): string => {
   const params = new URLSearchParams({
     utm_source: 'spendless',
     utm_medium: 'referral',
-    utm_campaign: 'support',
-    utm_content: placement,
+    utm_campaign: campaign,
+    utm_content: content,
   });
-  return `${SUPPORT_BASE}?${params.toString()}`;
+  return `${url}?${params.toString()}`;
 };
+
+/** Where the support link was clicked; becomes `utm_content`. */
+export type SupportPlacement = 'auth' | 'site_footer' | 'app_profile' | 'pricing_page' | 'privacy_page' | 'refund_page';
+
+export const supportUrl = (placement: SupportPlacement): string =>
+  tagged(`${IBEXOFT}/contact`, 'support', placement);
+
+// Ibexoft's Terms and Privacy Policy cover all Ibexoft products, SpendLess included.
+export const termsUrl = (placement: 'auth'): string => tagged(`${IBEXOFT}/terms-and-conditions/`, 'legal', placement);
+export const privacyUrl = (placement: 'auth'): string => tagged(`${IBEXOFT}/privacy-policy/`, 'legal', placement);

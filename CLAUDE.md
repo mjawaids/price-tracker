@@ -130,7 +130,7 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/types/index.ts` | All TypeScript types (Product, Store, Price, DeliveryRule, etc.) |
 | `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
-| `src/lib/links.ts` | Outbound links: `supportUrl(placement)` → ibexoft.com/contact with UTM tags |
+| `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact; `termsUrl`/`privacyUrl` → Ibexoft's Terms & Privacy Policy (they cover SpendLess) |
 | `src/hooks/useSupabaseData.ts` | All Supabase CRUD + caching |
 | `src/utils/optimizer.ts` | Cart optimization (brute-force ≤300k combos, else greedy) |
 | `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |
@@ -153,7 +153,8 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 - **Error handling**: try/catch with `console.error`; graceful fallbacks to empty arrays
 - **Analytics**: always guard with `window.gtag` check before calling
 - **Outbound links**: tag with `utm_source=spendless&utm_medium=referral`; the support
-  link always comes from `supportUrl()` (`src/lib/links.ts`), never a hand-built URL
+  link always comes from `supportUrl()` (`src/lib/links.ts`), never a hand-built URL or
+  an email address
 
 ## Security
 Always follow security best practices — in code, migrations, CI config and docs.
