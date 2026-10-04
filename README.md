@@ -12,7 +12,7 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Add items the way you'd say them: `bread`, `2 milk`, `atta 10 kg` — no brand or size needed
 - Suggestions while typing (your own history first) and one-tap "often bought" chips
 - Items sorted by aisle automatically (English and romanized Urdu names) — or turn off
-  **Group by aisle** in list options (⋯) to keep them in the order you added them
+  **Group by aisle** in list options (⋯) to keep them in the order you added them (each item still shows its aisle)
 - Tick items as you shop, swipe to tick/delete, undo anything, see your progress
 - Several lists (Groceries, Pharmacy, …) with optional quantity, unit and notes
 - Friendly one-at-a-time tips that teach the app as you use it

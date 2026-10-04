@@ -296,6 +296,7 @@ export default function ListsScreen() {
                 key={item.id}
                 item={item}
                 fresh={fresh.has(item.id)}
+                showAisle={!grouped}
                 nudge={hSwipe.show && g === firstGroup && idx === 0}
                 onToggle={() => toggle(item)}
                 onOpen={() => openDetails(item.id)}
