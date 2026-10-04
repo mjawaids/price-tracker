@@ -279,9 +279,19 @@ export function InstallSidebarCta({ mini }: { mini: boolean }) {
     );
   }
 
+  // Short windows get a one-row version so the nav above keeps its room.
   return (
     <>
-      <div className="rounded-[16px] bg-accent-wash text-accent-ink mb-2.5" style={{ padding: '14px 14px 12px' }}>
+      <button
+        type="button"
+        onClick={() => void start()}
+        className="hidden [@media(max-height:860px)]:flex w-full items-center gap-2.5 rounded-[14px] bg-accent-wash text-accent-ink font-bold text-[14px] mb-2.5"
+        style={{ minHeight: 48, padding: '0 14px' }}
+      >
+        <Icon name="download" size={18} stroke={2.4} />
+        {label}
+      </button>
+      <div className="[@media(max-height:860px)]:hidden rounded-[16px] bg-accent-wash text-accent-ink mb-2.5" style={{ padding: '14px 14px 12px' }}>
         <div className="flex items-center gap-2.5">
           <img src="/pwa-192x192.png" alt="" width={34} height={34} className="shrink-0 rounded-[10px]" />
           <div className="min-w-0">

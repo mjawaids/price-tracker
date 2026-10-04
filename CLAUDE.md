@@ -89,6 +89,7 @@ Context-based (no Redux). Providers in `src/contexts/`:
     steps snoozes it 14 days (`bannerSnoozed` in the store).
   - `InstallSidebarCta` — "Get the app" card above the profile button in the
     desktop sidebar (icon button on the tablet sidebar); always there until installed.
+    On windows ≤860px tall it shrinks to a one-row "Install the app" button.
   - `InstallPill` — small "Get app" pill in the mobile Lists header; steps aside
     while the banner is showing.
   - Profile → **App** → *Install the app* / *Install the app again*.
@@ -103,6 +104,8 @@ Sections (`app.section` / `app.openSection`): `lists` (default), `compare`, `pro
   Browse · Cart · Catalogue segmented control (Catalogue → Products/Stores/Prices)
 - Tablet (768–1099px): collapsed sidebar
 - Desktop (≥1100px): full sidebar (your lists on top, then Compare and Catalogue)
+- Sidebar nav scrolls (scrollbar hidden) above the pinned install card + profile;
+  `useNavOverflow` in `Shell.tsx` shows edge fades and a "More ⌄" button when items are hidden
 - Code splitting: `Shell.tsx` lazy-loads every screen except Lists (Suspense skeleton),
   and `src/pages/lazy.ts` lazy-loads the legal/pricing pages. The service worker
   precaches all chunks, so lazy screens still open offline.
