@@ -56,6 +56,22 @@ Context-based (no Redux). Providers in `src/contexts/`:
   cursor. Last write wins; rows with unsent local edits are never overwritten.
 - Ids are generated on the device; deletes are soft (`deleted_at`).
 - Service worker (vite-plugin-pwa) precaches the app shell and caches Google Fonts.
+
+### App updates (new deploys)
+- `registerType: 'prompt'` in `vite.config.ts`: a new deploy's service worker installs
+  and **waits**. `src/components/shell/UpdatePrompt.tsx` (mounted in `src/main.tsx`, so
+  every route) registers it via `virtual:pwa-register/react`, checks for a new
+  `sw.js` hourly, on return to the app and on reconnect, and shows a top toast
+  "A new version is ready · Update". Tapping it activates the new worker and reloads.
+  Coming back after ≥30 min in the background with an update waiting applies it
+  automatically. A cold start always gets the newest build.
+- Cache invalidation: Workbox precache entries are revisioned per build and old ones
+  are removed when the new worker activates. `public/_headers` makes Netlify serve
+  `/`, `/index.html`, `/sw.js` and `/site.webmanifest` as `no-cache` and the hashed
+  `/assets/*` as immutable. `src/main.tsx` reloads once on `vite:preloadError` (a tab
+  on an old build asking for a chunk the new deploy removed).
+- Lists data survives the reload (IndexedDB + outbox); in-memory state (navigation
+  stack, Compare cache) starts fresh.
 - Compare still needs a network; it shows an offline notice instead of breaking.
 
 ### Navigation
@@ -136,6 +152,8 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
+| `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
+| `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*`) |
 | `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`) |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
 | `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |
@@ -198,7 +216,8 @@ say so and propose a safe alternative.
 - Secrets/variables live in the GitHub `production` environment; runbook, setup and
   rollback in `docs/deployment.md`. Bolt is no longer used — don't add Bolt files.
 - New services go in as steps of the `deploy` job (see `docs/deployment.md`).
-- SPA routing on Netlify comes from `public/_redirects`; keep it.
+- SPA routing on Netlify comes from `public/_redirects`; keep it. Cache headers come
+  from `public/_headers`; never give `sw.js` or `index.html` a long cache lifetime.
 
 ## Keep Docs in Sync
 Docs are part of every change, not an afterthought:

@@ -144,6 +144,23 @@ Try locally against any Postgres: `SUPABASE_DB_URL=… scripts/db-migrate.sh --d
    revoke Bolt if it's listed.
 4. The repo no longer contains Bolt's `.bolt/` folder.
 
+## How users get a new version
+The app is a PWA, so a service worker serves the app shell from its cache. After a
+deploy, an open app finds the new `sw.js` (hourly, when the user returns to it, or on
+reconnect), installs it in the background and shows **"A new version is ready ·
+Update"**; tapping it switches over and reloads. If the app was in the background for
+30+ minutes it switches without asking, and any fresh launch runs the new build. See
+`src/components/shell/UpdatePrompt.tsx`.
+
+This only works if `sw.js` and `index.html` are never served stale. `public/_headers`
+sets `Cache-Control: no-cache` on `/`, `/index.html`, `/sw.js` and
+`/site.webmanifest`, and `immutable` on the content-hashed `/assets/*`. The public
+domain is behind **Cloudflare**: keep its *Browser Cache TTL* on **Respect Existing
+Headers** and don't add Cache Rules that cache HTML or `sw.js` at the edge (or purge
+the cache after each deploy if you do).
+
+Rolling back is a new deploy too: users get the previous build through the same prompt.
+
 ## Rolling back
 - **App**: Netlify → *Deploys* → open the previous good deploy → **Publish deploy**.
   (Or revert the commit on `main` — the pipeline deploys the revert as a new version.)

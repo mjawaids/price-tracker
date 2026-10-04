@@ -20,19 +20,24 @@ export default defineConfig(({ mode }) => {
         // Keep the existing static public/site.webmanifest as the single source
         // of truth — do not generate or inject a second manifest.
         manifest: false,
-        // Phase 1: no update UI. The service worker installs and updates silently.
-        registerType: 'autoUpdate',
-        // Plugin injects the SW registration <script> into the built index.html,
-        // so no changes to src/main.tsx and no virtual-module imports are needed.
-        injectRegister: 'auto',
+        // A new deploy installs a new service worker that waits; the app shows
+        // an "Update" prompt (src/components/shell/UpdatePrompt.tsx) and swaps
+        // to it on tap, or by itself after a long time in the background.
+        registerType: 'prompt',
+        // Registered from UpdatePrompt via virtual:pwa-register/react, so the
+        // plugin must not inject its own registration script.
+        injectRegister: false,
         workbox: {
           // Precache the built app-shell assets emitted into dist.
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           // SPA: serve index.html for client-side routes (/privacy, /refund, etc.).
           navigateFallback: '/index.html',
-          // Take control immediately on update (pairs with registerType autoUpdate).
+          // The new worker waits for the user (see registerType above), then
+          // claims open pages so they reload onto the new build.
           clientsClaim: true,
-          skipWaiting: true,
+          skipWaiting: false,
+          // Drop precaches left behind by older Workbox versions.
+          cleanupOutdatedCaches: true,
           // Cache Google Fonts so the app keeps its typography offline. Supabase
           // API calls are deliberately not cached here — Lists has its own
           // offline store (src/lib/offline).

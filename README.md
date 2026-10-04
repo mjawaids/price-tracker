@@ -20,6 +20,8 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Lists are stored on the device first (IndexedDB) and sync to Supabase when online
 - Changes made offline are queued and sent automatically; the app opens offline too
 - Installable PWA; the app shell and fonts are cached by a service worker
+- New releases arrive by themselves: an open app shows **"A new version is ready · Update"**,
+  and the next launch always runs the latest build
 
 ### 🛍️ Smart Price Tracking (Compare)
 - Track products and their prices across multiple stores
@@ -244,7 +246,7 @@ how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 
 ```
 .github/workflows/ci-cd.yml # CI checks + production deploy pipeline
-public/                     # Static assets (favicons, PWA icons, manifest, _redirects)
+public/                     # Static assets (favicons, PWA icons, manifest, _redirects, _headers)
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
 ├── check-contrast.mjs      # WCAG contrast check for the colour tokens
