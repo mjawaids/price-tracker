@@ -14,6 +14,9 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
 (tablet, collapsed sidebar) and **1280px** (desktop, full sidebar).
 On tablet and desktop, the sidebar's profile button (and "Get the app" card) stay pinned
 and fully visible on a short window or with many lists; the nav above them scrolls.
+When nav items are hidden, the nav fades at the edge and a **More ⌄** button sits at the
+bottom (tap it to scroll down; a top fade appears once scrolled). Windows ≤860px tall
+show the install card as a single "Install the app" row.
 
 ## Lists (default section)
 
