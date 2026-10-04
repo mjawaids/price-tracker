@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ListItem } from '../../types';
 import { useLists } from '../../contexts/ListsContext';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -26,12 +26,24 @@ export function ItemSheet({
   const lists = useLists();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
+  const aisleRowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setName(item?.name ?? '');
     setNote(item?.note ?? '');
     // Only reset the drafts when a different item is opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id]);
+
+  // Centre the selected aisle once when an item opens — not on every render, or the
+  // row would jump back while someone scrolls it to pick another aisle.
+  useEffect(() => {
+    const row = aisleRowRef.current;
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!row || !chip) return;
+    const r = row.getBoundingClientRect();
+    const c = chip.getBoundingClientRect();
+    row.scrollLeft += c.left - r.left - (r.width - c.width) / 2;
   }, [item?.id]);
 
   if (!item) return null;
@@ -51,7 +63,27 @@ export function ItemSheet({
   const qty = item.quantity ?? 1;
 
   return (
-    <Sheet open onClose={close} title="Item details">
+    <Sheet
+      open
+      onClose={close}
+      title="Item details"
+      footer={
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={() => onDelete(item)}
+            className="inline-flex items-center gap-2 rounded-btn bg-transparent text-danger font-bold text-[15.5px] shadow-[inset_0_0_0_1.5px_var(--line)]"
+            style={{ minHeight: 52, padding: '0 18px' }}
+          >
+            <Icon name="trash" size={18} stroke={2.2} />
+            Delete
+          </button>
+          <Btn size="lg" full onClick={close} className="flex-1">
+            Done
+          </Btn>
+        </div>
+      }
+    >
       <div className="flex flex-col gap-[18px]">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="item-name" className={fieldLabel}>
@@ -119,7 +151,7 @@ export function ItemSheet({
             className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5"
             role="group"
             aria-label="Aisle"
-            ref={(el) => el?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' })}
+            ref={aisleRowRef}
           >
             {CATEGORY_ORDER.map((id) => {
               const c = categoryMeta(id);
@@ -181,20 +213,6 @@ export function ItemSheet({
           <Icon name="chevR" size={18} stroke={2.4} color="var(--ink-soft)" />
         </button>
 
-        <div className="flex gap-2.5">
-          <button
-            type="button"
-            onClick={() => onDelete(item)}
-            className="inline-flex items-center gap-2 rounded-btn bg-transparent text-danger font-bold text-[15.5px] shadow-[inset_0_0_0_1.5px_var(--line)]"
-            style={{ minHeight: 52, padding: '0 18px' }}
-          >
-            <Icon name="trash" size={18} stroke={2.2} />
-            Delete
-          </button>
-          <Btn size="lg" full onClick={close} className="flex-1">
-            Done
-          </Btn>
-        </div>
       </div>
     </Sheet>
   );

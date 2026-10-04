@@ -289,7 +289,7 @@ and feel like it came from a strong product design team, not a default template.
   `rounded-btn`, `shadow-card`, `font-display`, `animate-slide-up`, …)
 - **Typography**: `font-display` (Bricolage Grotesque) for headings, `font-sans`
   (Hanken Grotesk) for body, `font-mono` (Space Mono) for figures where it helps
-- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx`, `Icon.tsx`)
+- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx` (optional pinned `footer` for actions), `Icon.tsx`)
   before creating new components; put new shared pieces there
 
 ### Using Claude Design

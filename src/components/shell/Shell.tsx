@@ -147,88 +147,92 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
   ];
   const onLists = app.screen === 'lists';
   return (
-    <div className="shrink-0 border-r border-line bg-paper flex flex-col overflow-y-auto no-scrollbar" style={{ width: mini ? 84 : 248, padding: mini ? '18px 12px' : '20px 16px' }}>
-      <div className="flex items-center gap-2.5 mb-[10px]" style={{ justifyContent: mini ? 'center' : 'flex-start', padding: mini ? 0 : '0 6px' }}>
-        <span className="grid place-items-center bg-accent text-accent-on shrink-0" style={{ width: 34, height: 34, borderRadius: 11 }}>
-          <Icon name="tag" size={19} stroke={2.4} />
-        </span>
-        {!mini && <span className="font-display font-extrabold text-[20px] tracking-[-0.03em]">SpendLess</span>}
-      </div>
-      <SidebarLabel mini={mini}>Lists</SidebarLabel>
-      <div className="flex flex-col gap-[3px]">
-        {mini ? (
-          <NavItem
-            it={{ id: 'lists', icon: 'lists', label: 'Lists', badge: lists.todo.length }}
-            mini
-            on={onLists}
-            onClick={() => onPick('lists')}
-          />
-        ) : (
-          <>
-            {lists.lists.map((l) => (
-              <NavItem
-                key={l.id}
-                it={{ id: 'lists', icon: 'lists', label: l.name, badge: lists.todoCountByList[l.id] || 0 }}
-                mini={false}
-                on={onLists && lists.activeList?.id === l.id}
-                onClick={() => {
-                  lists.setActiveList(l.id);
-                  onPick('lists');
-                }}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={() => app.tab('lists', { newList: true })}
-              className="w-full flex items-center gap-3 rounded-[13px] bg-transparent text-accent-ink font-bold text-[14.5px]"
-              style={{ padding: '11px 14px' }}
-            >
-              <Icon name="plus" size={20} stroke={2.6} />
-              New list
-            </button>
-          </>
-        )}
-      </div>
-      <SidebarLabel mini={mini}>Compare</SidebarLabel>
-      <div className="flex flex-col gap-[3px]">
-        {compare.map((it) => (
-          <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
-        ))}
-      </div>
-      <SidebarLabel mini={mini}>Catalogue</SidebarLabel>
-      <div className="flex flex-col gap-[3px]">
-        {cat.map((it) => (
-          <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
-        ))}
-      </div>
-      <div className="flex-1" style={{ minHeight: 16 }} />
-      <InstallSidebarCta mini={mini} />
-      <button
-        type="button"
-        onClick={() => onPick('profile')}
-        aria-label={mini ? 'Profile' : undefined}
-        className="flex items-center gap-2.5 rounded-[14px]"
-        style={{
-          justifyContent: mini ? 'center' : 'flex-start',
-          padding: mini ? '10px 0' : '10px 12px',
-          background: app.screen === 'profile' ? 'var(--accent-wash)' : 'var(--surface)',
-          boxShadow: app.screen === 'profile' ? 'none' : 'inset 0 0 0 1px var(--line)',
-        }}
-      >
-        <span className="grid place-items-center bg-accent text-accent-on font-display font-extrabold shrink-0 rounded-full overflow-hidden" style={{ width: 34, height: 34, fontSize: 14 }}>
-          {app.user.avatarUrl ? (
-            <img src={app.user.avatarUrl} alt={app.user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            initials
-          )}
-        </span>
-        {!mini && (
-          <span className="min-w-0 text-left">
-            <div className="font-bold text-[13.5px] truncate">{app.user.name}</div>
-            <div className="text-[11.5px] text-ink-soft">View profile</div>
+    <div className="shrink-0 border-r border-line bg-paper flex flex-col" style={{ width: mini ? 84 : 248, padding: mini ? '18px 12px' : '20px 16px' }}>
+      {/* Nav scrolls on short windows / many lists; the install card and profile stay pinned below. */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto no-scrollbar">
+        <div className="shrink-0 flex items-center gap-2.5 mb-[10px]" style={{ justifyContent: mini ? 'center' : 'flex-start', padding: mini ? 0 : '0 6px' }}>
+          <span className="grid place-items-center bg-accent text-accent-on shrink-0" style={{ width: 34, height: 34, borderRadius: 11 }}>
+            <Icon name="tag" size={19} stroke={2.4} />
           </span>
-        )}
-      </button>
+          {!mini && <span className="font-display font-extrabold text-[20px] tracking-[-0.03em]">SpendLess</span>}
+        </div>
+        <SidebarLabel mini={mini}>Lists</SidebarLabel>
+        <div className="flex flex-col gap-[3px]">
+          {mini ? (
+            <NavItem
+              it={{ id: 'lists', icon: 'lists', label: 'Lists', badge: lists.todo.length }}
+              mini
+              on={onLists}
+              onClick={() => onPick('lists')}
+            />
+          ) : (
+            <>
+              {lists.lists.map((l) => (
+                <NavItem
+                  key={l.id}
+                  it={{ id: 'lists', icon: 'lists', label: l.name, badge: lists.todoCountByList[l.id] || 0 }}
+                  mini={false}
+                  on={onLists && lists.activeList?.id === l.id}
+                  onClick={() => {
+                    lists.setActiveList(l.id);
+                    onPick('lists');
+                  }}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => app.tab('lists', { newList: true })}
+                className="w-full flex items-center gap-3 rounded-[13px] bg-transparent text-accent-ink font-bold text-[14.5px]"
+                style={{ padding: '11px 14px' }}
+              >
+                <Icon name="plus" size={20} stroke={2.6} />
+                New list
+              </button>
+            </>
+          )}
+        </div>
+        <SidebarLabel mini={mini}>Compare</SidebarLabel>
+        <div className="flex flex-col gap-[3px]">
+          {compare.map((it) => (
+            <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
+          ))}
+        </div>
+        <SidebarLabel mini={mini}>Catalogue</SidebarLabel>
+        <div className="flex flex-col gap-[3px]">
+          {cat.map((it) => (
+            <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
+          ))}
+        </div>
+      </div>
+      <div className="shrink-0 flex flex-col pt-4">
+        <InstallSidebarCta mini={mini} />
+        <button
+          type="button"
+          onClick={() => onPick('profile')}
+          aria-label={mini ? 'Profile' : undefined}
+          className="flex items-center gap-2.5 rounded-[14px]"
+          style={{
+            justifyContent: mini ? 'center' : 'flex-start',
+            padding: mini ? '10px 0' : '10px 12px',
+            background: app.screen === 'profile' ? 'var(--accent-wash)' : 'var(--surface)',
+            boxShadow: app.screen === 'profile' ? 'none' : 'inset 0 0 0 1px var(--line)',
+          }}
+        >
+          <span className="grid place-items-center bg-accent text-accent-on font-display font-extrabold shrink-0 rounded-full overflow-hidden" style={{ width: 34, height: 34, fontSize: 14 }}>
+            {app.user.avatarUrl ? (
+              <img src={app.user.avatarUrl} alt={app.user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              initials
+            )}
+          </span>
+          {!mini && (
+            <span className="min-w-0 text-left">
+              <div className="font-bold text-[13.5px] truncate">{app.user.name}</div>
+              <div className="text-[11.5px] text-ink-soft">View profile</div>
+            </span>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

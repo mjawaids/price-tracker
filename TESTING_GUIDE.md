@@ -12,6 +12,8 @@ npm run build && npm run preview   # service worker + offline only work in a bui
 
 Test at three widths (browser device toolbar): **375px** (phone), **768px**
 (tablet, collapsed sidebar) and **1280px** (desktop, full sidebar).
+On tablet and desktop, the sidebar's profile button (and "Get the app" card) stay pinned
+and fully visible on a short window or with many lists; the nav above them scrolls.
 
 ## Lists (default section)
 
@@ -29,6 +31,9 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
 - [ ] Tapping the circle ticks an item → it moves to **In cart**, with **Undo**.
 - [ ] Phone only: swipe right ticks, swipe left deletes (with Undo).
 - [ ] Tapping an item opens details: rename, quantity, unit, aisle, note, delete.
+- [ ] In details, the aisle row opens on the current aisle and can be scrolled freely (it doesn't
+      jump back while you scroll or type); **Delete** / **Done** stay visible at the bottom even on a
+      short window (the fields scroll above them).
 - [ ] **Clear** hides ticked items; they still appear under **Often** next time.
 - [ ] Shopping progress ("3 of 10 in cart") shows once something is ticked;
       ticking everything shows **All picked up**.
