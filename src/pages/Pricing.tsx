@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Check, Star, Zap, Shield, Headphones as HeadphonesIcon } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import PageFooter from '../components/PageFooter';
+import { supportUrl } from '../lib/links';
 
 const Pricing: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -214,12 +215,13 @@ const Pricing: React.FC = () => {
               <div>
                 <h4 className="font-semibold text-white mb-2">Need help choosing?</h4>
                 <p className="text-white/80">
-                  Contact us at{' '}
-                  <a 
-                    href="mailto:jawaid@jawaid.dev" 
+                  <a
+                    href={supportUrl('pricing_page')}
+                    target="_blank"
+                    rel="noopener"
                     className="text-blue-300 hover:text-blue-200 underline transition-colors"
                   >
-                    jawaid@jawaid.dev
+                    Contact us
                   </a>{' '}
                   and we'll help you find the right plan.
                 </p>

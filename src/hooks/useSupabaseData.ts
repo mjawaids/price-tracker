@@ -2,7 +2,42 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { PRODUCT_IMAGES_BUCKET, storagePathFromUrl } from '../lib/storage';
-import { Product, Store, ShoppingList } from '../types';
+import { Product, Store, ShoppingList, Price, DeliveryRule, ShoppingListItem } from '../types';
+
+// Row shapes as returned by `select('*')` (snake_case, nullable columns).
+interface ProductRow {
+  id: string;
+  name: string;
+  category: Product['category'];
+  brand: Product['brand'];
+  unit: string | null;
+  image_url: string | null;
+  prices: Price[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface StoreRow {
+  id: string;
+  name: string;
+  type: Store['type'];
+  location: Store['location'];
+  has_delivery: boolean;
+  delivery_radius?: number;
+  delivery_fee?: number;
+  delivery_rule: DeliveryRule | null;
+  website?: string;
+  phone?: string;
+  created_at: string;
+}
+
+interface ShoppingListRow {
+  id: string;
+  name: string;
+  items: ShoppingListItem[] | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 import { trackProduct, trackShoppingList } from '../utils/analytics';
 
 export const useSupabaseData = () => {
@@ -63,7 +98,7 @@ export const useSupabaseData = () => {
       return;
     }
 
-    const formattedProducts: Product[] = data.map(item => ({
+    const formattedProducts: Product[] = (data as ProductRow[]).map((item) => ({
       id: item.id,
       name: item.name,
       category: item.category,
@@ -92,7 +127,7 @@ export const useSupabaseData = () => {
       return;
     }
 
-    const formattedStores: Store[] = data.map(item => ({
+    const formattedStores: Store[] = (data as StoreRow[]).map((item) => ({
       id: item.id,
       name: item.name,
       type: item.type,
@@ -130,7 +165,7 @@ export const useSupabaseData = () => {
         return;
       }
 
-      const formattedLists: ShoppingList[] = data.map(item => ({
+      const formattedLists: ShoppingList[] = (data as ShoppingListRow[]).map((item) => ({
         id: item.id,
         name: item.name,
         items: item.items || [],

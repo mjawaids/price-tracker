@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import PageFooter from '../components/PageFooter';
+import { supportUrl } from '../lib/links';
 
 const Privacy: React.FC = () => {
   useEffect(() => {
@@ -98,13 +99,15 @@ const Privacy: React.FC = () => {
                 <h2 className="text-2xl font-semibold text-white mb-4">Your Rights</h2>
                 <p className="text-white/80 leading-relaxed">
                   You may have rights to access, correct, or delete your personal data depending on your jurisdiction. 
-                  Contact us at{' '}
-                  <a 
-                    href="mailto:jawaid@jawaid.dev" 
+                  <a
+                    href={supportUrl('privacy_page')}
+                    target="_blank"
+                    rel="noopener"
                     className="text-blue-300 hover:text-blue-200 underline transition-colors"
                   >
-                    jawaid@jawaid.dev
-                  </a>.
+                    Contact us
+                  </a>{' '}
+                  to make a request.
                 </p>
               </section>
             </div>

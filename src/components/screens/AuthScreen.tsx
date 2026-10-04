@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, GoogleIcon, Btn, IconName } from '../ui';
+import { supportUrl } from '../../lib/links';
 
 const FEATURES: [IconName, string, string][] = [
   ['scan', 'Track real prices', 'Your products, your stores, your prices.'],
@@ -159,7 +160,26 @@ function AuthForm() {
         {busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}
       </Btn>
       <p className="text-[11.5px] text-ink-faint text-center leading-relaxed mt-4">
-        By continuing you agree to SpendLess’s Terms &amp; Privacy Policy.
+        By continuing you agree to{' '}
+        <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink-soft">
+          Terms<span className="sr-only"> (opens in a new tab)</span>
+        </a>{' '}
+        &amp;{' '}
+        <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink-soft">
+          Privacy Policy<span className="sr-only"> (opens in a new tab)</span>
+        </a>
+        .
+      </p>
+      <p className="text-[13px] text-ink-faint text-center mt-2">
+        Need help?{' '}
+        <a
+          href={supportUrl('auth')}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center min-h-[48px] text-accent-ink font-semibold hover:underline"
+        >
+          Contact support<span className="sr-only"> (opens in a new tab)</span>
+        </a>
       </p>
     </div>
   );

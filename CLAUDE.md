@@ -14,7 +14,8 @@ Live at https://spendless.ibexoft.com
 
 ## Commands
 - `npm run dev` — start dev server
-- `npm run build` — production build (output: `dist/`)
+- `npm run build` — typecheck + production build (output: `dist/`)
+- `npm run typecheck` — TypeScript check only (`vite build` alone doesn't type-check)
 - `npm run lint` — ESLint (no test framework; manual testing only)
 - `npm run generate:icons` — regenerate PWA/favicon icons
 - `node scripts/check-contrast.mjs` — WCAG contrast check for the colour tokens (run after editing them)
@@ -129,6 +130,7 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 | `src/types/index.ts` | All TypeScript types (Product, Store, Price, DeliveryRule, etc.) |
 | `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
+| `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
 | `src/hooks/useSupabaseData.ts` | All Supabase CRUD + caching |
 | `src/utils/optimizer.ts` | Cart optimization (brute-force ≤300k combos, else greedy) |
 | `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |
@@ -150,6 +152,41 @@ Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes 
 - **Touch**: 48px min touch targets, 16px font on inputs (prevents iOS zoom)
 - **Error handling**: try/catch with `console.error`; graceful fallbacks to empty arrays
 - **Analytics**: always guard with `window.gtag` check before calling
+- **Outbound links**: tag with `utm_source=spendless&utm_medium=referral`; the support
+  link always comes from `supportUrl()` (`src/lib/links.ts`), never a hand-built URL or
+  an email address
+
+## Security
+Always follow security best practices — in code, migrations, CI config and docs.
+Security is never traded for convenience or speed; if a request would weaken it,
+say so and propose a safe alternative.
+- **Secrets**: never commit secrets, keys, tokens or DB URLs (`.env` is git-ignored;
+  `.env.example` holds placeholders only). Only the Supabase **anon** key belongs in the
+  client — never a `service_role` key or `SUPABASE_DB_URL`. CI secrets stay in the
+  GitHub `production` environment; never echo them in logs.
+- **Data access**: RLS is the security boundary, not the UI. Every new `spendless`
+  table gets RLS enabled plus policies scoped to `auth.uid() = user_id` in the same
+  migration; never disable RLS or add `USING (true)` policies on user data. Never trust
+  a client-supplied `user_id` without a policy that enforces it.
+- **Database functions**: avoid `SECURITY DEFINER`; if one is truly needed, pin
+  `SET search_path` and keep it in `spendless`. Never build SQL from string
+  concatenation — use the Supabase client's query builder or parameters.
+- **Storage**: users may only write, list and delete inside their own `<user id>/`
+  folder; keep policies that way. Validate file type and size before uploading.
+- **Input & output**: treat all user input, URLs, imported data and synced rows as
+  untrusted. Validate and length-limit on input; rely on React's escaping — no
+  `dangerouslySetInnerHTML`, `eval`, `new Function` or unvalidated `href`/`src`
+  (block `javascript:` URLs).
+- **Auth**: use Supabase Auth only; never roll custom auth, store passwords, or put
+  tokens in URLs. Keep sign-out clearing the cached identity and the user's offline
+  lists (`AppContext.signOut` → `ListsContext.clearLocalData`, after a final sync).
+- **Privacy**: no PII or user content in analytics events, logs or error messages.
+- **Dependencies**: add packages sparingly from reputable sources; keep the lockfile
+  committed; check `npm audit` when adding or upgrading; no scripts from untrusted CDNs.
+- **CI/CD**: least-privilege `permissions:` in workflows; pin actions to a version
+  (third-party ones to a commit SHA); never run untrusted PR code with access to secrets.
+- When reviewing or writing code, flag any security issue you spot (even outside the
+  task) rather than silently leaving it.
 
 ## Deployment (CI/CD)
 - `.github/workflows/ci-cd.yml`: PRs and pushes run checks (lint, contrast, migration
@@ -243,3 +280,5 @@ a Claude Design pass.
   `ListsContext` (IndexedDB first, then sync)
 - Don't ship UI with hard-coded colors/sizes, unstyled default controls, or missing
   loading/empty/error states
+- Don't commit secrets, ship a `service_role` key to the client, or weaken RLS/storage
+  policies — see **Security**

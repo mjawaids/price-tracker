@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShoppingCart } from 'lucide-react';
+import { supportUrl } from '../lib/links';
 
 const PageFooter: React.FC = () => {
   return (
@@ -53,6 +54,7 @@ const PageFooter: React.FC = () => {
             <a href="/privacy" className="text-white/70 hover:text-white hover:underline">Privacy Policy</a>
             <a href="/refund" className="text-white/70 hover:text-white hover:underline">Refund Policy</a>
             <a href="/terms" className="text-white/70 hover:text-white hover:underline">Terms & Conditions</a>
+            <a href={supportUrl('site_footer')} target="_blank" rel="noopener" className="text-white/70 hover:text-white hover:underline">Support</a>
           </div>
         </div>
       </div>

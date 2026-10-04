@@ -49,7 +49,7 @@ because the Supabase project can be shared with other apps.
 ```bash
 npm run dev        # http://localhost:5173
 npm run lint
-npm run build      # production build in dist/
+npm run build      # typecheck + production build in dist/
 npm run preview    # serve the build (service worker + offline work here, not in dev)
 ```
 
