@@ -42,6 +42,26 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
 - [ ] With an update waiting, leaving the app for 30+ min and coming back applies it
       without a prompt.
 
+## Installing the app
+
+Use a production build (`npm run build && npm run preview`) — the dev server has no
+service worker.
+- [ ] Signed out: the sign-in screen shows **Install the app**; it opens the install sheet.
+- [ ] Chrome/Edge (desktop or Android): **Install SpendLess** opens the browser's dialog;
+      accepting shows "Installed!" and the app opens in its own window.
+- [ ] Inside the installed app: no install button or banner; Profile → App says
+      **Installed on this device**.
+- [ ] Uninstall it, reload in the browser: the banner and **Install the app** come back
+      and install it again.
+- [ ] iPhone/iPad (Safari and Chrome): the sheet shows Share → Add to Home Screen steps;
+      the banner shows on first visit, and closing the sheet or **Not now** hides it.
+- [ ] Mac Safari shows File → Add to Dock; Firefox desktop shows the "other browser" tip.
+- [ ] Signed in: Profile → App → **Install the app** (or **Install the app again**) works.
+- [ ] Desktop (≥1100px): a **Get the app** card sits above the profile button; tablet
+      (768–1099px) shows a download icon button there instead. Both open the install.
+- [ ] Mobile Lists header shows a **Get app** pill next to ⋯ — but not while the banner
+      is showing; after **Not now** on the banner the pill appears.
+
 ## Offline (Lists)
 
 - [ ] Go offline (DevTools → Network → Offline): banner and "Offline" badge appear.

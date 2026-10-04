@@ -11,8 +11,10 @@ import { currencyChipLabel } from './sheets';
 import { versionLabel } from '../../lib/version';
 import { AVATARS_BUCKET, storagePathFromUrl } from '../../lib/storage';
 import { supportUrl } from '../../lib/links';
+import { useInstall } from '../../lib/install';
+import { InstallSheet } from '../shell/Install';
 
-type ProfileSheet = 'edit' | 'notifications' | 'privacy' | null;
+type ProfileSheet = 'edit' | 'notifications' | 'privacy' | 'install' | null;
 
 function SettingRow({
   icon,
@@ -371,6 +373,7 @@ export default function ProfileScreen() {
   const [sheet, setSheet] = useState<ProfileSheet>(null);
   const lists = useLists();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const install = useInstall();
   // Signing out wipes this device's copy of the lists, so warn about unsynced edits.
   const signOut = () => (lists.pending > 0 ? setConfirmSignOut(true) : void app.signOut());
 
@@ -425,6 +428,20 @@ export default function ProfileScreen() {
           <SettingRow icon="user" label="Edit profile" onClick={() => setSheet('edit')} />
           <SettingRow icon="bell" label="Notifications" value={settings.notifications ? 'On' : 'Off'} onClick={() => setSheet('notifications')} />
           <SettingRow icon="lock" label="Privacy & security" onClick={() => setSheet('privacy')} last />
+        </Group>
+
+        <Group title="App">
+          {install.standalone ? (
+            <SettingRow icon="download" label="Installed on this device" value="✓" last />
+          ) : (
+            <SettingRow
+              icon="download"
+              label={install.installed && !install.canPrompt ? 'Install the app again' : 'Install the app'}
+              accent
+              onClick={() => setSheet('install')}
+              last
+            />
+          )}
         </Group>
 
         <Group title="Help">
@@ -484,6 +501,7 @@ export default function ProfileScreen() {
       <EditProfileSheet open={sheet === 'edit'} onClose={() => setSheet(null)} />
       <NotificationsSheet open={sheet === 'notifications'} onClose={() => setSheet(null)} />
       <PrivacySheet open={sheet === 'privacy'} onClose={() => setSheet(null)} />
+      <InstallSheet open={sheet === 'install'} onClose={() => setSheet(null)} />
     </div>
   );
 }

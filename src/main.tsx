@@ -7,6 +7,8 @@ import Refund from './pages/Refund';
 import Terms from './pages/Terms';
 import Pricing from './pages/Pricing';
 import UpdatePrompt from './components/shell/UpdatePrompt';
+// Listens for the browser's install offer before anything renders.
+import './lib/install';
 import './index.css';
 
 // A tab still running an old build can ask for a code chunk that the new

@@ -7,6 +7,7 @@ import { trackPageView } from '../../utils/analytics';
 import { Chip, Icon, IconName, SegmentedControl, TipRow } from '../ui';
 import { useHint } from '../../hooks/useHint';
 import { currencyChipLabel, CurrencySheet, LocationSheet } from '../screens/sheets';
+import { InstallBanner, InstallSidebarCta } from './Install';
 
 import ListsScreen from '../screens/ListsScreen';
 import BrowseScreen from '../screens/BrowseScreen';
@@ -183,6 +184,7 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
         ))}
       </div>
       <div className="flex-1" style={{ minHeight: 16 }} />
+      <InstallSidebarCta mini={mini} />
       <button
         type="button"
         onClick={() => onPick('profile')}
@@ -350,6 +352,7 @@ export default function Shell() {
   if (compact) {
     return (
       <div className="flex flex-col bg-paper text-ink" style={{ height: '100dvh' }}>
+        <InstallBanner />
         {inCompareTabs && <CompareNav />}
         {compareOffline && <CompareOfflineNote />}
         <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden relative">
@@ -367,6 +370,7 @@ export default function Shell() {
     <div className="flex bg-paper text-ink" style={{ height: '100dvh' }}>
       <Sidebar mini={isTablet} onPick={navigateSidebar} />
       <div className="flex-1 min-w-0 flex flex-col">
+        <InstallBanner />
         {app.section === 'compare' && <TopBar onPick={navigateSidebar} />}
         {compareOffline && <CompareOfflineNote />}
         <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden relative">

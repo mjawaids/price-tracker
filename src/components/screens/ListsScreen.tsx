@@ -26,6 +26,7 @@ import {
   groupByCategory,
 } from './listParts';
 import { ItemSheet, ListSwitcherSheet } from './listSheets';
+import { InstallPill } from '../shell/Install';
 
 const TOAST_MS = 4500;
 const PLACEHOLDER_MS = 3800;
@@ -195,15 +196,18 @@ export default function ListsScreen() {
             <Icon name="chevD" size={22} stroke={2.4} className="shrink-0" />
           </button>
         </h1>
-        <button
-          type="button"
-          aria-label="List options"
-          onClick={openSwitcher}
-          className="shrink-0 grid place-items-center rounded-[14px] bg-surface text-ink-soft shadow-[inset_0_0_0_1px_var(--line)]"
-          style={{ width: 44, height: 44 }}
-        >
-          <Icon name="more" size={20} stroke={2.4} />
-        </button>
+        <div className="shrink-0 flex items-center gap-2">
+          {compact && <InstallPill />}
+          <button
+            type="button"
+            aria-label="List options"
+            onClick={openSwitcher}
+            className="shrink-0 grid place-items-center rounded-[14px] bg-surface text-ink-soft shadow-[inset_0_0_0_1px_var(--line)]"
+            style={{ width: 44, height: 44 }}
+          >
+            <Icon name="more" size={20} stroke={2.4} />
+          </button>
+        </div>
       </div>
       {doneCount > 0 && lists.todo.length > 0 ? (
         <ShoppingProgress done={doneCount} total={total} />
