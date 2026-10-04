@@ -17,7 +17,3 @@ export type SupportPlacement = 'auth' | 'site_footer' | 'app_profile' | 'pricing
 
 export const supportUrl = (placement: SupportPlacement): string =>
   tagged(`${IBEXOFT}/contact`, 'support', placement);
-
-// Ibexoft's Terms and Privacy Policy cover all Ibexoft products, SpendLess included.
-export const termsUrl = (placement: 'auth'): string => tagged(`${IBEXOFT}/terms-and-conditions/`, 'legal', placement);
-export const privacyUrl = (placement: 'auth'): string => tagged(`${IBEXOFT}/privacy-policy/`, 'legal', placement);

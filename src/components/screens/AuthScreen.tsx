@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, GoogleIcon, Btn, IconName } from '../ui';
-import { supportUrl, termsUrl, privacyUrl } from '../../lib/links';
+import { supportUrl } from '../../lib/links';
 
 const FEATURES: [IconName, string, string][] = [
   ['scan', 'Track real prices', 'Your products, your stores, your prices.'],
@@ -160,12 +160,12 @@ function AuthForm() {
         {busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}
       </Btn>
       <p className="text-[11.5px] text-ink-faint text-center leading-relaxed mt-4">
-        By continuing you agree to Ibexoft’s{' '}
-        <a href={termsUrl('auth')} target="_blank" rel="noopener" className="underline hover:text-ink-soft">
+        By continuing you agree to{' '}
+        <a href="/terms" target="_blank" rel="noopener" className="underline hover:text-ink-soft">
           Terms<span className="sr-only"> (opens in a new tab)</span>
         </a>{' '}
         &amp;{' '}
-        <a href={privacyUrl('auth')} target="_blank" rel="noopener" className="underline hover:text-ink-soft">
+        <a href="/privacy" target="_blank" rel="noopener" className="underline hover:text-ink-soft">
           Privacy Policy<span className="sr-only"> (opens in a new tab)</span>
         </a>
         .

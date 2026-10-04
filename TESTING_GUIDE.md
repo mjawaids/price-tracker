@@ -63,9 +63,8 @@ Test at three widths (browser device toolbar): **375px** (phone), **768px**
       `auth` (sign-in screen), `site_footer` (Pricing/Privacy/Refund/Terms footer),
       `app_profile` (Profile → Help), or `pricing_page` / `privacy_page` / `refund_page`
       (the "Contact us" links in those pages' text). No page shows an email address.
-- [ ] Sign-in screen: "By continuing you agree to Ibexoft’s Terms & Privacy Policy" links
-      to https://ibexoft.com/terms-and-conditions/ and https://ibexoft.com/privacy-policy/
-      (new tab, `utm_campaign=legal&utm_content=auth`).
+- [ ] Sign-in screen: "By continuing you agree to Terms & Privacy Policy" links to the
+      app's own `/terms` and `/privacy` pages (new tab).
 
 ## Data separation (Supabase)
 
