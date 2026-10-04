@@ -1,5 +1,4 @@
 import React from 'react';
-import { Product } from '../../types';
 import { resolveCategory, catTint, catInk } from '../../lib/categories';
 import { Icon, IconName } from './Icon';
 
@@ -11,13 +10,13 @@ export function Thumb({
   label = true,
   fill = false,
 }: {
-  product: Product;
+  product: { id: string; name: string; category?: string | null; imageUrl?: string | null };
   size?: number;
   radius?: number;
   label?: boolean;
   fill?: boolean;
 }) {
-  const cat = resolveCategory(product.category);
+  const cat = resolveCategory(product.category ?? undefined);
   const bg = catTint(cat.hue, 0.94, 0.04);
   const stripe = catTint(cat.hue, 0.89, 0.06);
   const ink = catInk(cat.hue);

@@ -33,7 +33,8 @@ function toRow(table: SyncTable, r: GroceryList | ListItem, userId: string): Row
   return {
     id: i.id, list_id: i.listId, user_id: userId, name: i.name, quantity: i.quantity, unit: i.unit,
     note: i.note, category: i.category, done: i.done, done_at: i.doneAt, cleared_at: i.clearedAt,
-    sort_order: i.sortOrder, product_id: i.productId, created_at: i.createdAt,
+    sort_order: i.sortOrder, product_id: i.productId, plan_store_id: i.planStoreId ?? null,
+    plan_product_id: i.planProductId ?? null, plan_price: i.planPrice ?? null, created_at: i.createdAt,
     updated_at: i.updatedAt, deleted_at: i.deletedAt,
   };
 }
@@ -51,8 +52,9 @@ function fromRow(table: SyncTable, r: Row): GroceryList | ListItem {
     id: String(r.id), listId: String(r.list_id), name: String(r.name),
     quantity: r.quantity == null ? null : Number(r.quantity), unit: str(r.unit), note: str(r.note),
     category: str(r.category), done: !!r.done, doneAt: str(r.done_at), clearedAt: str(r.cleared_at),
-    sortOrder: Number(r.sort_order) || 0, productId: str(r.product_id), createdAt: String(r.created_at),
-    updatedAt: String(r.updated_at), deletedAt: str(r.deleted_at),
+    sortOrder: Number(r.sort_order) || 0, productId: str(r.product_id), planStoreId: str(r.plan_store_id),
+    planProductId: str(r.plan_product_id), planPrice: r.plan_price == null ? null : Number(r.plan_price),
+    createdAt: String(r.created_at), updatedAt: String(r.updated_at), deletedAt: str(r.deleted_at),
   };
 }
 
@@ -155,10 +157,16 @@ export class ListsSync {
         if (!isPermanent(error)) throw error;
         // One bad row shouldn't block the rest: retry individually, drop only bad rows.
         for (const e of chunk) {
-          const { error: rowError } = await this.upsert(table, [e]);
+          let { error: rowError } = await this.upsert(table, [e]);
+          // A plan or pinned product pointing at something deleted (foreign key): keep the
+          // user's change, drop just those links.
+          if (rowError?.code === '23503' && table === 'list_items') {
+            const unlinked = { ...(e.row as ListItem), productId: null, planStoreId: null, planProductId: null, planPrice: null };
+            ({ error: rowError } = await this.upsert(table, [{ ...e, row: unlinked }]));
+          }
           if (!rowError) await this.ack(e);
           else if (isPermanent(rowError)) {
-            console.error('Dropping a list change the server rejected:', rowError, e.row);
+            console.error('Dropping a list change the server rejected:', rowError.code);
             await this.ack(e);
           } else throw rowError;
         }

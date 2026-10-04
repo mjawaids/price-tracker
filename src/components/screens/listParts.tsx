@@ -72,6 +72,7 @@ export function ItemRow({
   fresh,
   onSwiped,
   showAisle,
+  planned,
 }: {
   item: ListItem;
   onToggle: () => void;
@@ -85,6 +86,8 @@ export function ItemRow({
   fresh?: boolean;
   /** Show the aisle under the name (ungrouped list, where there are no aisle headings). */
   showAisle?: boolean;
+  /** Planned product under the name, and its price on the right (store sections). */
+  planned?: { product: string; price: string };
 }) {
   const [dx, setDx] = useState(0);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -192,7 +195,12 @@ export function ItemRow({
           >
             {item.name}
           </span>
-          {aisle ? (
+          {planned ? (
+            <span className="truncate text-[13px] text-ink-soft">
+              {planned.product}
+              {item.note && ` · ${item.note}`}
+            </span>
+          ) : aisle ? (
             <span className="flex items-center gap-1.5 min-w-0 text-[13px] text-ink-soft">
               <span aria-hidden className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: aisle.dot }} />
               <span className="truncate">
@@ -204,7 +212,11 @@ export function ItemRow({
             item.note && !item.done && <span className="truncate text-[13px] text-ink-soft">{item.note}</span>
           )}
         </button>
+        {planned && (
+          <span className={`shrink-0 font-mono text-[13px] font-bold ml-2 ${item.done ? 'text-ink-soft' : 'text-ink'}`}>{planned.price}</span>
+        )}
         {qty &&
+          !planned &&
           (item.done ? (
             <span className="shrink-0 font-mono text-[12.5px] text-ink-soft">{qty}</span>
           ) : (

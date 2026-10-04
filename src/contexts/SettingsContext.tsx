@@ -1,12 +1,26 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useTheme } from './ThemeContext';
 
+/** Shopping features people can turn off (Profile → Shopping features). */
+export interface ShoppingFeatures {
+  /** "Where to buy" on lists. */
+  whereToBuy: boolean;
+  /** Price check when ticking an item in a store section (Phase 3). */
+  askPrices: boolean;
+  /** Receipt import (Phase 3). */
+  receipts: boolean;
+}
+
 interface UserSettings {
   currency: string;
   theme: 'light' | 'dark' | 'system';
   notifications: boolean;
   language: string;
+  /** Legacy free-text location; replaced by `regionId`. */
   location: string | null;
+  /** City for Compare (spendless.regions id), chosen once; null = not chosen yet. */
+  regionId: string | null;
+  features: ShoppingFeatures;
   /** Lists: group open items by aisle (off = order added). */
   groupListsByAisle: boolean;
 }
@@ -23,6 +37,8 @@ const defaultSettings: UserSettings = {
   notifications: true,
   language: 'en',
   location: null,
+  regionId: null,
+  features: { whereToBuy: true, askPrices: true, receipts: true },
   groupListsByAisle: true,
 };
 
@@ -43,7 +59,10 @@ const STORAGE_KEY = 'price-tracker-settings';
 function loadSettings(): UserSettings {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return { ...defaultSettings, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved) as Partial<UserSettings>;
+      return { ...defaultSettings, ...parsed, features: { ...defaultSettings.features, ...(parsed.features || {}) } };
+    }
   } catch (error) {
     console.error('Error loading settings:', error);
   }

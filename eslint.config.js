@@ -28,6 +28,7 @@ export default tseslint.config(
             'useAnalytics',
             'useApp',
             'useAuth',
+            'useCompare',
             'useLists',
             'useOnboarding',
             'useSettings',

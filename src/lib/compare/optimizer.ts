@@ -7,7 +7,8 @@
 // order). Sets are ranked by how many lines they cover, then by total.
 //
 // Results: the cheapest plan, a plan with fewer stops when one exists, the best
-// single store, and a concrete baseline for "you save" — buying it all at one store.
+// single store, the best all-delivered plan, and a concrete baseline for "you
+// save" — buying it all at one store.
 import type { DeliveryRule } from '../../types/index.ts';
 import type { StoreDeliveryRule } from './types.ts';
 
@@ -29,6 +30,8 @@ export interface PlanLineInput {
 export interface OptStore {
   id: string;
   rule: StoreDeliveryRule;
+  /** Online stores deliver; physical ones need a trip. */
+  kind?: 'physical' | 'online';
 }
 
 export interface PlannedLine {
@@ -60,6 +63,8 @@ export interface PlanSet {
   fewerStops: Plan | null;
   /** Best single store, when `cheapest` uses more than one. */
   oneStop: Plan | null;
+  /** Best plan using online stores only (no trips), when it differs from the above. */
+  delivered: Plan | null;
   /** "Buy it all at X" — for the savings line. */
   baseline: { storeId: string; total: number } | null;
   savings: number;
@@ -213,6 +218,7 @@ export function buildPlans(lines: PlanLineInput[], stores: OptStore[], opts: Opt
   const maxCandidates = opts.maxCandidates ?? 12;
   const rules = new Map(stores.map((s) => [s.id, s.rule]));
   const known = new Set(stores.map((s) => s.id));
+  const online = new Set(stores.filter((s) => s.kind === 'online').map((s) => s.id));
 
   // Only options at known stores with a real price count.
   const clean = lines.map((l) => ({
@@ -221,7 +227,7 @@ export function buildPlans(lines: PlanLineInput[], stores: OptStore[], opts: Opt
   }));
   const coverable = clean.filter((l) => l.options.length).map((l) => l.key);
   const unpriced = clean.filter((l) => !l.options.length).map((l) => l.key);
-  const empty: PlanSet = { cheapest: null, fewerStops: null, oneStop: null, baseline: null, savings: 0, coverable, unpriced };
+  const empty: PlanSet = { cheapest: null, fewerStops: null, oneStop: null, delivered: null, baseline: null, savings: 0, coverable, unpriced };
   if (!coverable.length) return empty;
   const priced = clean.filter((l) => l.options.length);
   const coverableSet = new Set(coverable);
@@ -245,6 +251,7 @@ export function buildPlans(lines: PlanLineInput[], stores: OptStore[], opts: Opt
   let best: Evaluated | null = null;
   const bestBySize = new Map<number, Evaluated>();
   const singles: Evaluated[] = [];
+  let bestOnline: Evaluated | null = null;
   for (let k = 1; k <= Math.min(maxStores, candidates.length); k++) {
     for (const set of combinations(candidates, k)) {
       const ev = evaluateSet(set, priced, rules);
@@ -253,6 +260,7 @@ export function buildPlans(lines: PlanLineInput[], stores: OptStore[], opts: Opt
       if (k === 1) singles.push(ev);
       if (better(ev, best)) best = ev;
       if (better(ev, bestBySize.get(k) ?? null)) bestBySize.set(k, ev);
+      if (ev.storeIds.every((s) => online.has(s)) && better(ev, bestOnline)) bestOnline = ev;
     }
   }
   if (!best) return empty;
@@ -288,10 +296,20 @@ export function buildPlans(lines: PlanLineInput[], stores: OptStore[], opts: Opt
     baseline = { storeId: sid, total: round(sub + deliveryFeeFor(rules.get(sid), sub) + other) };
   }
 
+  // Delivered: hidden when it's the same set of stores as a plan already shown.
+  const sameStores = (a: Evaluated | null, b: Evaluated | null) =>
+    !!a && !!b && a.storeIds.length === b.storeIds.length && a.storeIds.every((s) => b.storeIds.includes(s));
+  const showOneStop = single && best.storeIds.length > 1 ? single : null;
+  const delivered =
+    bestOnline && !sameStores(bestOnline, best) && !sameStores(bestOnline, showOneStop) && !sameStores(bestOnline, fewer)
+      ? bestOnline
+      : null;
+
   return {
     cheapest,
     fewerStops: fewer ? toPlan(fewer, priced, rules, coverableSet) : null,
-    oneStop: single && best.storeIds.length > 1 ? toPlan(single, priced, rules, coverableSet) : null,
+    oneStop: showOneStop ? toPlan(showOneStop, priced, rules, coverableSet) : null,
+    delivered: delivered ? toPlan(delivered, priced, rules, coverableSet) : null,
     baseline,
     savings: baseline ? Math.max(0, round(baseline.total - cheapest.total)) : 0,
     coverable,

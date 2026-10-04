@@ -28,3 +28,27 @@ export const buzz = () => {
     /* not supported */
   }
 };
+
+// ── Store sections (an applied "Where to buy" plan) ──────────────────────────
+export interface StoreSection<S> {
+  store: S | null;
+  items: ListItem[];
+  /** Sum of the items' plan line totals. */
+  subtotal: number;
+}
+
+/** Open items grouped by their planned store (biggest first), then "Anywhere". */
+export function groupByStore<S extends { id: string }>(items: ListItem[], storeById: (id: string) => S | undefined): StoreSection<S>[] {
+  const byStore = new Map<string, ListItem[]>();
+  const anywhere: ListItem[] = [];
+  for (const i of items) {
+    const store = i.planStoreId ? storeById(i.planStoreId) : undefined;
+    if (store) byStore.set(store.id, [...(byStore.get(store.id) || []), i]);
+    else anywhere.push(i);
+  }
+  const sections: StoreSection<S>[] = [...byStore.entries()]
+    .map(([id, its]) => ({ store: storeById(id)!, items: its, subtotal: its.reduce((a, i) => a + (i.planPrice || 0), 0) }))
+    .sort((a, b) => b.subtotal - a.subtotal);
+  if (anywhere.length) sections.push({ store: null, items: anywhere, subtotal: 0 });
+  return sections;
+}

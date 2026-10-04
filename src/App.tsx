@@ -5,6 +5,7 @@ import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { OnboardingProvider } from './contexts/OnboardingContext';
 import { AppProvider } from './contexts/AppContext';
 import { ListsProvider } from './contexts/ListsContext';
+import { CompareProvider } from './contexts/CompareContext';
 import AuthScreen from './components/screens/AuthScreen';
 import Shell from './components/shell/Shell';
 
@@ -32,9 +33,11 @@ function AppContent() {
 
   return (
     <ListsProvider>
-      <AppProvider>
-        <Shell />
-      </AppProvider>
+      <CompareProvider>
+        <AppProvider>
+          <Shell />
+        </AppProvider>
+      </CompareProvider>
     </ListsProvider>
   );
 }

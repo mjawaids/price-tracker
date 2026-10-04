@@ -1,6 +1,6 @@
 # SpendLess - Smart Shopping List and Price Comparison App
 
-A modern, mobile-first shopping app built with React, TypeScript, and Supabase. Jot down what you need in seconds — even offline — and, when you want to save more, track prices across stores and get the cheapest shopping plan.
+A modern, mobile-first shopping app built with React, TypeScript, and Supabase. Jot down what you need in seconds — even offline — and, when you want to save more, tap **Where to buy** to see which stores make your list cheapest, delivery included.
 
 > Formerly referred to as "PriceTracker" — the product is now branded **SpendLess**.
 
@@ -24,20 +24,28 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - New releases arrive by themselves: an open app shows **"A new version is ready · Update"**,
   and the next launch always runs the latest build
 
-### 🛍️ Smart Price Tracking (Compare)
-- Track products and their prices across multiple stores
-- Real-time price comparison with visual best-price indicators
-- Per-store availability and delivery rules
+### 🛍️ Where to buy (Compare)
+- On any list, **Where to buy** finds the stores that make the whole list cheapest —
+  delivery fees, free-delivery thresholds and minimum orders included
+- Four choices: **Cheapest**, **One stop**, **Delivered** (online stores only) and
+  **Fewer stops**, with what you save compared with the best single store
+- Write "bread" and we pick a sensible product (and say which); tap an item to choose
+  the brand and size — just this time, or as your usual
+- **Use this plan** splits the same list into one section per store; *Shop here*
+  shows just that store's part
+- Works offline from the prices saved on the device
 
-### 📝 Smart Shopping Plans
-- Build shopping lists and turn them into optimized plans
-- Automatic store-by-store cost optimization (including delivery fees)
-- Cart and plan screens for organizing what to buy and where
-
-### 🏪 Store Management
-- Support for both physical and online stores
-- Delivery fee and delivery-rule tracking
-- Store-specific pricing and availability
+### 🏷️ Prices, stores and contributing
+- Shared prices for your city where they're live (Karachi first); anywhere else,
+  Compare works with the stores and prices you add yourself
+- **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
+  at, add your own) and **Contribute** (add a price, add a product)
+- Prices at shared stores are shared without your name; prices far from the usual one
+  are kept for you only; your own stores and products stay private
+- Use as much as you like: Profile → **Shopping features** turns Where to buy off, and
+  lists look exactly as before
+- In-app help (Profile → Help), a short walkthrough the first time you open Where to buy,
+  and one-at-a-time tips
 
 ### 🎨 Beautiful Design
 - Warm "paper" light theme with a magenta accent and custom design tokens
@@ -135,8 +143,9 @@ can share a Supabase project with other apps without mixing data. Tables:
 - **spendless.user_stores / item_preferences / plans**: a user's stores, usual
   products and applied plans
 - **spendless.products / spendless.stores / spendless.shopping_lists**: the original
-  per-user catalogue and Compare cart, still read by the current Compare screens
-  (copied into the catalogue as private rows)
+  per-user catalogue and Compare cart (legacy). Their rows were copied into the
+  catalogue as private rows; the old cart is turned into a list once ("From Compare
+  cart"). A later post-deploy migration drops them.
 
 How prices are decided and protected from spam: [docs/compare-data.md](docs/compare-data.md).
 
@@ -277,20 +286,25 @@ src/
 ├── index.css               # Global styles, design tokens & Tailwind
 ├── components/
 │   ├── shell/Shell.tsx     # Adaptive app shell (sidebar/nav + screens)
+│   ├── shell/HelpSheet.tsx # In-app help topics (src/lib/help.ts)
 │   ├── screens/            # Feature screens
 │   │   ├── ListsScreen.tsx     # Quick lists (default section)
 │   │   ├── listParts.tsx       # List rows, add bar, suggestions, banners
 │   │   ├── listSheets.tsx      # Item details + list switcher sheets
-│   │   ├── listHelpers.ts      # Aisle grouping/colours + haptic tap
+│   │   ├── listHelpers.ts      # Aisle and store grouping/colours + haptic tap
+│   │   ├── listCompare.tsx     # Where to buy chip, plan banner, store section headers
 │   │   ├── AuthScreen.tsx      # Sign in / sign up
-│   │   ├── BrowseScreen.tsx    # Browse products
-│   │   ├── SearchScreen.tsx    # Search
-│   │   ├── CartScreen.tsx      # Cart
-│   │   ├── PlanScreen.tsx      # Optimized shopping plan
-│   │   ├── DetailScreen.tsx    # Product detail
-│   │   ├── ManageScreens.tsx   # Manage products / stores / prices
-│   │   └── ProfileScreen.tsx   # User profile & settings
-│   ├── onboarding/         # Compare walkthrough
+│   │   ├── PlanScreen.tsx      # Where to buy for a list
+│   │   ├── PricesScreen.tsx    # Compare home (prices)
+│   │   ├── SearchScreen.tsx    # Product search
+│   │   ├── DetailScreen.tsx    # Product page (prices per store, add to list)
+│   │   ├── StoresScreen.tsx    # Your city and stores
+│   │   ├── ContributeScreen.tsx # Add a price / a product
+│   │   ├── ManageScreens.tsx   # Your own products
+│   │   ├── compareSheets.tsx   # Item choice, city, store picker, store form, add a price
+│   │   ├── productSheet.tsx    # Add/edit your product
+│   │   └── ProfileScreen.tsx   # Profile, shopping features, help
+│   ├── onboarding/         # Where to buy walkthrough + "What's new" sheet
 │   ├── ui/                 # Reusable UI primitives (Icon, Sheet, Toast, CoachMark, Toggle, …)
 │   ├── PageHeader.tsx      # Header for marketing/legal pages
 │   └── PageFooter.tsx      # Footer with developer credits
@@ -303,13 +317,13 @@ src/
 ├── contexts/               # React contexts
 │   ├── AuthContext.tsx         # Authentication state (+ offline identity)
 │   ├── ListsContext.tsx        # Lists state, quick add, offline sync
-│   ├── AppContext.tsx          # Navigation, sections & Compare cart state
+│   ├── CompareContext.tsx      # Compare catalogue, prices, plans (cached offline)
+│   ├── AppContext.tsx          # Navigation, sections & app sheets
 │   ├── OnboardingContext.tsx   # Walkthrough + contextual tips
 │   ├── ThemeContext.tsx        # Theme management
-│   ├── SettingsContext.tsx     # User settings (currency, location, list grouping)
+│   ├── SettingsContext.tsx     # User settings (currency, city, shopping features, list grouping)
 │   └── AnalyticsContext.tsx    # Analytics wiring
 ├── hooks/                  # Custom React hooks
-│   ├── useSupabaseData.ts      # Supabase data management
 │   ├── useBreakpoint.ts        # Responsive breakpoints
 │   ├── useHint.ts              # One-at-a-time contextual tips
 │   └── useFmt.ts               # Formatting helpers
@@ -317,17 +331,16 @@ src/
 │   ├── supabase.ts             # Supabase client re-export
 │   ├── supabaseClient.ts       # Supabase client (pinned to the `spendless` schema)
 │   ├── offline/                # IndexedDB store + sync engine for Lists
-│   ├── compare/                # Compare v2: item types, name parser, unit prices, matching, optimizer
+│   ├── compare/                # Compare: item types, name parser, unit prices, matching, optimizer, API, offline cache
+│   ├── help.ts                 # Help topic copy
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy
 │   ├── version.ts              # Release version (CalVer, set by CI)
 │   └── categories.ts           # Product categories
 ├── utils/                  # Utility functions
 │   ├── currency.ts             # Currency formatting
-│   ├── optimizer.ts            # Shopping plan optimization (current Compare screens)
 │   ├── quickAdd.ts             # Parses "2 milk", "atta 10 kg", …
-│   ├── analytics.ts            # Analytics helpers
-│   └── storage.ts              # Local storage utilities
+│   └── analytics.ts            # Analytics helpers
 └── types/
     └── index.ts            # TypeScript type definitions
 ```

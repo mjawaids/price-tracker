@@ -4,8 +4,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useLists } from '../../contexts/ListsContext';
+import { useCompare } from '../../contexts/CompareContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
-import { Icon, Btn, IconName, Sheet, Toggle } from '../ui';
+import { Icon, Btn, IconName, Sheet, Toggle, ToggleTrack } from '../ui';
 import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from '../../utils/currency';
 import { versionLabel } from '../../lib/version';
@@ -71,6 +72,53 @@ function SettingRow({
       style={style}
     >
       {body}
+    </button>
+  );
+}
+
+/** A setting that turns something on or off (the whole row is the switch). */
+function SwitchRow({
+  icon,
+  label,
+  sub,
+  on,
+  onChange,
+  soon,
+  last,
+}: {
+  icon: IconName;
+  label: string;
+  sub?: string;
+  on: boolean;
+  onChange?: (v: boolean) => void;
+  /** Not built yet: shown, but can't be switched. */
+  soon?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={soon ? false : on}
+      aria-disabled={soon || undefined}
+      onClick={soon ? undefined : () => onChange?.(!on)}
+      className="w-full flex items-center gap-3 text-left"
+      style={{ padding: '13px 16px', borderBottom: last ? 'none' : '1px solid var(--line)', cursor: soon ? 'default' : undefined }}
+    >
+      <span
+        className="grid place-items-center shrink-0"
+        style={{ width: 38, height: 38, borderRadius: 11, background: soon ? 'var(--paper)' : 'var(--accent-wash)', boxShadow: soon ? 'inset 0 0 0 1px var(--line)' : 'none' }}
+      >
+        <Icon name={icon} size={19} color={soon ? 'var(--ink-soft)' : 'var(--accent-ink)'} stroke={2} />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block font-semibold text-[15px]">
+          {label}
+          {soon && <span className="ml-1.5 font-mono text-[10.5px] tracking-[0.1em] uppercase text-ink-soft">Coming soon</span>}
+        </span>
+        {sub && <span className="block text-[12.5px] text-ink-soft leading-snug mt-0.5">{sub}</span>}
+      </span>
+      {!soon && <ToggleTrack on={on} />}
     </button>
   );
 }
@@ -341,7 +389,8 @@ function PrivacySheet({ open, onClose }: { open: boolean; onClose: () => void })
 
 export default function ProfileScreen() {
   const app = useApp();
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
+  const compare = useCompare();
   const { compact } = useBreakpoint();
   const onboarding = useOnboarding();
   const big = !compact;
@@ -397,8 +446,27 @@ export default function ProfileScreen() {
         </div>
 
         <Group title="Preferences">
-          <SettingRow icon="coin" label="Currency" accent value={currencyChipLabel(app.currencyCode)} onClick={() => app.openSheet('currency')} />
-          <SettingRow icon="pin" label="Location" accent value={app.location ? app.location.split(',')[0] : 'Set'} onClick={() => app.openSheet('location')} last />
+          <SettingRow
+            icon="pin"
+            label="City"
+            accent
+            value={compare.region?.name ?? (compare.regionChosen ? 'Another city' : 'Choose')}
+            onClick={() => app.openSheet('region')}
+          />
+          <SettingRow icon="coin" label="Currency" accent value={compare.region ? compare.region.currency : currencyChipLabel(app.currencyCode)} onClick={() => app.openSheet('currency')} last />
+        </Group>
+
+        <Group title="Shopping features">
+          <SwitchRow
+            icon="tag"
+            label="Where to buy"
+            sub="Find the cheapest stores for a list, delivery included"
+            on={settings.features.whereToBuy}
+            onChange={(v) => updateSettings({ features: { ...settings.features, whereToBuy: v } })}
+          />
+          <SwitchRow icon="history" label="Ask for prices after a trip" sub="Add what you paid in a couple of taps" on={false} soon />
+          <SwitchRow icon="receipt" label="Receipt import" sub="Add a whole shop’s prices from a photo, PDF or text receipt" on={false} soon />
+          <SwitchRow icon="bulb" label="Tips" sub="Short hints as you go, one at a time" on={onboarding.tipsOn} onChange={onboarding.setTipsOn} last />
         </Group>
 
         <Group title="Account">
@@ -422,14 +490,9 @@ export default function ProfileScreen() {
         </Group>
 
         <Group title="Help">
-          <SettingRow
-            icon="bulb"
-            label="Tips"
-            value={onboarding.tipsOn ? 'On' : 'Off'}
-            onClick={() => onboarding.setTipsOn(!onboarding.tipsOn)}
-          />
+          <SettingRow icon="bulb" label="How SpendLess works" accent onClick={() => app.openSheet('help')} />
+          <SettingRow icon="spark" label="Where to buy walkthrough" value="Replay" onClick={onboarding.start} />
           <SettingRow icon="refresh" label="Show tips again" value="Reset" onClick={onboarding.resetTips} />
-          <SettingRow icon="spark" label="Compare walkthrough" value="Replay" onClick={onboarding.start} />
           <SettingRow icon="mail" label="Contact support" href={supportUrl('app_profile')} last />
         </Group>
 

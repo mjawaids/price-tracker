@@ -44,8 +44,9 @@ inserts, updates or deletes reports:
 - The newest report decides availability (out of stock).
 - `confidence` = the summed weight (capped at 1); `n_reports` = reports counted.
 
-The app overlays the user's **own** latest report on top, so what you entered is
-what you see, even before anyone else agrees.
+The app overlays the user's **own** latest report (last 30 days, `pending` ones
+included) when it's at least as new as the shared price, so what you entered is what
+you see, even before anyone else agrees.
 
 ## Quality and anti-spam (server-side)
 
@@ -70,7 +71,28 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
 | `productName.ts` | Name → brand, item type, variant, size, pack ("Olper's Milk Full Cream 1Ltr x 12" → Olper's · milk · Full Cream · 12 × 1000 ml); `learnBrands()` for imports |
 | `units.ts` | Size labels, unit prices (per 100 g / kg / L / piece / dozen), "similar size" (±15%), packs needed for "atta 10 kg" |
 | `resolve.ts` | List item → acceptable products + priced options. Order: pinned product → the user's usual → brand/words named in the text → item type with an *assumed* default (last bought, else the product most of your stores carry) → not compared |
-| `optimizer.ts` | Tries every set of 1–4 stores (best 12 candidates), assigns each item to its cheapest store in the set, then moves items while it lowers the total (crossing "free over X", meeting minimum orders). Returns *cheapest*, *fewer stops*, *one stop*, and a "buy it all at X" baseline for savings |
+| `optimizer.ts` | Tries every set of 1–4 stores (best 12 candidates), assigns each item to its cheapest store in the set, then moves items while it lowers the total (crossing "free over X", meeting minimum orders). Returns *cheapest*, *fewer stops* (2+ stores, fewer than cheapest), *one stop*, *delivered* (online stores only; hidden when it's the same stores as another choice), and a "buy it all at X" baseline for savings (the best single store other than the cheapest plan's only store) |
+| `describe.ts` | Wording for the app: how an item was matched, how old a price is, delivery rules and notes |
+
+## In the app
+
+- `src/contexts/CompareContext.tsx` holds the catalogue for the user's city: public
+  stores in the region plus the user's own, the products priced there plus the user's
+  own, current prices, the user's reports from the last 30 days, usuals, "my stores"
+  and this month's plans. Reads and writes go through `src/lib/compare/api.ts`.
+- The snapshot is cached per user in IndexedDB (`spendless-catalog-<userId>`,
+  `src/lib/compare/cache.ts`) so Where to buy works offline. Prices are pulled by
+  `updated_at` since the last sync; a full refresh runs when the city changes, after
+  24 hours, or when new stores appear. Sign-out deletes the cache.
+- "Stores considered" = the user's picks (`user_stores`), else every active store in
+  the snapshot.
+- *Use this plan* writes `plan_store_id` / `plan_product_id` / `plan_price` on each
+  open item (through the offline Lists outbox) and inserts a `plans` row.
+- The old Compare cart (`shopping_lists`) is turned into a list called "From Compare
+  cart" once per user (flag `spendless-cart-migrated:<userId>` in localStorage), after
+  the user's lists have synced and only if no list with that name exists.
+- Analytics events carry counts only (`plan_applied`, `price_reported`,
+  `cart_converted`) — never names, prices or ids.
 
 ## Regions
 
