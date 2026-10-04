@@ -127,26 +127,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Cart writes run one at a time (persistQueueRef), so only one "My Cart" row is
   // ever created and an older cart can't overwrite a newer one. persistSeqRef
   // lets a queued write skip itself once a newer cart is waiting behind it, and
-  // persistGenRef drops writes queued before the user changed.
+  // persistGenRef (captured when a save is scheduled) drops saves from before
+  // the user changed.
   const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
   const persistSeqRef = useRef(0);
   const persistGenRef = useRef(0);
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset hydration when the user changes (login/logout).
+  // Reset hydration when the user changes (login/logout), and discard any save
+  // still pending for the previous user.
   useEffect(() => {
     hydratedRef.current = false;
     cartListIdRef.current = null;
     persistGenRef.current += 1;
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    persistTimer.current = null;
     setCart({});
   }, [authUser?.id]);
 
   // Debounced persistence of the cart into a single shopping list row.
-  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistCart = useCallback(
     (next: Cart) => {
       if (!authUser) return;
+      const gen = persistGenRef.current;
       if (persistTimer.current) clearTimeout(persistTimer.current);
       persistTimer.current = setTimeout(() => {
+        if (gen !== persistGenRef.current) return; // scheduled before the user changed
         const items: ShoppingListItem[] = Object.entries(next)
           .filter(([, q]) => q > 0)
           .map(([productId, quantity]) => ({
@@ -156,7 +162,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             addedAt: new Date(),
           }));
         const seq = ++persistSeqRef.current;
-        const gen = persistGenRef.current;
         const isCurrent = () => seq === persistSeqRef.current && gen === persistGenRef.current;
         persistQueueRef.current = persistQueueRef.current
           .then(async () => {
