@@ -34,6 +34,9 @@
     - `current_prices` is written only by `spendless.refresh_current_prices()`,
       a SECURITY DEFINER trigger function (it must aggregate every user's
       reports). search_path is pinned and EXECUTE is revoked from client roles.
+      A price that loses its last counted report becomes a tombstone
+      (n_reports = 0, price NULL) instead of being deleted, so apps that sync
+      by updated_at drop it too.
 
   4. Notes
     - Idempotent: safe to run more than once.
@@ -284,10 +287,14 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  -- Pairs with no counted report left lose their current price.
-  DELETE FROM spendless.current_prices c
-  USING (SELECT DISTINCT store_id, product_id FROM changed) p
+  -- Pairs with no counted report left lose their price, as a tombstone rather
+  -- than a deleted row: apps sync this table by updated_at and can't see a row
+  -- that's gone. n_reports = 0 means "no current price"; a new report revives it.
+  UPDATE spendless.current_prices c
+  SET price = NULL, is_available = false, n_reports = 0, confidence = 0, updated_at = now()
+  FROM (SELECT DISTINCT store_id, product_id FROM changed) p
   WHERE c.store_id = p.store_id AND c.product_id = p.product_id
+    AND c.n_reports > 0
     AND NOT EXISTS (
       SELECT 1 FROM spendless.price_reports r
       WHERE r.store_id = c.store_id AND r.product_id = c.product_id

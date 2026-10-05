@@ -43,4 +43,4 @@ SELECT
   (SELECT count(*) FROM spendless.catalog_products p
      WHERE p.owner_id IS NULL
        AND EXISTS (SELECT 1 FROM spendless.price_reports r WHERE r.product_id = p.id AND r.store_id = :'store_id')) AS public_products,
-  (SELECT count(*) FROM spendless.current_prices WHERE store_id = :'store_id') AS current_prices;
+  (SELECT count(*) FROM spendless.current_prices WHERE store_id = :'store_id' AND n_reports > 0) AS current_prices;

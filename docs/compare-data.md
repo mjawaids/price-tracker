@@ -20,7 +20,7 @@ from people's own entries, and (later) from receipts. Shared prices are live in
 | `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
 | `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`) | Same as stores |
 | `price_reports` | **Append-only** observations: price (one pack), `observed_at`, `source`, `status`. `user_id NULL` = system source | Users add their own (user sources only); read and delete only their own; nobody updates |
-| `current_prices` | The price shown per (store, product), derived from reports | Only the trigger |
+| `current_prices` | The price shown per (store, product), derived from reports; `n_reports = 0` = no price any more (tombstone) | Only the trigger |
 | `user_stores` | "My stores" (empty = all public stores in the city + your private ones) | Owner |
 | `item_preferences` | A user's "usual" per list item name: `mode` (`exact` / `brand_size` / `any_size`), `product_ids`, `ref_product_id` | Owner |
 | `plans` | Plans applied to a list (totals, savings) — powers "saved this month" | Owner |
@@ -43,6 +43,10 @@ inserts, updates or deletes reports:
   `trip`/`confirm` 0.8, `manual` 0.6. Recency halves every 10 days.
 - The newest report decides availability (out of stock).
 - `confidence` = the summed weight (capped at 1); `n_reports` = reports counted.
+- A pair whose last counted report is retracted (or rejected) isn't deleted: it
+  becomes a **tombstone** (`n_reports = 0`, no price, `updated_at` bumped), because
+  apps sync this table by `updated_at` and can't see a row that's gone. A new
+  report revives it. Readers treat `n_reports = 0` as "no current price".
 
 The app overlays the user's **own** latest report (last 30 days, `pending` ones
 included) when it's at least as new as the shared price, so what you entered is what
@@ -82,8 +86,10 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
   and this month's plans. Reads and writes go through `src/lib/compare/api.ts`.
 - The snapshot is cached per user in IndexedDB (`spendless-catalog-<userId>`,
   `src/lib/compare/cache.ts`) so Where to buy works offline. Prices are pulled by
-  `updated_at` since the last sync; a full refresh runs when the city changes, after
-  24 hours, or when new stores appear. Sign-out deletes the cache.
+  `updated_at` since the last sync (tombstones remove a price); a full refresh runs
+  when the city changes, after 24 hours, or when new stores appear. A refresh asked
+  for while one is running is queued, not dropped, and a run whose city or user
+  changed meanwhile is thrown away. Sign-out deletes the cache.
 - "Stores considered" = the user's picks (`user_stores`), else every active store in
   the snapshot.
 - *Use this plan* writes `plan_store_id` / `plan_product_id` / `plan_price` on each

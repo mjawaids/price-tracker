@@ -138,18 +138,23 @@ export async function fetchStores(userId: string, regionId: string | null): Prom
   return [...(check(a) as StoreRow[]), ...(check(b) as StoreRow[])].map(toStore);
 }
 
+/** "storeId:productId" — how the app keys a current price. */
+export const pairKey = (storeId: string, productId: string) => `${storeId}:${productId}`;
+
 /**
  * Current prices at the given stores, each with its product. `since` limits it to
- * rows changed after a cursor (delta refresh).
+ * rows changed after a cursor (delta refresh). Rows with `n_reports = 0` are
+ * tombstones (the price is gone) and come back as `removed` pair keys.
  */
 export async function fetchPrices(
   storeIds: string[],
   since: string | null,
-): Promise<{ prices: CurrentPrice[]; products: CatalogProduct[]; cursor: string | null }> {
+): Promise<{ prices: CurrentPrice[]; removed: string[]; products: CatalogProduct[]; cursor: string | null }> {
   const prices: CurrentPrice[] = [];
+  const removed: string[] = [];
   const products = new Map<string, CatalogProduct>();
   let cursor = since;
-  if (!storeIds.length) return { prices, products: [], cursor };
+  if (!storeIds.length) return { prices, removed, products: [], cursor };
   for (let from = 0; ; from += PAGE) {
     let q = supabase
       .from('current_prices')
@@ -161,13 +166,17 @@ export async function fetchPrices(
     if (since) q = q.gt('updated_at', since);
     const rows = check(await q) as unknown as PriceRow[];
     for (const r of rows) {
+      if (!cursor || r.updated_at > cursor) cursor = r.updated_at;
+      if (r.n_reports <= 0) {
+        removed.push(pairKey(r.store_id, r.product_id));
+        continue;
+      }
       prices.push(toPrice(r));
       if (r.product) products.set(r.product.id, toProduct(r.product));
-      if (!cursor || r.updated_at > cursor) cursor = r.updated_at;
     }
     if (rows.length < PAGE) break;
   }
-  return { prices, products: [...products.values()], cursor };
+  return { prices, removed, products: [...products.values()], cursor };
 }
 
 /** The user's own products (including ones without prices yet). */
@@ -340,7 +349,8 @@ export async function insertReport(r: {
 }
 
 /** The current price of one pair after a report (the trigger has already updated it). */
-export async function fetchPrice(storeId: string, productId: string): Promise<CurrentPrice | null> {
+/** The current price of one pair; `price: null` when there is none (or it's a tombstone). */
+export async function fetchPrice(storeId: string, productId: string): Promise<{ price: CurrentPrice | null }> {
   const rows = check(
     await supabase
       .from('current_prices')
@@ -349,7 +359,7 @@ export async function fetchPrice(storeId: string, productId: string): Promise<Cu
       .eq('product_id', productId)
       .limit(1),
   ) as PriceRow[];
-  return rows[0] ? toPrice(rows[0]) : null;
+  return { price: rows[0] && rows[0].n_reports > 0 ? toPrice(rows[0]) : null };
 }
 
 export async function upsertPreference(userId: string, p: Omit<ItemPreference, 'updatedAt'>): Promise<void> {

@@ -22,7 +22,7 @@ const FULL_REFRESH_MS = 24 * 60 * 60 * 1000;
 const STALE_MS = 10 * 60 * 1000;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const cartKey = (userId: string) => `spendless-cart-migrated:${userId}`;
-const pairKey = (storeId: string, productId: string) => `${storeId}|${productId}`;
+const { pairKey } = api;
 
 export interface PlanResult {
   resolved: ResolvedItem[];
@@ -139,7 +139,11 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const snapRef = useRef(snap);
   snapRef.current = snap;
   const busy = useRef(false);
+  /** A refresh asked for while one was running (forced if any request was). */
+  const pending = useRef<{ force: boolean } | null>(null);
   const lastRefresh = useRef(0);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
@@ -155,7 +159,12 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // ── Load from the device, then refresh from the network ────────────────────
   const refresh = useCallback(
     async (force = false) => {
-      if (!userId || busy.current) return;
+      if (!userId) return;
+      if (busy.current) {
+        // Never drop it: the running one may be for an old city (or user).
+        pending.current = { force: (pending.current?.force ?? false) || force };
+        return;
+      }
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       busy.current = true;
       setRefreshing(true);
@@ -189,14 +198,11 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
           api.fetchPlansThisMonth(),
         ]);
 
-        const keep = new Set(storeIds);
-        const priceMap = new Map<string, CurrentPrice>();
-        if (!full) for (const p of cur.prices) if (keep.has(p.storeId)) priceMap.set(pairKey(p.storeId, p.productId), p);
-        for (const p of priced.prices) priceMap.set(pairKey(p.storeId, p.productId), p);
-        const prices = [...priceMap.values()];
-
         const productMap = new Map<string, CatalogProduct>();
-        if (!full) for (const p of cur.products) productMap.set(p.id, p);
+        // Own products are always re-read in full: one missing now was deleted
+        // (maybe on another device), and its prices went with it.
+        const ownIds = new Set(own.map((p) => p.id));
+        if (!full) for (const p of cur.products) if (!(p.ownerId === userId && !ownIds.has(p.id))) productMap.set(p.id, p);
         for (const p of [...priced.products, ...own]) productMap.set(p.id, p);
         // Products referenced by usuals or pinned on list items, if not loaded yet.
         const wanted = new Set<string>();
@@ -207,6 +213,21 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
         for (const l of lists.lists) for (const i of lists.itemsForList(l.id)) if (i.productId) wanted.add(i.productId);
         const missing = [...wanted].filter((id) => !productMap.has(id));
         if (missing.length) for (const p of await api.fetchProductsById(missing)) productMap.set(p.id, p);
+
+        // Delta: changed rows replace old ones and tombstones remove theirs.
+        const keep = new Set(storeIds);
+        const priceMap = new Map<string, CurrentPrice>();
+        if (!full) for (const p of cur.prices) if (keep.has(p.storeId)) priceMap.set(pairKey(p.storeId, p.productId), p);
+        for (const p of priced.prices) priceMap.set(pairKey(p.storeId, p.productId), p);
+        for (const k of priced.removed) priceMap.delete(k);
+        const prices = [...priceMap.values()].filter((p) => productMap.has(p.productId));
+
+        // Stale by now (another city chosen, or another user signed in): drop it;
+        // the queued refresh loads the right data.
+        if (userIdRef.current !== userId || settingsRef.current.regionId !== region) {
+          pending.current = { force: true };
+          return;
+        }
 
         commit({
           regions,
@@ -231,6 +252,9 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
         busy.current = false;
         setRefreshing(false);
         setReady(true);
+        const next = pending.current;
+        pending.current = null;
+        if (next) void refreshRef.current(next.force);
       }
     },
     [userId, commit, updateSettings, lists],
@@ -560,14 +584,15 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const mine: CurrentPrice = {
         storeId, productId, price, currency, isAvailable, observedAt: new Date().toISOString(), nReports: 1, confidence: 1, mine: true,
       };
-      const cur = snapRef.current;
       const fresh = await guard('Reading the new price', () => api.fetchPrice(storeId, productId));
+      // Read the snapshot only now, so a refresh that landed meanwhile isn't undone.
+      const cur = snapRef.current;
+      const others = cur.prices.filter((p) => !(p.storeId === storeId && p.productId === productId));
       commit({
         ...cur,
         ownReports: [mine, ...cur.ownReports.filter((r) => !(r.storeId === storeId && r.productId === productId))],
-        prices: fresh
-          ? [...cur.prices.filter((p) => !(p.storeId === storeId && p.productId === productId)), fresh]
-          : cur.prices,
+        // A failed read keeps what we had; "no current price" removes it.
+        prices: fresh ? (fresh.price ? [...others, fresh.price] : others) : cur.prices,
       });
       return status;
     },
