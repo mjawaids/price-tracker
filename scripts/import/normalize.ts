@@ -1,7 +1,7 @@
 // A store listing → the catalogue product it describes, plus a match key so the
 // same product from two stores becomes one catalogue row.
 import { parseProductName, tidyName } from '../../src/lib/compare/productName.ts';
-import { decideAisle } from './aisles.ts';
+import { decideAisle, pharmacyLookalike } from './aisles.ts';
 
 /** What every adapter produces. */
 export interface RawListing {
@@ -83,8 +83,12 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   // A type that contradicts the store's aisle, read from one loose word ("Apple Orchard"
   // car gel → apple), is a misreading: drop it and keep the store's aisle.
   const typeWeight = parsed.confidence - (parsed.brand ? 0.3 : 0) - (parsed.size ? 0.3 : 0);
-  const itemType = parsed.itemType && typeWeight > 0.35 ? parsed.itemType : null;
-  const typeAisle = itemType?.category ?? null;
+  const lookalike = !!parsed.itemType && pharmacyLookalike(parsed.itemType.id, name);
+  const itemType = parsed.itemType && !lookalike && typeWeight > 0.35 ? parsed.itemType : null;
+  // A pharmacy item stays out even when we'd otherwise doubt the type ("Panadol Extra"
+  // filed under "Personal Care"): leaving one out by mistake is the safe direction.
+  const pharmacy = parsed.itemType?.category === 'pharmacy' && !lookalike;
+  const typeAisle = pharmacy ? 'pharmacy' : (itemType?.category ?? null);
   const decision = raw.exclude ? { aisle: null, include: false } : decideAisle(raw.aisles, typeAisle, name);
   const base = {
     external_id: raw.externalId.slice(0, 120),

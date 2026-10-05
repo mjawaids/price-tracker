@@ -25,8 +25,12 @@ store, and how the importer behaves. Code: `scripts/import/`. Schedule:
 - **Grocery and household only.** Food, drinks, household, personal care and baby
   aisles are imported (baby formula included). Pharmacy, medicines, supplements,
   make-up, perfume, fashion, electronics, toys, stationery, crockery and similar aisles
-  are left out (`scripts/import/aisles.ts`). An aisle that mixes the two is decided per
-  product by its name: "Deos & Perfumes" keeps deodorants and leaves out perfumes;
+  are left out (`scripts/import/aisles.ts`). A product whose name reads as a pharmacy
+  item in our taxonomy (pain relief, ORS, vitamins, bandages, cough syrup, antiseptic,
+  hand sanitiser, medical face masks, adult diapers) is left out in whatever aisle the
+  store files it, e.g. Panadol under "Personal Care". A cosmetic that only mentions a
+  vitamin ("Vitamin C Serum") or a beauty face mask is not. An aisle that mixes the two
+  is decided per product by its name: "Deos & Perfumes" keeps deodorants and leaves out perfumes;
   "Home & Car Fresheners" keeps home fresheners and leaves out car ones. When these
   rules change to include more, `RULES_CHANGED_AT` makes the importer re-read the
   listings it left out that the new rules would now include.

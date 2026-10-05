@@ -42,6 +42,18 @@ function mixOf(name: string): Mix | null {
   return null;
 }
 
+/**
+ * A pharmacy item type read from a name that is really a cosmetic: "Vitamin C Serum" and
+ * "Multi Vitamin Glow" cream aren't vitamins, and a beauty face mask isn't a surgical one.
+ */
+export function pharmacyLookalike(typeId: string, productName: string): boolean {
+  if (typeId === 'vitamins') {
+    return /serum|cream|toner|mask|lotion|cleans|micellar|moistur|polisher|spray|face ?wash|shampoo|conditioner|\boil\b|\bgel\b|soap|scrub|glow|rose ?water|whiten|fairness/i.test(productName);
+  }
+  if (typeId === 'face-mask') return !/surgical|medical|disposable|\bply\b|\d ?ply|\bk?n95\b/i.test(productName);
+  return false;
+}
+
 /** True when any of these aisle names is one we never import (so the aisle needn't be fetched). */
 export const leftOut = (names: (string | null | undefined)[]) =>
   names.some((n) => !!n && leaveOutName(mixOf(n)?.name ?? n));
@@ -74,7 +86,8 @@ export interface AisleDecision {
  * Beauty"). The most specific name we recognise wins; a leave-out name anywhere
  * in the path excludes the listing (pharmacy stays out even under "Health & Beauty").
  * `typeAisle` is the category of the item type read from the product name, used
- * when the store's aisle names don't place it. In an aisle that mixes what we import
+ * when the store's aisle names don't place it; a pharmacy item ("Panadol Extra") is
+ * left out whatever aisle the store files it in. In an aisle that mixes what we import
  * with what we don't ("Deos & Perfumes"), `productName` decides.
  */
 export function decideAisle(
@@ -82,6 +95,7 @@ export function decideAisle(
   typeAisle: string | null,
   productName = '',
 ): AisleDecision {
+  if (typeAisle === 'pharmacy') return { aisle: null, include: false };
   const raw = names.map((n) => (n || '').trim()).filter(Boolean);
   const mixes = raw.map(mixOf);
   if (mixes.some((m) => m?.excludes(productName))) return { aisle: null, include: false };
@@ -89,8 +103,8 @@ export function decideAisle(
   if (leftOut(clean)) return { aisle: null, include: false };
   for (const n of clean) {
     const hit = AISLES.find(([re]) => re.test(n));
-    if (hit) return { aisle: typeAisle && typeAisle !== 'pharmacy' ? typeAisle : hit[1], include: true };
+    if (hit) return { aisle: typeAisle ?? hit[1], include: true };
   }
-  if (typeAisle && typeAisle !== 'pharmacy') return { aisle: typeAisle, include: true };
+  if (typeAisle) return { aisle: typeAisle, include: true };
   return { aisle: null, include: false };
 }
