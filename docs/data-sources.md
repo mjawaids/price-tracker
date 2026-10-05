@@ -9,6 +9,10 @@ store, and how the importer behaves. Code: `scripts/import/`. Schedule:
 - **Only public pages, read politely.** robots.txt is read on every run and obeyed
   (the `SpendLessBot` group, else `*`; longest match wins; Crawl-delay honoured).
   One request at a time per site, at least 1 second apart.
+- **Redirects are checked before they're followed.** The importer follows them by
+  hand, one hop at a time (at most 5): a redirect to another site, or to a path
+  robots.txt disallows, is never requested. Only robots.txt itself may redirect
+  elsewhere, as RFC 9309 allows.
 - **Honest identity.** User agent `SpendLessBot/1.0 (+https://spendless.ibexoft.com/bot)`.
   `/bot` explains the bot and how to opt out.
 - **Never get around a block.** A 401/403/429/503 or a challenge page stops that store
