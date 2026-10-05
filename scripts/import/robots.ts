@@ -1,5 +1,7 @@
 // A small robots.txt reader (RFC 9309): the group for our product token, else `*`;
 // the longest matching rule wins and Allow wins a tie; `*` and `$` are supported.
+// Paths and rules are compared in one normal form (RFC 9309 §2.2.2), so "/%61pi/"
+// can't slip past "Disallow: /api/".
 
 interface Rule {
   allow: boolean;
@@ -13,6 +15,33 @@ export interface Robots {
   crawlDelay: number | null;
   /** Which group applied, for the log. */
   group: string;
+}
+
+const UNRESERVED = /^[A-Za-z0-9\-._~]$/;
+
+/**
+ * RFC 9309 §2.2.2: characters outside printable ASCII are percent-encoded (UTF-8);
+ * percent-encoded unreserved characters are decoded ("%61" → "a", "%7E" → "~");
+ * every other percent-encoding stays encoded, in upper-case hex ("%2f" → "%2F", which
+ * is not "/"). Applied to both the rule patterns and the path being checked.
+ */
+export function normalizePath(path: string): string {
+  let out = '';
+  for (const ch of path) {
+    const c = ch.codePointAt(0)!;
+    if (c > 0x20 && c < 0x7f) out += ch;
+    else {
+      try {
+        out += encodeURIComponent(ch);
+      } catch {
+        out += '%EF%BF%BD'; // a lone surrogate: U+FFFD
+      }
+    }
+  }
+  return out.replace(/%([0-9a-fA-F]{2})/g, (_m, hex: string) => {
+    const decoded = String.fromCharCode(parseInt(hex, 16));
+    return UNRESERVED.test(decoded) ? decoded : `%${hex.toUpperCase()}`;
+  });
 }
 
 const toRegExp = (path: string) =>
@@ -48,7 +77,8 @@ export function parseRobots(text: string, token: string): Robots {
     if (!current) continue;
     if (key === 'allow' || key === 'disallow') {
       if (!value) continue; // an empty Disallow allows everything
-      current.rules.push({ allow: key === 'allow', path: value, re: toRegExp(value) });
+      const pattern = normalizePath(value);
+      current.rules.push({ allow: key === 'allow', path: pattern, re: toRegExp(pattern) });
     } else if (key === 'crawl-delay') {
       const n = Number(value);
       if (Number.isFinite(n) && n >= 0) current.delay = n;
@@ -63,7 +93,8 @@ export function parseRobots(text: string, token: string): Robots {
   return {
     group: mine.length ? mine[0].agents.join(',') : chosen.length ? '*' : 'none',
     crawlDelay: delay,
-    allowed(path: string) {
+    allowed(rawPath: string) {
+      const path = normalizePath(rawPath);
       let best: Rule | null = null;
       for (const r of rules) {
         if (!r.re.test(path)) continue;

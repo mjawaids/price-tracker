@@ -8,6 +8,8 @@ store, and how the importer behaves. Code: `scripts/import/`. Schedule:
 
 - **Only public pages, read politely.** robots.txt is read on every run and obeyed
   (the `SpendLessBot` group, else `*`; longest match wins; Crawl-delay honoured).
+  Paths and rules are compared after RFC 9309 percent-encoding normalisation, so
+  `/%61pi/` counts as `/api/`.
   One request at a time per site, at least 1 second apart.
 - **Redirects are checked before they're followed.** The importer follows them by
   hand, one hop at a time (at most 5): a redirect to another site, or to a path
