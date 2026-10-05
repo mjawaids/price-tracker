@@ -56,6 +56,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     summary: 'Shared prices, your prices, and how fresh they are',
     body: [
       'In cities where shared prices are live, prices come from store catalogues and from people who shop there. Each price is the typical recent one: newer reports count more, and reports older than 30 days drop out once newer ones arrive.',
+      'Some online stores’ prices are read from their own websites every day or every few days.',
       'A price you add is used for you straight away (for 30 days), unless a newer one comes in from someone else.',
       'Each price shows how old it is. Prices change — if you see a different one, add it.',
     ],

@@ -6,7 +6,7 @@ import UpdatePrompt from './components/shell/UpdatePrompt';
 // Listens for the browser's install offer before anything renders.
 import './lib/install';
 import './index.css';
-import { Privacy, Refund, Terms, Pricing } from './pages/lazy';
+import { Privacy, Refund, Terms, Pricing, Bot } from './pages/lazy';
 import { APP_VERSION } from './lib/version';
 
 // Expose the build on <html data-app-version> (handy for support). It also keeps
@@ -38,6 +38,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/refund" element={<Refund />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/bot" element={<Bot />} />
         </Routes>
       </Suspense>
       <UpdatePrompt />

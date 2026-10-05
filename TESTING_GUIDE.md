@@ -129,6 +129,20 @@ service worker.
 - [ ] Profile → Help → **How SpendLess works** opens the help topics; the "?" buttons in
       the plan open the matching topic.
 
+## Store price import
+
+- [ ] Dry run of each changed source (no database needed):
+      `NODE_USE_ENV_PROXY=1 node --experimental-strip-types scripts/import/run.ts --dry-run --source <id> --max-pages 20`
+      — robots.txt line shows the group used; type, size and match-key coverage look sane;
+      the sample prices match the store's website; pharmacy/cosmetics aisles are "left out".
+- [ ] Against a local copy of the schema (`SUPABASE_DB_URL=…`), run a source twice: the
+      second run reports `changed 0` and `new_products 0`, and adds no rows to `price_reports`.
+- [ ] As `anon`/`authenticated`, `select` from `spendless.store_listings` and
+      `spendless.import_runs` is refused.
+- [ ] `/bot` loads (also signed out) and its contact links carry `utm_content=bot_page`.
+- [ ] After the first real run: Compare → Stores lists the new Karachi stores with their
+      delivery fees, and Where to buy can pick them.
+
 ## Upgrading an existing account
 
 - [ ] An account with an old Compare cart gets a new list "From Compare cart" (once, with
@@ -142,8 +156,8 @@ service worker.
 - [ ] **Contact support** opens https://ibexoft.com/contact in a new tab with
       `utm_source=spendless&utm_medium=referral&utm_campaign=support` and `utm_content`
       `auth` (sign-in screen), `site_footer` (Pricing/Privacy/Refund/Terms footer),
-      `app_profile` (Profile → Help), or `pricing_page` / `privacy_page` / `refund_page`
-      (the "Contact us" links in those pages' text). No page shows an email address.
+      `app_profile` (Profile → Help), or `pricing_page` / `privacy_page` / `refund_page` /
+      `bot_page` (the "Contact us" links in those pages' text). No page shows an email address.
 - [ ] Sign-in screen: "By continuing you agree to Terms & Privacy Policy" links to the
       app's own `/terms` and `/privacy` pages (new tab).
 
@@ -159,7 +173,7 @@ service worker.
 
 - [ ] The GitHub Actions run is green and a `vYYYY.M.N` release was created.
 - [ ] Profile shows the same version (`SpendLess · v2026.10.N (commit)`).
-- [ ] https://spendless.ibexoft.com/privacy loads directly (SPA redirect works).
+- [ ] https://spendless.ibexoft.com/privacy and `/bot` load directly (SPA redirect works).
 - [ ] Sign in, add a list item on one device, see it on another.
 - [ ] Compare data (your stores, products and prices) is still there; an old cart is now
       the "From Compare cart" list.

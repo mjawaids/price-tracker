@@ -38,6 +38,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
 ### 🏷️ Prices, stores and contributing
 - Shared prices for your city where they're live (Karachi first); anywhere else,
   Compare works with the stores and prices you add yourself
+- Karachi's shared prices are refreshed daily from six online stores (Diamond, Hydri,
+  Imtiaz, Chase Up, Spar, Bin Hashim), read politely by SpendLessBot (see `/bot` and
+  [docs/data-sources.md](docs/data-sources.md))
 - **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
   at, add your own) and **Contribute** (add a price, add a product)
 - Prices at shared stores are shared without your name; prices far from the usual one
@@ -263,6 +266,10 @@ Production deploys are fully automated with **GitHub Actions**
 Pull requests run the checks only. Releases use **CalVer `YYYY.M.N`** (e.g.
 `2026.10.0`), shown in the app under Profile.
 
+A second workflow, `.github/workflows/price-import.yml`, imports store prices once a
+day (and can be run by hand as a dry run); a third, `catalog-jobs.yml`, runs manual
+catalogue jobs.
+
 One-time setup (tokens, GitHub `production` environment, leaving Bolt), rollback and
 how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 
@@ -270,6 +277,8 @@ how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 
 ```
 .github/workflows/ci-cd.yml # CI checks + production deploy pipeline
+.github/workflows/price-import.yml # Daily store price import (docs/data-sources.md)
+.github/workflows/catalog-jobs.yml # Manual catalogue jobs (promote a store to public)
 public/                     # Static assets (favicons, PWA icons, manifest, _redirects, _headers)
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
@@ -277,7 +286,8 @@ scripts/
 ├── check-migrations.mjs    # Guard: migrations may only touch the spendless schema (+ spendless-* storage policies)
 ├── db-migrate.sh           # Applies migrations (tracked in spendless.schema_migrations)
 ├── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
-└── seed/promote-store.ts   # Makes a private store + its products public (manual "Catalog jobs" workflow)
+├── seed/promote-store.ts   # Makes a private store + its products public (manual "Catalog jobs" workflow)
+└── import/                 # Daily store price import: run.ts, sources.ts, adapters/, polite http + robots.txt, write.sql
 supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless
 supabase/post-deploy/       # Post-deploy (cleanup) migrations
 src/
@@ -313,6 +323,7 @@ src/
 │   ├── Privacy.tsx
 │   ├── Refund.tsx
 │   ├── Terms.tsx
+│   ├── Bot.tsx             # /bot: what SpendLessBot is and how to opt out
 │   └── lazy.ts             # Lazy (code-split) exports of the pages above
 ├── contexts/               # React contexts
 │   ├── AuthContext.tsx         # Authentication state (+ offline identity)
