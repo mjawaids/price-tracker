@@ -18,6 +18,8 @@ export interface Source {
   adapter: Adapter;
   /** Most requests one run may make to this site. */
   maxPages: number;
+  /** Why this store is left out of `--source all` for now (it still runs on its own with `--source <id>`). */
+  paused?: string;
 }
 
 export const SOURCES: Source[] = [
@@ -57,6 +59,9 @@ export const SOURCES: Source[] = [
     },
     adapter: { kind: 'hydri' },
     maxPages: 1500,
+    // Allowed this importer from a test machine, but refused GitHub's runners (403 on the
+    // home page) on the first scheduled run. We don't work around that (docs/data-sources.md).
+    paused: 'refuses GitHub runners (403, 2026-10-05)',
   },
   {
     id: 'imtiaz',

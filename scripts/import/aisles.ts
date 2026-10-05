@@ -2,12 +2,76 @@
 // listings we import at all. We compare groceries and household basics: pharmacy,
 // cosmetics and non-grocery aisles (electronics, toys, crockery, …) are left out.
 
+/**
+ * When these rules last changed in a way that brings back listings they used to leave
+ * out. Listings left out before this date are looked at again on the next runs rather
+ * than after the usual 60 days (scripts/import/adapters/blink-pages.ts).
+ */
+export const RULES_CHANGED_AT = '2026-10-06T00:00:00Z';
+
 /** Aisles that are never imported. Checked first. */
 const LEAVE_OUT =
-  /pharma|medicin|tablet|capsule|vitamin|(?<!food )supplement|nutrition|optical|surgical|first aid|sexual|herbal|cosmetic|make ?up|perfume|\battars?\b|eau de|cologne|nail|lip(stick)?|eye ?liner|mascara|jewel|fashion|apparel|clothing|garment|shoes\b|footwear|electronic|appliance|mobile|toy|stationer|stationar|book|crockery|kitchen ?ware|cookware|dinnerware|glassware|utensil|knives|bakeware|party|car |car care|automotive|sporting|sports? (goods|equipment|accessor)|outdoor|pet\b|gift|decor|furniture|grilling|\bgrills?\b|barbecue (tool|accessor|equipment)|learning|school|tobacco|\bvap(e|es|ing)\b|luggage/i;
+  /pharma|medicin|tablet|capsule|vitamin|nutrition|optical|surgical|first aid|sexual|herbal|cosmetic|make ?up|perfume|\battars?\b|eau de|cologne|nail|lipstick|lip ?(gloss|liner|colou?r|tint|stain)|eye ?liner|mascara|jewel|fashion|apparel|clothing|garment|shoes\b|footwear|electronic|appliance|mobile|toy|stationer|stationar|book|crockery|kitchen ?ware|cookware|dinnerware|glassware|utensil|knives|bakeware|party|car |car care|automotive|sporting|sports? (goods|equipment|accessor)|outdoor|pet\b|gift|decor|furniture|grilling|\bgrills?\b|barbecue (tool|accessor|equipment)|learning|school|tobacco|\bvap(e|es|ing)\b|luggage/i;
+
+// Supplements are left out, except baby formula and food supplements ("Formula And
+// Supplements", "Baby Food Supplement"); "Herbal & Nutrition" still catches the rest.
+const leaveOutName = (n: string) => LEAVE_OUT.test(n) || (/supplement/i.test(n) && !/formula|baby|infant|food/i.test(n));
+
+// Aisles that mix what we import with what we don't. They're decided per product, by name.
+const FRAGRANCE = /perfumes?|colognes?|fragrances?/gi;
+const PERSONAL = /\bdeos?\b|deod|powder|body ?spray|roll ?on|antiperspirant/i;
+const PERFUME_NAME = /perfume|parfum|cologne|eau de|\bedp\b|\bedt\b|\battars?\b/i;
+const CAR = /\bcar\b/gi;
+
+interface Mix {
+  /** The aisle name without the words for what it mixes in. */
+  name: string;
+  /** True when this product, by its name, is the part we leave out. */
+  excludes: (productName: string) => boolean;
+}
+
+function mixOf(name: string): Mix | null {
+  if (new RegExp(FRAGRANCE.source, 'i').test(name) && PERSONAL.test(name)) {
+    // "Deos & Perfumes", "Powder & Cologne": deodorants and baby powder in, perfumes out.
+    return { name: name.replace(FRAGRANCE, ' '), excludes: (p) => PERFUME_NAME.test(p) };
+  }
+  if (/\bhome\b/i.test(name) && new RegExp(CAR.source, 'i').test(name)) {
+    // "Home & Car Fresheners": home air fresheners in, car ones out.
+    return { name: name.replace(CAR, ' '), excludes: (p) => new RegExp(CAR.source, 'i').test(p) };
+  }
+  return null;
+}
+
+// A form that only goes on the body: the name alone settles it.
+const TOPICAL_FORM =
+  /serum|cream|toner|mask|lotion|cleanser|cleansing|micellar|moistur|polisher|face ?wash|shampoo|conditioner|soap|scrub|(face|facial|hair|body|massage|skin|scalp) ?(oil|spray|mist|gel)/i;
+// Something you swallow ("Vitamin D3 Oral Spray", softgels, gummies).
+const INGESTED = /\boral\b|tablet|\btabs?\b|capsule|softgel|gumm(y|ies)|chewable|effervescent|syrup|\bdrops\b|sachet|cod ?liver|fish ?oil|omega/i;
+// Beauty words that only count when nothing says it's swallowed ("Multi Vitamin Glow" cream).
+const COSMETIC_WORD = /glow|rose ?water|whiten|fairness/i;
+// A specific skin/face/hair aisle (not a broad "Health & Beauty" or "Personal Care").
+const TOPICAL_AISLE = /skin|face|facial|hair|serum|toner|lotion|scrub/i;
+
+/**
+ * A pharmacy item type read from a name that is really a cosmetic: "Vitamin C Serum" and
+ * "Multi Vitamin Glow" cream aren't vitamins, and a beauty face mask isn't a surgical one.
+ * A vitamin counts as cosmetic only on a clearly topical signal: a topical form in its
+ * name, or else (when nothing in the name says it's swallowed) a beauty word or a
+ * skin/face/hair aisle. "Vitamin D3 Oral Spray" stays a vitamin in any aisle.
+ */
+export function pharmacyLookalike(typeId: string, productName: string, aisles: string[] = []): boolean {
+  if (typeId === 'vitamins') {
+    if (TOPICAL_FORM.test(productName)) return true;
+    if (INGESTED.test(productName)) return false;
+    return COSMETIC_WORD.test(productName) || aisles.some((a) => !!a && TOPICAL_AISLE.test(a));
+  }
+  if (typeId === 'face-mask') return !/surgical|medical|disposable|\bply\b|\d ?ply|\bk?n95\b/i.test(productName);
+  return false;
+}
 
 /** True when any of these aisle names is one we never import (so the aisle needn't be fetched). */
-export const leftOut = (names: (string | null | undefined)[]) => names.some((n) => !!n && LEAVE_OUT.test(n));
+export const leftOut = (names: (string | null | undefined)[]) =>
+  names.some((n) => !!n && leaveOutName(mixOf(n)?.name ?? n));
 
 const AISLES: [RegExp, string][] = [
   [/frozen|ice ?cream/i, 'frozen'],
@@ -20,9 +84,9 @@ const AISLES: [RegExp, string][] = [
   [/spice|masala|\bsalt\b|herb|sauce|ketchup|condiment|dressing|vinegar|pickle|achar/i, 'spices'],
   [/snack|biscuit|chocolate|confection|cand(y|ies)|chips|nimko|dessert/i, 'snacks'],
   [/beverage|drink|juice|water|\btea\b|coffee|soda|squash/i, 'beverages'],
-  [/baby|infant|diaper|nappy|wipes|kids/i, 'baby'],
-  [/personal care|shampoo|soap|oral|tooth|skin|hair|body|bath|shav|deodorant|feminine|sanitary|hand ?wash|face ?wash|beauty/i, 'personal-care'],
-  [/household|laundry|clean|detergent|home ?care|tissue|toilet|dish|insect|air fresh|garbage|foil|cling/i, 'household'],
+  [/baby|infant|diaper|nappy|wipes|kids|feeding|feeder|nursing/i, 'baby'],
+  [/personal care|shampoo|soap|oral|tooth|skin|hair|body|bath|shav|deodorant|\bdeos?\b|deodr|feminine|sanitary|hand ?wash|face ?wash|beauty/i, 'personal-care'],
+  [/household|laundry|clean|detergent|home ?care|home essential|tissue|toilet|dish|insect|air fresh|freshener|garbage|foil|cling|bucket|broom|\bmops?\b|wiper|sponge|scrubber|brushes/i, 'household'],
   [/pantry|canned|jam|honey|spread|baking|cooking|sugar|cereal|breakfast|grocery|edible/i, 'pantry'],
 ];
 
@@ -37,15 +101,25 @@ export interface AisleDecision {
  * Beauty"). The most specific name we recognise wins; a leave-out name anywhere
  * in the path excludes the listing (pharmacy stays out even under "Health & Beauty").
  * `typeAisle` is the category of the item type read from the product name, used
- * when the store's aisle names don't place it.
+ * when the store's aisle names don't place it; a pharmacy item ("Panadol Extra") is
+ * left out whatever aisle the store files it in. In an aisle that mixes what we import
+ * with what we don't ("Deos & Perfumes"), `productName` decides.
  */
-export function decideAisle(names: (string | null | undefined)[], typeAisle: string | null): AisleDecision {
-  const clean = names.map((n) => (n || '').trim()).filter(Boolean);
+export function decideAisle(
+  names: (string | null | undefined)[],
+  typeAisle: string | null,
+  productName = '',
+): AisleDecision {
+  if (typeAisle === 'pharmacy') return { aisle: null, include: false };
+  const raw = names.map((n) => (n || '').trim()).filter(Boolean);
+  const mixes = raw.map(mixOf);
+  if (mixes.some((m) => m?.excludes(productName))) return { aisle: null, include: false };
+  const clean = raw.map((n, i) => mixes[i]?.name.replace(/\s+/g, ' ').trim() || n);
   if (leftOut(clean)) return { aisle: null, include: false };
   for (const n of clean) {
     const hit = AISLES.find(([re]) => re.test(n));
-    if (hit) return { aisle: typeAisle && typeAisle !== 'pharmacy' ? typeAisle : hit[1], include: true };
+    if (hit) return { aisle: typeAisle ?? hit[1], include: true };
   }
-  if (typeAisle && typeAisle !== 'pharmacy') return { aisle: typeAisle, include: true };
+  if (typeAisle) return { aisle: typeAisle, include: true };
   return { aisle: null, include: false };
 }

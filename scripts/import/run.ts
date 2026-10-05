@@ -39,7 +39,7 @@ function fail(msg: string): never {
 }
 
 if (maxPages != null && !(Number.isInteger(maxPages) && maxPages > 0)) fail('--max-pages must be a positive whole number');
-const chosen = which === 'all' ? SOURCES : SOURCES.filter((s) => s.id === which);
+const chosen = which === 'all' ? SOURCES.filter((s) => !s.paused) : SOURCES.filter((s) => s.id === which);
 if (!chosen.length) fail(`unknown --source "${which}" (one of: all, ${SOURCES.map((s) => s.id).join(', ')})`);
 if (!dryRun && !dbUrl) fail('SUPABASE_DB_URL must be set (or use --dry-run)');
 
@@ -74,10 +74,18 @@ async function runSource(src: Source): Promise<Outcome> {
   let known = new Map<string, KnownListing>();
   let dbBrands: string[] = [];
   if (!dryRun) {
-    const read = lastJson<{ listings: { id: string; url: string | null; included: boolean; active: boolean; checked_at: string }[]; brands: string[] }>(
+    const read = lastJson<{
+      listings: { id: string; url: string | null; included: boolean; active: boolean; checked_at: string; name: string | null; category: string | null }[];
+      brands: string[];
+    }>(
       await runFile(dbUrl, 'read.sql', { store_id: src.store.id }),
     );
-    known = new Map(read.listings.map((l) => [l.id, { url: l.url, included: l.included, active: l.active, checkedAt: l.checked_at }]));
+    known = new Map(
+      read.listings.map((l) => [
+        l.id,
+        { url: l.url, included: l.included, active: l.active, checkedAt: l.checked_at, sourceName: l.name, sourceCategory: l.category },
+      ]),
+    );
     dbBrands = read.brands;
   }
 
@@ -189,6 +197,7 @@ async function backfillMatchKeys() {
 
 async function main() {
   console.log(`${dryRun ? 'Dry run' : 'Import'}: ${chosen.map((s) => s.id).join(', ')}${maxPages ? ` · max ${maxPages} pages each` : ''}`);
+  if (which === 'all') for (const s of SOURCES.filter((x) => x.paused)) console.log(`[${s.id}] paused: ${s.paused}`);
   if (!dryRun) await backfillMatchKeys();
 
   // Different sites, so they run side by side; each one is polite on its own and

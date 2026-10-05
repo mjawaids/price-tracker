@@ -3,6 +3,7 @@
 // product's own page (server-rendered `__NEXT_DATA__`), found through the sitemap.
 // One page per product is slow (1 a second), so this is a rolling refresh: each run
 // reads new products first, then the ones checked longest ago, up to a page cap.
+import { decideAisle, RULES_CHANGED_AT } from '../aisles.ts';
 import { Blocked, Disallowed } from '../http.ts';
 import { nextData, sitemapLocs } from '../html.ts';
 import type { RawListing } from '../normalize.ts';
@@ -111,9 +112,11 @@ export async function blinkPages(ctx: AdapterContext, o: BlinkOptions): Promise<
     // 2. What to read this run.
     const now = Date.now();
     const recheck = (o.recheckExcludedDays ?? 60) * DAY;
+    const rulesChanged = Date.parse(RULES_CHANGED_AT);
     const age = (id: string) => Date.parse(ctx.known.get(id)?.checkedAt ?? '') || 0;
     const fresh: string[] = [];
     const due: string[] = [];
+    const nowIncluded: string[] = [];
     const excludedDue: string[] = [];
     for (const id of urls.keys()) {
       const k = ctx.known.get(id);
@@ -122,11 +125,17 @@ export async function blinkPages(ctx: AdapterContext, o: BlinkOptions): Promise<
         // Gone before (e.g. 404) but still in the sitemap: look again weekly, not daily.
         if (now - age(id) > 7 * DAY) excludedDue.push(id);
       } else if (k.included) due.push(id);
-      else if (now - age(id) > recheck) excludedDue.push(id);
+      else if (age(id) < rulesChanged && k.sourceCategory && decideAisle(k.sourceCategory.split(' › '), null, k.sourceName ?? '').include) {
+        // Left out under older aisle rules that now include it: read it again soon.
+        nowIncluded.push(id);
+      } else if (now - age(id) > recheck) excludedDue.push(id); // left out: look again after 60 days
     }
     due.sort((a, b) => age(a) - age(b));
     excludedDue.sort((a, b) => age(a) - age(b));
-    const queue = [...fresh, ...due, ...excludedDue];
+    // New pages first, then ones the rules now include; left-out pages get a tenth of
+    // the run so they're re-checked even when the included ones alone fill the cap.
+    const share = Math.floor(ctx.maxPages / 10);
+    const queue = [...fresh, ...nowIncluded, ...excludedDue.slice(0, share), ...due, ...excludedDue.slice(share)];
 
     // Listed before but not in a complete sitemap any more → gone. Skipped when the
     // sitemap looks broken (much smaller than what we know).

@@ -113,8 +113,8 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
 
 1. **The existing Panda Mart import** — promoted to public (Karachi) with its
    owner's consent by `scripts/seed/promote-store.ts` (manual GitHub Actions run).
-2. **Daily online-store import** — Diamond, Hydri, Imtiaz, Chase Up, Spar and Bin
-   Hashim (Karachi), read politely once a day by `scripts/import/run.ts`
+2. **Daily online-store import** — Diamond, Imtiaz, Chase Up, Spar and Bin Hashim
+   (Karachi; Hydri is paused), read politely once a day by `scripts/import/run.ts`
    (`.github/workflows/price-import.yml`). Each source, what we checked, and the
    stores we don't import are in `docs/data-sources.md`. Imports are `price_reports`
    with `user_id NULL` and `source 'import'`. While a price stays the same, the
