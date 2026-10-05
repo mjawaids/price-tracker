@@ -13,7 +13,7 @@ const tagged = (url: string, campaign: string, content: string): string => {
 };
 
 /** Where the support link was clicked; becomes `utm_content`. */
-export type SupportPlacement = 'auth' | 'site_footer' | 'app_profile' | 'pricing_page' | 'privacy_page' | 'refund_page';
+export type SupportPlacement = 'auth' | 'site_footer' | 'app_profile' | 'pricing_page' | 'privacy_page' | 'refund_page' | 'bot_page';
 
 export const supportUrl = (placement: SupportPlacement): string =>
   tagged(`${IBEXOFT}/contact`, 'support', placement);

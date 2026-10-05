@@ -69,6 +69,31 @@ environment with `SUPABASE_DB_URL`, and is a **dry run unless "apply" is ticked*
   (it prints how many names it could parse), then with *apply*. Re-running is a
   no-op once the store is public.
 
+## Price import (daily)
+
+[`.github/workflows/price-import.yml`](../.github/workflows/price-import.yml) runs
+`scripts/import/run.ts` every day at 03:17 Karachi time (22:17 UTC) in the `production`
+environment with `SUPABASE_DB_URL`. It reads the online stores in
+`scripts/import/sources.ts` politely and writes their prices, one transaction per store.
+Sources, rules and exclusions are in `docs/data-sources.md`.
+
+- **Run by hand:** *Actions → Price import → Run workflow*.
+  - *source*: `all` or one store id.
+  - *dry run*: ticked by default; it fetches and parses but writes nothing.
+  - *max pages*: optional, a smaller per-store request cap.
+- **Check how it went:**
+  - the job log ends with a per-store summary;
+  - `spendless.import_runs` has one row per store per run (`ok`, `partial` = stopped at
+    its page cap, `blocked` = the store refused us, `failed` = an error);
+  - read it with read-only SQL.
+- **A failed run** (an error, not a block) makes the job fail, and GitHub emails you.
+  A store that blocks us shows a warning in the log and is retried the next day; it
+  is never worked around.
+- **GitHub disables scheduled workflows after 60 days without repository activity.**
+  If the import stops, open *Actions → Price import* and click *Enable workflow*.
+- **Stop one store:** remove it from `scripts/import/sources.ts` and merge. Its last
+  prices fade by recency; to retire them at once, ask for a one-off job.
+
 ## One-time setup
 
 ### 1. Supabase (project "Universal Project for Apps", ref `xutrdyjoqthxqwejarpz`)

@@ -241,10 +241,12 @@ export function parseProductName(
   const pricePoint = pp ? Number(pp[1]) : null;
   const brand = findBrand(name, opts.brands);
   // The brand is always the leading words (see findBrand).
-  const afterBrand = brand ? name.split(' ').slice(brand.split(' ').length).join(' ') : name;
+  const brandWords = brand ? brand.split(' ').length : 0;
+  const afterBrand = brand ? name.split(' ').slice(brandWords).join(' ') : name;
   // Match on the whole name so a phrase that starts inside the brand still counts
   // ("Cadbury Dairy Milk" → chocolate), but not one that's only the brand ("Lemon Max").
-  const typeMatch = matchItemType(name, opts.categoryHint, brand ? tokens(brand).length : 0);
+  // Skip the name's own brand words: "OLPERS" is one token where "Olper's" is two.
+  const typeMatch = matchItemType(name, opts.categoryHint, brand ? tokens(name.split(' ').slice(0, brandWords).join(' ')).length : 0);
   const itemType = typeMatch?.type ?? null;
 
   // Variant: what's left once brand, item words, sizes, prices and packaging are gone.

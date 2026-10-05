@@ -17,7 +17,7 @@ Live at https://spendless.ibexoft.com
 ## Commands
 - `npm run dev` — start dev server
 - `npm run build` — typecheck + production build (output: `dist/`)
-- `npm run typecheck` — TypeScript check only (`vite build` alone doesn't type-check)
+- `npm run typecheck` — TypeScript check only, app + `vite.config.ts` + `scripts/import`, `scripts/seed` (`vite build` alone doesn't type-check)
 - `npm run lint` — ESLint (no test framework; manual testing only)
 - `npm run generate:icons` — regenerate PWA/favicon icons
 - `node scripts/check-contrast.mjs` — WCAG contrast check for the colour tokens (run after editing them)
@@ -26,6 +26,9 @@ Live at https://spendless.ibexoft.com
 - `SUPABASE_DB_URL=… scripts/db-migrate.sh [--dry-run] <dir>` — apply migrations (CI does this on deploy)
 - `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/promote-store.ts --store-id <id> --chain <name> [--apply]`
   — make a private store public (normally run from the manual *Catalog jobs* workflow; dry run without `--apply`)
+- `node --experimental-strip-types scripts/import/run.ts --dry-run [--source <id>|all] [--max-pages N]` — daily store
+  price import, fetch + parse only (needs `NODE_USE_ENV_PROXY=1` behind a proxy). Without `--dry-run` it needs
+  `SUPABASE_DB_URL` and writes; normally run by the *Price import* workflow
 
 ## Environment Variables (`.env`)
 ```
@@ -140,7 +143,7 @@ Sections (`app.section` / `app.openSection`): `lists` (default; includes `plan`)
   `useNavOverflow` in `Shell.tsx` shows edge fades and a "More ⌄" button when items are hidden
 - Code splitting: `Shell.tsx` lazy-loads every screen except Lists (Suspense skeleton)
   and the region/help sheets; `ListsScreen` lazy-loads the item choice sheet;
-  `src/pages/lazy.ts` lazy-loads the legal/pricing pages. The service worker
+  `src/pages/lazy.ts` lazy-loads the legal/pricing pages and `/bot` (what SpendLessBot is). The service worker
   precaches all chunks, so lazy screens still open offline.
 
 ## Database (Supabase — schema `spendless`, all tables have RLS, data is per-user)
@@ -163,7 +166,9 @@ are in `public`). SpendLess data must never mix with theirs:
   (`createClient(url, key, { db: { schema: DB_SCHEMA } })`, `DB_SCHEMA = 'spendless'`);
   don't create other clients without it.
 - New tables need grants in their migration (`GRANT ALL ON spendless.<t> TO anon,
-  authenticated, service_role`) plus RLS. `spendless` must stay listed in Dashboard →
+  authenticated, service_role`) plus RLS. Exception: system tables only the importer
+  uses (`store_listings`, `import_runs`) have RLS on, **no policies**, and are revoked
+  from `anon`/`authenticated` (granted to `service_role` only). `spendless` must stay listed in Dashboard →
   Project Settings → Integrations → **Data API** → *Exposed schemas* (the pipeline
   adds it automatically), or the API can't see it.
 - `auth.users` is shared by all apps in the project (that can't be split without a
@@ -193,16 +198,18 @@ are in `public`). SpendLess data must never mix with theirs:
 | `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id? (→ `catalog_products`, the pinned product), plan_store_id?, plan_product_id?, plan_price?, updated_at (server-set), deleted_at |
 | `regions` | id (slug, e.g. `karachi`), name, country_code, currency, status (`live` \| `gathering`) |
 | `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, city, lat/lng, delivery_rule (+`minOrder`), website, status |
-| `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into |
-| `price_reports` | **append-only**: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`) |
+| `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into, match_key (importer: same product across stores; `''` = not confident) |
+| `price_reports` | **append-only** for users: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`). The importer moves its own latest `import` report's `observed_at` forward while a price is unchanged |
 | `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence — written only by the `refresh_current_prices` trigger; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
 | `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
+| `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`; one row per store per run (counts, status) |
 
 **Compare catalogue (v2)**: `catalog_*`, `price_reports` and `current_prices` replace the
 per-user `products`/`stores` (their rows were copied in as private rows with the same
 ids). Public rows are read-only for clients; users write only their own private rows and
 their own price reports (rate-limited, outliers held as `pending`). Full model, price
-consensus and anti-spam rules: `docs/compare-data.md`. Item types are a curated vocabulary
+consensus and anti-spam rules: `docs/compare-data.md`. Public Karachi prices also come
+from a daily import of six online stores (`scripts/import/`, `docs/data-sources.md`). Item types are a curated vocabulary
 in `src/lib/compare/itemTypes.ts` (the column only checks the slug).
 
 `delivery_rule` union: `none | free | flat { fee } | over { threshold, fee }` (catalogue
@@ -228,6 +235,9 @@ post-deploy migration drops them.
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
 | `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`) and `WhatsNewSheet` |
 | `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
+| `docs/data-sources.md` | Each imported store: robots.txt, terms checked, method, branch, delivery source; stores not imported and why |
+| `scripts/import/` | Daily price import: `run.ts` (CLI), `sources.ts` (stores, delivery rules, caps), `adapters/` (Magento GraphQL, Hydri, Imtiaz menu, Blink product pages), `http.ts` (polite client: honest UA, robots.txt, 1 req/s, stop on a block; redirects followed by hand, each target checked for same site + robots.txt before it's requested), `robots.ts`, `aisles.ts` (what we leave out + aisle → category), `normalize.ts` (name → product + `match_key`), `write.sql` (one transaction per store), `db.ts` |
+| `src/pages/Bot.tsx` | `/bot`: what SpendLessBot does and how to opt out (its user agent links here) |
 | `scripts/seed/promote-store.ts` | Make a private store + its products public (with consent); run via `.github/workflows/catalog-jobs.yml` |
 | `src/utils/currency.ts` | 50+ currencies, formatting, default currency from the browser locale |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
@@ -294,6 +304,9 @@ say so and propose a safe alternative.
   build → Netlify → smoke test → post-deploy migrations → tag + GitHub Release.
 - `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue
   (promote a store to public); dry run unless "apply" is ticked.
+- `.github/workflows/price-import.yml`: daily store price import (03:17 Karachi), also
+  manual with *source* / *dry run* / *max pages*. Scheduled workflows stop after 60 days
+  without repo activity — re-enable from the Actions tab.
 - Versions are **CalVer `YYYY.M.N`** from git tags (`N` = release count within the
   month, not the day), injected as `VITE_APP_VERSION` / `VITE_APP_COMMIT`
   (`src/lib/version.ts`, shown in Profile and set on `<html data-app-version>` in
@@ -377,8 +390,11 @@ a Claude Design pass.
 ## What to Avoid
 - Don't add a test framework — no tests exist and none are expected
 - Don't introduce CSS Modules or styled-components
-- Don't write prices anywhere but `price_reports` (append-only) — `current_prices` is
-  written only by its trigger
+- Don't write prices anywhere but `price_reports` (append-only; only the importer moves
+  its own `import` reports' `observed_at`) — `current_prices` is written only by its trigger
+- Don't make the importer ignore robots.txt, hide its user agent, or work around a store's
+  block (403/429/captcha/token gates) — record the store as not imported in
+  `docs/data-sources.md` instead
 - Don't add dark mode — `ThemeContext` is light-only by design
 - Don't add Redux/Zustand — the context pattern is intentional
 - Don't create SpendLess tables/functions in `public` or touch other apps' objects —

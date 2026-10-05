@@ -2,7 +2,8 @@
 
 How SpendLess knows what things cost, where, and how it turns a list into a
 "where to buy" plan. Schema: `supabase/migrations/20261005000000_compare_catalog.sql`
-(+ `20261005000100_compare_copy_personal_data.sql`). Logic: `src/lib/compare/`.
+(+ `20261005000100_compare_copy_personal_data.sql`, `20261005120000_compare_import.sql`).
+Logic: `src/lib/compare/`. Store imports: `docs/data-sources.md`.
 
 ## The idea in one paragraph
 
@@ -18,12 +19,14 @@ from people's own entries, and (later) from receipts. Shared prices are live in
 |---|---|---|
 | `regions` | Cities. `status`: `live` (shared prices on) or `gathering` (personal mode) | Migrations only |
 | `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
-| `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`) | Same as stores |
+| `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`); `match_key` (set by the importer: the same product at two stores → one row; `''` = not confident) | Same as stores |
 | `price_reports` | **Append-only** observations: price (one pack), `observed_at`, `source`, `status`. `user_id NULL` = system source | Users add their own (user sources only); read and delete only their own; nobody updates |
 | `current_prices` | The price shown per (store, product), derived from reports; `n_reports = 0` = no price any more (tombstone) | Only the trigger |
 | `user_stores` | "My stores" (empty = all public stores in the city + your private ones) | Owner |
 | `item_preferences` | A user's "usual" per list item name: `mode` (`exact` / `brand_size` / `any_size`), `product_ids`, `ref_product_id` | Owner |
 | `plans` | Plans applied to a list (totals, savings) — powers "saved this month" | Owner |
+| `store_listings` | The importer's memory: each store's own product id → our product, last price, when checked, `included` (false = an aisle we leave out) | Importer only; clients can't read it |
+| `import_runs` | One row per store per import run: counts and a short status code | Importer only; clients can't read it |
 | `list_items` (+cols) | `plan_store_id`, `plan_product_id`, `plan_price`; `product_id` = product pinned on the item | Owner (synced offline like the rest of the list) |
 
 Everything a user creates is **private** unless it's explicitly promoted to public.
@@ -110,15 +113,20 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
 
 1. **The existing Panda Mart import** — promoted to public (Karachi) with its
    owner's consent by `scripts/seed/promote-store.ts` (manual GitHub Actions run).
-2. **Daily online-store import** (next phase) — only for stores whose terms allow
-   it or that offer a feed/partnership; each source is recorded in
-   `docs/data-sources.md` before it's enabled.
+2. **Daily online-store import** — Diamond, Hydri, Imtiaz, Chase Up, Spar and Bin
+   Hashim (Karachi), read politely once a day by `scripts/import/run.ts`
+   (`.github/workflows/price-import.yml`). Each source, what we checked, and the
+   stores we don't import are in `docs/data-sources.md`. Imports are `price_reports`
+   with `user_id NULL` and `source 'import'`. While a price stays the same, the
+   importer moves its latest import report's `observed_at` forward instead of adding
+   a row every day, so "updated today" stays true and the table stays small. A listing
+   that disappears gets one "out of stock" report.
 3. **People's prices** — while shopping, and from receipts (image, PDF or text,
    read on the device; the file never leaves it).
 
 ## Roadmap
 
-- Daily online-store import.
+- More import sources as feeds or partnerships allow (see `docs/data-sources.md`).
 - Trip capture (confirm the price when you tick an item), disputes, corroboration of
   pending reports, reporter trust, freshness badges, "your contributions".
 - Receipt import: text and PDF with a text layer, then photos/scans via on-device OCR,
