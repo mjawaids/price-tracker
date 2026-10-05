@@ -4,7 +4,8 @@
 SELECT json_build_object(
   'listings', (
     SELECT coalesce(json_agg(json_build_object(
-      'id', l.external_id, 'url', l.url, 'included', l.included, 'active', l.active, 'checked_at', l.last_checked_at
+      'id', l.external_id, 'url', l.url, 'included', l.included, 'active', l.active, 'checked_at', l.last_checked_at,
+      'name', l.source_name, 'category', l.source_category
     )), '[]'::json)
     FROM spendless.store_listings l
     WHERE l.store_id = :'store_id'

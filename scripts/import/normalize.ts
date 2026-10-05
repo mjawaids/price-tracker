@@ -78,14 +78,14 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   if (!name || !raw.externalId || (!priced && !raw.exclude)) return null;
   const storeBrand = raw.brand?.replace(/\s+/g, ' ').trim() || null;
   // The store's aisle is a hint for reading the name; the item type read from the name then has the last word.
-  const storeAisle = raw.exclude ? null : decideAisle(raw.aisles, null).aisle;
+  const storeAisle = raw.exclude ? null : decideAisle(raw.aisles, null, name).aisle;
   const parsed = parseProductName(name, { categoryHint: storeAisle, brands: storeBrand ? [...brands, storeBrand] : brands });
   // A type that contradicts the store's aisle, read from one loose word ("Apple Orchard"
   // car gel → apple), is a misreading: drop it and keep the store's aisle.
   const typeWeight = parsed.confidence - (parsed.brand ? 0.3 : 0) - (parsed.size ? 0.3 : 0);
   const itemType = parsed.itemType && typeWeight > 0.35 ? parsed.itemType : null;
   const typeAisle = itemType?.category ?? null;
-  const decision = raw.exclude ? { aisle: null, include: false } : decideAisle(raw.aisles, typeAisle);
+  const decision = raw.exclude ? { aisle: null, include: false } : decideAisle(raw.aisles, typeAisle, name);
   const base = {
     external_id: raw.externalId.slice(0, 120),
     url: httpsOnly(raw.url),

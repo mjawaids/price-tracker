@@ -38,9 +38,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
 ### 🏷️ Prices, stores and contributing
 - Shared prices for your city where they're live (Karachi first); anywhere else,
   Compare works with the stores and prices you add yourself
-- Karachi's shared prices are refreshed daily from six online stores (Diamond, Hydri,
-  Imtiaz, Chase Up, Spar, Bin Hashim), read politely by SpendLessBot (see `/bot` and
-  [docs/data-sources.md](docs/data-sources.md))
+- Karachi's shared prices are refreshed daily from five online stores (Diamond,
+  Imtiaz, Chase Up, Spar, Bin Hashim; Hydri is paused), read politely by SpendLessBot
+  (see `/bot` and [docs/data-sources.md](docs/data-sources.md))
 - **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
   at, add your own) and **Contribute** (add a price, add a product)
 - Prices at shared stores are shared without your name; prices far from the usual one

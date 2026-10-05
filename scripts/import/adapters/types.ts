@@ -8,6 +8,9 @@ export interface KnownListing {
   included: boolean;
   active: boolean;
   checkedAt: string;
+  /** The store's name for it and its aisle path ("A › B › C"), as last seen. */
+  sourceName: string | null;
+  sourceCategory: string | null;
 }
 
 export interface AdapterContext {
