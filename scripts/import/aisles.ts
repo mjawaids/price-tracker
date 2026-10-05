@@ -42,13 +42,28 @@ function mixOf(name: string): Mix | null {
   return null;
 }
 
+// A form that only goes on the body: the name alone settles it.
+const TOPICAL_FORM =
+  /serum|cream|toner|mask|lotion|cleanser|cleansing|micellar|moistur|polisher|face ?wash|shampoo|conditioner|soap|scrub|(face|facial|hair|body|massage|skin|scalp) ?(oil|spray|mist|gel)/i;
+// Something you swallow ("Vitamin D3 Oral Spray", softgels, gummies).
+const INGESTED = /\boral\b|tablet|\btabs?\b|capsule|softgel|gumm(y|ies)|chewable|effervescent|syrup|\bdrops\b|sachet|cod ?liver|fish ?oil|omega/i;
+// Beauty words that only count when nothing says it's swallowed ("Multi Vitamin Glow" cream).
+const COSMETIC_WORD = /glow|rose ?water|whiten|fairness/i;
+// A specific skin/face/hair aisle (not a broad "Health & Beauty" or "Personal Care").
+const TOPICAL_AISLE = /skin|face|facial|hair|serum|toner|lotion|scrub/i;
+
 /**
  * A pharmacy item type read from a name that is really a cosmetic: "Vitamin C Serum" and
  * "Multi Vitamin Glow" cream aren't vitamins, and a beauty face mask isn't a surgical one.
+ * A vitamin counts as cosmetic only on a clearly topical signal: a topical form in its
+ * name, or else (when nothing in the name says it's swallowed) a beauty word or a
+ * skin/face/hair aisle. "Vitamin D3 Oral Spray" stays a vitamin in any aisle.
  */
-export function pharmacyLookalike(typeId: string, productName: string): boolean {
+export function pharmacyLookalike(typeId: string, productName: string, aisles: string[] = []): boolean {
   if (typeId === 'vitamins') {
-    return /serum|cream|toner|mask|lotion|cleans|micellar|moistur|polisher|spray|face ?wash|shampoo|conditioner|\boil\b|\bgel\b|soap|scrub|glow|rose ?water|whiten|fairness/i.test(productName);
+    if (TOPICAL_FORM.test(productName)) return true;
+    if (INGESTED.test(productName)) return false;
+    return COSMETIC_WORD.test(productName) || aisles.some((a) => !!a && TOPICAL_AISLE.test(a));
   }
   if (typeId === 'face-mask') return !/surgical|medical|disposable|\bply\b|\d ?ply|\bk?n95\b/i.test(productName);
   return false;

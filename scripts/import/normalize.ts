@@ -83,7 +83,7 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   // A type that contradicts the store's aisle, read from one loose word ("Apple Orchard"
   // car gel → apple), is a misreading: drop it and keep the store's aisle.
   const typeWeight = parsed.confidence - (parsed.brand ? 0.3 : 0) - (parsed.size ? 0.3 : 0);
-  const lookalike = !!parsed.itemType && pharmacyLookalike(parsed.itemType.id, name);
+  const lookalike = !!parsed.itemType && pharmacyLookalike(parsed.itemType.id, name, raw.aisles);
   const itemType = parsed.itemType && !lookalike && typeWeight > 0.35 ? parsed.itemType : null;
   // A pharmacy item stays out even when we'd otherwise doubt the type ("Panadol Extra"
   // filed under "Personal Care"): leaving one out by mistake is the safe direction.
