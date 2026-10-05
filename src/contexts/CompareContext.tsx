@@ -1,0 +1,652 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { useLists } from './ListsContext';
+import { useSettings } from './SettingsContext';
+import { ListItem } from '../types';
+import { supabase } from '../lib/supabase';
+import { PRODUCT_IMAGES_BUCKET, storagePathFromUrl } from '../lib/storage';
+import { normalizeName } from '../lib/groceryDictionary';
+import * as api from '../lib/compare/api';
+import { CatalogSnapshot, deleteSnapshot, readSnapshot, writeSnapshot } from '../lib/compare/cache';
+import { buildContext, resolveItem, ResolvedItem, ResolveContext } from '../lib/compare/resolve';
+import { buildPlans, PlanSet } from '../lib/compare/optimizer';
+import { CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, PreferenceMode, Region } from '../lib/compare/types';
+import { ITEM_TYPE_BY_ID } from '../lib/compare/itemTypes';
+import { CATEGORIES, resolveCategory } from '../lib/categories';
+import { trackUserAction } from '../utils/analytics';
+import { formatPrice } from '../utils/currency';
+
+/** The list the old Compare cart becomes (one time, on update). */
+export const CART_LIST_NAME = 'From Compare cart';
+const FULL_REFRESH_MS = 24 * 60 * 60 * 1000;
+const STALE_MS = 10 * 60 * 1000;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const cartKey = (userId: string) => `spendless-cart-migrated:${userId}`;
+const { pairKey } = api;
+
+export interface PlanResult {
+  resolved: ResolvedItem[];
+  set: PlanSet;
+  /** Stores the plan could use. */
+  storeIds: string[];
+}
+
+interface CompareApi {
+  /** Something to show (from the device or the network). */
+  ready: boolean;
+  refreshing: boolean;
+  /** The last network refresh failed (cached data may still be shown). */
+  failed: boolean;
+  online: boolean;
+  syncedAt: string | null;
+  regions: Region[];
+  region: Region | null;
+  /** The user has picked a city (or "another city"). */
+  regionChosen: boolean;
+  /** Shared prices are on in the user's city. */
+  isLive: boolean;
+  /** Money in the city's currency (prices are stored in it), else the user's. */
+  fmt: (n: number) => string;
+  currency: string;
+  setRegion: (id: string | null) => void;
+  stores: CatalogStore[];
+  products: CatalogProduct[];
+  storeById: (id: string) => CatalogStore | undefined;
+  productById: (id: string) => CatalogProduct | undefined;
+  /** Effective prices: the shared price, or the user's own newer report. */
+  pricesFor: (productId: string) => CurrentPrice[];
+  priceAt: (storeId: string, productId: string) => CurrentPrice | undefined;
+  /** Explicit store picks (empty = all stores in the city + your own). */
+  myStoreIds: string[];
+  consideredStores: CatalogStore[];
+  setMyStores: (ids: string[]) => Promise<boolean>;
+  preferences: Map<string, ItemPreference>;
+  setUsual: (itemKey: string, mode: PreferenceMode, refProductId: string, productIds?: string[]) => Promise<boolean>;
+  clearUsual: (itemKey: string) => Promise<boolean>;
+  resolveContext: ResolveContext;
+  planFor: (items: ListItem[]) => PlanResult;
+  recordPlan: (p: { listId: string; total: number; baselineTotal: number | null; savings: number; storeCount: number; itemCount: number }) => void;
+  savedThisMonth: number;
+  plansThisMonth: number;
+  /** Prices this user added in the last 30 days. */
+  recentReports: number;
+  addStore: (s: api.StoreInput) => Promise<CatalogStore | null>;
+  updateStore: (id: string, s: api.StoreInput) => Promise<CatalogStore | null>;
+  deleteStore: (id: string) => Promise<boolean>;
+  addProduct: (p: api.ProductInput) => Promise<CatalogProduct | null>;
+  updateProduct: (id: string, p: api.ProductInput) => Promise<CatalogProduct | null>;
+  deleteProduct: (id: string) => Promise<boolean>;
+  uploadProductImage: (productId: string, file: File) => Promise<string | null>;
+  /** Delete an image this user uploaded (anything outside their folder is left alone). */
+  removeProductImage: (url: string | null | undefined) => Promise<void>;
+  reportPrice: (r: { storeId: string; productId: string; price: number | null; isAvailable?: boolean; source?: api.ReportSource }) => Promise<'accepted' | 'pending' | null>;
+  refresh: (force?: boolean) => Promise<void>;
+  /** Set when the old Compare cart was turned into a list on this device. */
+  convertedCart: { listId: string; count: number } | null;
+  /** Sign-out helper: delete this user's cached catalogue. */
+  clearLocalData: () => Promise<void>;
+}
+
+/** A product's list aisle (a canonical category id), when we know it. */
+const aisleOf = (p: CatalogProduct): string | null => {
+  const fromType = p.itemType ? ITEM_TYPE_BY_ID.get(p.itemType)?.category : undefined;
+  if (fromType) return fromType;
+  const c = resolveCategory(p.category ?? undefined);
+  return CATEGORIES.some((x) => x.id === c.id) ? c.id : null;
+};
+
+const CompareContext = createContext<CompareApi | undefined>(undefined);
+
+export const useCompare = () => {
+  const ctx = useContext(CompareContext);
+  if (!ctx) throw new Error('useCompare must be used within CompareProvider');
+  return ctx;
+};
+
+const emptySnapshot = (): CatalogSnapshot => ({
+  regions: [], stores: [], products: [], prices: [], ownReports: [], preferences: [], myStores: [], plans: [],
+  regionId: null, cursor: null, fullAt: 0, syncedAt: null,
+});
+
+/** Run a network write; log (without user content) and return null on failure. */
+async function guard<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (error) {
+    console.error(`${label} failed:`, error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+const track = (action: string, details?: Record<string, unknown>) => {
+  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') trackUserAction(action, details);
+};
+
+export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const lists = useLists();
+  const { settings, updateSettings } = useSettings();
+  const regionId = settings.regionId;
+
+  const [snap, setSnap] = useState<CatalogSnapshot>(emptySnapshot);
+  const [ready, setReady] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
+  const [convertedCart, setConvertedCart] = useState<{ listId: string; count: number } | null>(null);
+
+  const snapRef = useRef(snap);
+  snapRef.current = snap;
+  const busy = useRef(false);
+  /** A refresh asked for while one was running (forced if any request was). */
+  const pending = useRef<{ force: boolean } | null>(null);
+  const lastRefresh = useRef(0);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
+  /** Update state and the device copy together. */
+  const commit = useCallback(
+    (next: CatalogSnapshot) => {
+      setSnap(next);
+      if (userId) void writeSnapshot(userId, next);
+    },
+    [userId],
+  );
+
+  // ── Load from the device, then refresh from the network ────────────────────
+  const refresh = useCallback(
+    async (force = false) => {
+      if (!userId) return;
+      if (busy.current) {
+        // Never drop it: the running one may be for an old city (or user).
+        pending.current = { force: (pending.current?.force ?? false) || force };
+        return;
+      }
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      busy.current = true;
+      setRefreshing(true);
+      try {
+        const cur = snapRef.current;
+        const regions = await api.fetchRegions();
+        // One-time: map the old free-text location ("Karachi, PK") to a city.
+        let region = settingsRef.current.regionId;
+        if (!region && settingsRef.current.location) {
+          const loc = settingsRef.current.location.toLowerCase();
+          const hit = regions.find((r) => loc.startsWith(r.name.toLowerCase()));
+          if (hit) {
+            region = hit.id;
+            updateSettings({ regionId: hit.id });
+          }
+        }
+        const stores = await api.fetchStores(userId, region && regions.some((r) => r.id === region) ? region : null);
+        const storeIds = stores.map((s) => s.id);
+        const known = new Set(cur.stores.map((s) => s.id));
+        const full =
+          force ||
+          cur.regionId !== region ||
+          Date.now() - cur.fullAt > FULL_REFRESH_MS ||
+          storeIds.some((id) => !known.has(id));
+        const [priced, own, ownReports, preferences, myStores, plans] = await Promise.all([
+          api.fetchPrices(storeIds, full ? null : cur.cursor),
+          api.fetchOwnProducts(userId),
+          api.fetchOwnReports(userId),
+          api.fetchPreferences(),
+          api.fetchMyStores(),
+          api.fetchPlansThisMonth(),
+        ]);
+
+        const productMap = new Map<string, CatalogProduct>();
+        // Own products are always re-read in full: one missing now was deleted
+        // (maybe on another device), and its prices went with it.
+        const ownIds = new Set(own.map((p) => p.id));
+        if (!full) for (const p of cur.products) if (!(p.ownerId === userId && !ownIds.has(p.id))) productMap.set(p.id, p);
+        for (const p of [...priced.products, ...own]) productMap.set(p.id, p);
+        // Products referenced by usuals or pinned on list items, if not loaded yet.
+        const wanted = new Set<string>();
+        for (const pref of preferences) {
+          if (pref.refProductId) wanted.add(pref.refProductId);
+          pref.productIds.forEach((id) => wanted.add(id));
+        }
+        for (const l of lists.lists) for (const i of lists.itemsForList(l.id)) if (i.productId) wanted.add(i.productId);
+        const missing = [...wanted].filter((id) => !productMap.has(id));
+        if (missing.length) for (const p of await api.fetchProductsById(missing)) productMap.set(p.id, p);
+
+        // Delta: changed rows replace old ones and tombstones remove theirs.
+        const keep = new Set(storeIds);
+        const priceMap = new Map<string, CurrentPrice>();
+        if (!full) for (const p of cur.prices) if (keep.has(p.storeId)) priceMap.set(pairKey(p.storeId, p.productId), p);
+        for (const p of priced.prices) priceMap.set(pairKey(p.storeId, p.productId), p);
+        for (const k of priced.removed) priceMap.delete(k);
+        const prices = [...priceMap.values()].filter((p) => productMap.has(p.productId));
+
+        // Stale by now (another city chosen, or another user signed in): drop it;
+        // the queued refresh loads the right data.
+        if (userIdRef.current !== userId || settingsRef.current.regionId !== region) {
+          pending.current = { force: true };
+          return;
+        }
+
+        commit({
+          regions,
+          stores,
+          products: [...productMap.values()],
+          prices,
+          ownReports,
+          preferences,
+          myStores,
+          plans,
+          regionId: region,
+          cursor: full ? priced.cursor : priced.cursor ?? cur.cursor,
+          fullAt: full ? Date.now() : cur.fullAt,
+          syncedAt: new Date().toISOString(),
+        });
+        setFailed(false);
+        lastRefresh.current = Date.now();
+      } catch (error) {
+        console.error('Compare refresh failed:', error instanceof Error ? error.message : error);
+        setFailed(true);
+      } finally {
+        busy.current = false;
+        setRefreshing(false);
+        setReady(true);
+        const next = pending.current;
+        pending.current = null;
+        if (next) void refreshRef.current(next.force);
+      }
+    },
+    [userId, commit, updateSettings, lists],
+  );
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+
+  useEffect(() => {
+    setSnap(emptySnapshot());
+    setReady(false);
+    setFailed(false);
+    setConvertedCart(null);
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      const cached = await readSnapshot(userId);
+      if (cancelled) return;
+      if (cached) {
+        setSnap(cached);
+        setReady(true);
+      }
+      await refreshRef.current();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // A new city: reload everything for it.
+  const firstRegion = useRef(true);
+  useEffect(() => {
+    if (firstRegion.current) {
+      firstRegion.current = false;
+      return;
+    }
+    void refreshRef.current(true);
+  }, [regionId]);
+
+  useEffect(() => {
+    const on = () => {
+      setOnline(true);
+      void refreshRef.current();
+    };
+    const off = () => setOnline(false);
+    const visible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastRefresh.current > STALE_MS) void refreshRef.current();
+    };
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, []);
+
+  // ── One-time: the old Compare cart becomes a list ───────────────────────────
+  const converting = useRef(false);
+  useEffect(() => {
+    if (!userId || !ready || !lists.ready || lists.syncStatus !== 'synced' || converting.current) return;
+    let flag: string | null = null;
+    try {
+      flag = localStorage.getItem(cartKey(userId));
+    } catch {
+      return;
+    }
+    if (flag) return;
+    converting.current = true;
+    (async () => {
+      try {
+        const done = (value: string) => localStorage.setItem(cartKey(userId), value);
+        // Another device may have converted it already (the list syncs).
+        if (lists.lists.some((l) => l.name === CART_LIST_NAME)) return done('exists');
+        const cart = await api.fetchLegacyCart();
+        if (!cart.length) return done('empty');
+        const known = new Map(snapRef.current.products.map((p) => [p.id, p]));
+        const missing = cart.map((c) => c.productId).filter((id) => !known.has(id));
+        if (missing.length) for (const p of await api.fetchProductsById(missing)) known.set(p.id, p);
+        const items = cart
+          .filter((c) => known.has(c.productId))
+          .map((c) => {
+            const p = known.get(c.productId)!;
+            return { name: p.name, quantity: c.quantity, productId: p.id, category: aisleOf(p) };
+          });
+        if (!items.length) return done('empty');
+        const list = lists.createListWithItems(CART_LIST_NAME, items);
+        done(`converted:${list.id}:${items.length}`);
+        setConvertedCart({ listId: list.id, count: items.length });
+        track('cart_converted', { item_count: items.length });
+      } catch (error) {
+        console.error('Cart conversion failed (will retry):', error instanceof Error ? error.message : error);
+        converting.current = false;
+      }
+    })();
+  }, [userId, ready, lists]);
+
+  // ── Derived data ────────────────────────────────────────────────────────────
+  const region = useMemo(() => snap.regions.find((r) => r.id === regionId) ?? null, [snap.regions, regionId]);
+  const storeMap = useMemo(() => new Map(snap.stores.map((s) => [s.id, s])), [snap.stores]);
+  const productMap = useMemo(() => new Map(snap.products.map((p) => [p.id, p])), [snap.products]);
+
+  /** Shared prices with the user's own newer report on top. */
+  const effective = useMemo(() => {
+    const m = new Map<string, CurrentPrice>();
+    for (const p of snap.prices) m.set(pairKey(p.storeId, p.productId), p);
+    // Own reports come newest first: the first one per pair wins if it's newer.
+    for (const r of snap.ownReports) {
+      if (!storeMap.has(r.storeId)) continue;
+      const k = pairKey(r.storeId, r.productId);
+      const cur = m.get(k);
+      if (cur?.mine) continue;
+      if (!cur || r.observedAt >= cur.observedAt) m.set(k, r);
+    }
+    return m;
+  }, [snap.prices, snap.ownReports, storeMap]);
+
+  const byProduct = useMemo(() => {
+    const m = new Map<string, CurrentPrice[]>();
+    for (const p of effective.values()) m.set(p.productId, [...(m.get(p.productId) || []), p]);
+    return m;
+  }, [effective]);
+
+  const consideredStores = useMemo(() => {
+    const active = snap.stores.filter((s) => s.status === 'active');
+    if (snap.myStores.length) {
+      const picked = active.filter((s) => snap.myStores.includes(s.id));
+      if (picked.length) return picked;
+    }
+    return active;
+  }, [snap.stores, snap.myStores]);
+
+  const preferences = useMemo(() => new Map(snap.preferences.map((p) => [p.itemKey, p])), [snap.preferences]);
+
+  /** Item type → the product the user last reported (their "last buy"). */
+  const lastBought = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of snap.ownReports) {
+      const p = productMap.get(r.productId);
+      if (p?.itemType && !m.has(p.itemType)) m.set(p.itemType, p.id);
+    }
+    return m;
+  }, [snap.ownReports, productMap]);
+
+  const resolveContext = useMemo(
+    () =>
+      buildContext({
+        products: snap.products,
+        prices: [...effective.values()],
+        storeIds: new Set(consideredStores.map((s) => s.id)),
+        preferences: snap.preferences,
+        lastBought,
+      }),
+    [snap.products, effective, consideredStores, snap.preferences, lastBought],
+  );
+
+  const planFor = useCallback(
+    (items: ListItem[]): PlanResult => {
+      const resolved = items.map((i) =>
+        resolveItem(resolveContext, { id: i.id, name: i.name, quantity: i.quantity, unit: i.unit, productId: i.productId }),
+      );
+      const optStores = consideredStores.map((s) => ({ id: s.id, rule: s.deliveryRule, kind: s.kind }));
+      const set = buildPlans(
+        resolved.map((r) => ({ key: r.item.id, options: r.options })),
+        optStores,
+      );
+      return { resolved, set, storeIds: optStores.map((s) => s.id) };
+    },
+    [resolveContext, consideredStores],
+  );
+
+  const savedThisMonth = useMemo(() => snap.plans.reduce((a, p) => a + p.savings, 0), [snap.plans]);
+
+  // ── Writes ──────────────────────────────────────────────────────────────────
+  const setMyStores = useCallback(
+    async (ids: string[]) => {
+      if (!userId) return false;
+      const prev = snapRef.current.myStores;
+      const ok = await guard('Saving your stores', () => api.saveMyStores(userId, ids, prev));
+      if (ok === null) return false;
+      commit({ ...snapRef.current, myStores: ids });
+      return true;
+    },
+    [userId, commit],
+  );
+
+  const setUsual = useCallback(
+    async (itemKey: string, mode: PreferenceMode, refProductId: string, productIds: string[] = [refProductId]) => {
+      if (!userId) return false;
+      const key = normalizeName(itemKey);
+      const ok = await guard('Saving your usual', () => api.upsertPreference(userId, { itemKey: key, mode, refProductId, productIds }));
+      if (ok === null) return false;
+      const pref: ItemPreference = { itemKey: key, mode, refProductId, productIds, updatedAt: new Date().toISOString() };
+      commit({ ...snapRef.current, preferences: [...snapRef.current.preferences.filter((p) => p.itemKey !== key), pref] });
+      return true;
+    },
+    [userId, commit],
+  );
+
+  const clearUsual = useCallback(
+    async (itemKey: string) => {
+      const key = normalizeName(itemKey);
+      const ok = await guard('Clearing your usual', () => api.deletePreference(key));
+      if (ok === null) return false;
+      commit({ ...snapRef.current, preferences: snapRef.current.preferences.filter((p) => p.itemKey !== key) });
+      return true;
+    },
+    [commit],
+  );
+
+  const recordPlan = useCallback<CompareApi['recordPlan']>(
+    (p) => {
+      track('plan_applied', { store_count: p.storeCount, item_count: p.itemCount });
+      void guard('Saving the plan', async () => {
+        const rec = await api.insertPlan({ ...p, regionId: settingsRef.current.regionId, currency: region?.currency ?? settingsRef.current.currency });
+        commit({ ...snapRef.current, plans: [rec, ...snapRef.current.plans] });
+      });
+    },
+    [commit, region],
+  );
+
+  const addStore = useCallback(
+    async (s: api.StoreInput) => {
+      const row = await guard('Adding a store', () => api.insertStore(s));
+      if (row) commit({ ...snapRef.current, stores: [row, ...snapRef.current.stores] });
+      return row;
+    },
+    [commit],
+  );
+
+  const updateStore = useCallback(
+    async (id: string, s: api.StoreInput) => {
+      const row = await guard('Saving a store', () => api.updateStoreRow(id, s));
+      if (row) commit({ ...snapRef.current, stores: snapRef.current.stores.map((x) => (x.id === id ? row : x)) });
+      return row;
+    },
+    [commit],
+  );
+
+  const deleteStore = useCallback(
+    async (id: string) => {
+      const ok = await guard('Deleting a store', () => api.deleteStoreRow(id));
+      if (ok === null) return false;
+      const cur = snapRef.current;
+      commit({
+        ...cur,
+        stores: cur.stores.filter((s) => s.id !== id),
+        prices: cur.prices.filter((p) => p.storeId !== id),
+        ownReports: cur.ownReports.filter((p) => p.storeId !== id),
+        myStores: cur.myStores.filter((s) => s !== id),
+      });
+      return true;
+    },
+    [commit],
+  );
+
+  const addProduct = useCallback(
+    async (p: api.ProductInput) => {
+      const row = await guard('Adding a product', () => api.insertProduct(p));
+      if (row) commit({ ...snapRef.current, products: [row, ...snapRef.current.products] });
+      return row;
+    },
+    [commit],
+  );
+
+  const updateProduct = useCallback(
+    async (id: string, p: api.ProductInput) => {
+      const row = await guard('Saving a product', () => api.updateProductRow(id, p));
+      if (row) commit({ ...snapRef.current, products: snapRef.current.products.map((x) => (x.id === id ? row : x)) });
+      return row;
+    },
+    [commit],
+  );
+
+  const removeProductImage = useCallback(
+    async (url: string | null | undefined) => {
+      const path = storagePathFromUrl(url ?? undefined, PRODUCT_IMAGES_BUCKET);
+      if (!userId || !path || !path.startsWith(`${userId}/`)) return;
+      const { error } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).remove([path]);
+      if (error) console.error('Product image delete failed:', error.message);
+    },
+    [userId],
+  );
+
+  const deleteProduct = useCallback(
+    async (id: string) => {
+      const image = snapRef.current.products.find((p) => p.id === id)?.imageUrl;
+      const ok = await guard('Deleting a product', () => api.deleteProductRow(id));
+      if (ok === null) return false;
+      void removeProductImage(image);
+      const cur = snapRef.current;
+      commit({
+        ...cur,
+        products: cur.products.filter((p) => p.id !== id),
+        prices: cur.prices.filter((p) => p.productId !== id),
+        ownReports: cur.ownReports.filter((p) => p.productId !== id),
+      });
+      return true;
+    },
+    [commit, removeProductImage],
+  );
+
+  const uploadProductImage = useCallback(
+    async (productId: string, file: File) => {
+      if (!userId) return null;
+      if (!file.type.startsWith('image/') || file.size > MAX_IMAGE_BYTES) return null;
+      const ext = (file.name.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '').slice(0, 5) || 'jpg';
+      const path = `${userId}/${productId}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, file, { upsert: false, contentType: file.type });
+      if (error) {
+        console.error('Product image upload failed:', error.message);
+        return null;
+      }
+      return supabase.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path).data.publicUrl as string;
+    },
+    [userId],
+  );
+
+  const reportPrice = useCallback<CompareApi['reportPrice']>(
+    async ({ storeId, productId, price, isAvailable = true, source = 'manual' }) => {
+      const currency = region?.currency ?? settingsRef.current.currency;
+      const status = await guard('Saving a price', () =>
+        api.insertReport({ storeId, productId, price, currency, isAvailable, source }),
+      );
+      if (!status) return null;
+      track('price_reported', { source, status });
+      const mine: CurrentPrice = {
+        storeId, productId, price, currency, isAvailable, observedAt: new Date().toISOString(), nReports: 1, confidence: 1, mine: true,
+      };
+      const fresh = await guard('Reading the new price', () => api.fetchPrice(storeId, productId));
+      // Read the snapshot only now, so a refresh that landed meanwhile isn't undone.
+      const cur = snapRef.current;
+      const others = cur.prices.filter((p) => !(p.storeId === storeId && p.productId === productId));
+      commit({
+        ...cur,
+        ownReports: [mine, ...cur.ownReports.filter((r) => !(r.storeId === storeId && r.productId === productId))],
+        // A failed read keeps what we had; "no current price" removes it.
+        prices: fresh ? (fresh.price ? [...others, fresh.price] : others) : cur.prices,
+      });
+      return status;
+    },
+    [commit, region],
+  );
+
+  const clearLocalData = useCallback(async () => {
+    if (userId) await deleteSnapshot(userId);
+  }, [userId]);
+
+  const api_: CompareApi = {
+    ready,
+    refreshing,
+    failed,
+    online,
+    syncedAt: snap.syncedAt,
+    regions: snap.regions,
+    region,
+    regionChosen: regionId != null,
+    isLive: region?.status === 'live',
+    fmt: (n) => formatPrice(n ?? 0, region?.currency ?? settings.currency),
+    currency: region?.currency ?? settings.currency,
+    setRegion: (id) => updateSettings({ regionId: id }),
+    stores: snap.stores,
+    products: snap.products,
+    storeById: (id) => storeMap.get(id),
+    productById: (id) => productMap.get(id),
+    pricesFor: (id) => byProduct.get(id) || [],
+    priceAt: (storeId, productId) => effective.get(pairKey(storeId, productId)),
+    myStoreIds: snap.myStores,
+    consideredStores,
+    setMyStores,
+    preferences,
+    setUsual,
+    clearUsual,
+    resolveContext,
+    planFor,
+    recordPlan,
+    savedThisMonth,
+    plansThisMonth: snap.plans.length,
+    recentReports: snap.ownReports.length,
+    addStore,
+    updateStore,
+    deleteStore,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    uploadProductImage,
+    removeProductImage,
+    reportPrice,
+    refresh,
+    convertedCart,
+    clearLocalData,
+  };
+
+  return <CompareContext.Provider value={api_}>{children}</CompareContext.Provider>;
+};

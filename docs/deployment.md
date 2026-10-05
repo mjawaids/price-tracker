@@ -56,6 +56,19 @@ transaction with its bookkeeping row, so a failure leaves nothing half-applied.
 
 Try locally against any Postgres: `SUPABASE_DB_URL=… scripts/db-migrate.sh --dry-run supabase/migrations`.
 
+## Catalogue jobs (manual)
+
+[`.github/workflows/catalog-jobs.yml`](../.github/workflows/catalog-jobs.yml) runs
+one-off data jobs on the shared Compare catalogue (`docs/compare-data.md`). It is
+manual only (Actions → *Catalog jobs* → *Run workflow*), runs in the `production`
+environment with `SUPABASE_DB_URL`, and is a **dry run unless "apply" is ticked**.
+
+- **promote-store** — makes one private store, and its owner's products priced
+  there, public in a city (`scripts/seed/promote-store.ts`). Only with the owner's
+  consent. Run it after the catalogue migrations are deployed: first as a dry run
+  (it prints how many names it could parse), then with *apply*. Re-running is a
+  no-op once the store is public.
+
 ## One-time setup
 
 ### 1. Supabase (project "Universal Project for Apps", ref `xutrdyjoqthxqwejarpz`)

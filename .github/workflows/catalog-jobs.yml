@@ -1,0 +1,66 @@
+# Manual jobs on the shared Compare catalogue (see docs/compare-data.md).
+#
+# promote-store: make one private store — and its owner's products priced there —
+# public in a city, with the owner's consent (used to seed Karachi with the
+# existing Panda Mart import). Dry run by default: it reads, parses and reports;
+# tick "apply" to write. Run it only after the catalogue migrations are deployed.
+
+name: Catalog jobs
+
+on:
+  workflow_dispatch:
+    inputs:
+      store_id:
+        description: Store id (catalog_stores.id) to make public
+        required: true
+        type: string
+      region:
+        description: City id (regions.id)
+        required: true
+        default: karachi
+        type: string
+      chain:
+        description: Chain name shown on the store (e.g. Panda Mart)
+        required: true
+        type: string
+      apply:
+        description: Write the changes (unticked = dry run)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-jobs
+  cancel-in-progress: false
+
+jobs:
+  promote-store:
+    name: Promote a store to public
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      # Inputs reach the script through env vars (never inlined into the shell),
+      # and the script validates them again.
+      - name: Promote store
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          STORE_ID: ${{ inputs.store_id }}
+          REGION: ${{ inputs.region }}
+          CHAIN: ${{ inputs.chain }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args=(--store-id "$STORE_ID" --region "$REGION" --chain "$CHAIN")
+          if [ "$APPLY" = "true" ]; then args+=(--apply); fi
+          node --experimental-strip-types --no-warnings scripts/seed/promote-store.ts "${args[@]}"

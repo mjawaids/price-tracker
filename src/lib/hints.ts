@@ -10,7 +10,12 @@ export const HINTS = {
   swipe: 'Swipe right to tick, left to delete.',
   often: 'Your regulars — one tap adds them again.',
   switcher: 'Shopping somewhere else too? Tap the list name to make another list.',
-  catalogue: 'Start with the stores you shop at, then note prices as you spot them.',
+  whereToBuy: 'Tap to see which stores make this list cheapest, delivery included.',
+  assumed: 'We picked a product for these. Tap one to choose the brand and size you want.',
+  storeSections: 'Your list is now split by store. Switch back to aisles any time.',
+  focusStore: 'Shopping now? Tap “Shop here” to see just that store’s part of the list.',
+  myStores: 'Comparing lots of stores? Pick just the ones you shop at.',
+  freshness: 'Older prices may have changed. Spotted a new one? Add it — it helps everyone.',
 } as const;
 
 export type HintId = keyof typeof HINTS;

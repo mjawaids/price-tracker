@@ -1,27 +1,6 @@
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  brand?: string;
-  unit?: string;
-  imageUrl?: string;
-  prices: Price[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Price {
-  id: string;
-  storeId: string;
-  price: number;
-  currency: string;
-  lastUpdated: Date;
-  isAvailable: boolean;
-  discountPercentage?: number;
-}
-
 /**
- * Per-store delivery rule feeding the cart optimizer.
+ * A store's delivery rule (catalogue stores add an optional minOrder; see
+ * src/lib/compare/types.ts). Used by the Where to buy optimizer.
  *   none → in-store / pickup only, no delivery cost
  *   free → always free delivery
  *   over → free above {threshold}, else {fee}
@@ -32,40 +11,6 @@ export type DeliveryRule =
   | { type: 'free' }
   | { type: 'flat'; fee: number }
   | { type: 'over'; threshold: number; fee: number };
-
-export interface Store {
-  id: string;
-  name: string;
-  type: 'physical' | 'online';
-  location?: {
-    address: string;
-    city: string;
-    coordinates: [number, number];
-  };
-  hasDelivery: boolean;
-  deliveryRadius?: number;
-  deliveryFee?: number;
-  deliveryRule?: DeliveryRule;
-  website?: string;
-  phone?: string;
-  createdAt: Date;
-}
-
-export interface ShoppingListItem {
-  id: string;
-  productId: string;
-  quantity: number;
-  addedAt: Date;
-  priority?: 'low' | 'medium' | 'high';
-}
-
-export interface ShoppingList {
-  id: string;
-  name: string;
-  items: ShoppingListItem[];
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 /**
  * A quick list ("Groceries", "Pharmacy", …) in the Lists section.
@@ -95,13 +40,13 @@ export interface ListItem {
   /** Set by "Clear": hidden from the list but kept for suggestions. */
   clearedAt: string | null;
   sortOrder: number;
+  /** Product pinned on the item ("Just this time" in Which-product). */
   productId: string | null;
+  /** Applied "Where to buy" plan: the store, product and line total for this item. */
+  planStoreId?: string | null;
+  planProductId?: string | null;
+  planPrice?: number | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
 }
-
-/** Per-user cart: { [productId]: quantity } */
-export type Cart = Record<string, number>;
-
-export type ViewMode = 'dashboard' | 'products' | 'stores' | 'shopping-list' | 'shopping-lists' | 'price-manager' | 'add-product' | 'add-store';

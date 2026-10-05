@@ -21,7 +21,8 @@ export function ItemSheet({
   item: ListItem | null;
   onClose: () => void;
   onDelete: (item: ListItem) => void;
-  onCompare: () => void;
+  /** Opens "Which product?" (hidden when Where to buy is turned off). */
+  onCompare?: () => void;
 }) {
   const lists = useLists();
   const [name, setName] = useState('');
@@ -194,6 +195,7 @@ export function ItemSheet({
           />
         </div>
 
+        {onCompare && (
         <button
           type="button"
           onClick={() => {
@@ -207,11 +209,12 @@ export function ItemSheet({
             <Icon name="tag" size={18} stroke={2.2} />
           </span>
           <span className="flex-1 flex flex-col gap-px">
-            <span className="font-bold text-[15px]">Compare prices</span>
-            <span className="text-[13px] text-ink-soft">Optional — track prices at your stores</span>
+            <span className="font-bold text-[15px]">Which one? Compare prices</span>
+            <span className="text-[13px] text-ink-soft">Optional — pick a brand and size, see prices at your stores</span>
           </span>
           <Icon name="chevR" size={18} stroke={2.4} color="var(--ink-soft)" />
         </button>
+        )}
 
       </div>
     </Sheet>

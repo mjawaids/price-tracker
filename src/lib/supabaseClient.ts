@@ -20,7 +20,7 @@ const createStub = (): SpendlessClient => {
   const queryBuilder = () => {
     const result = { data: null, error: NOT_CONFIGURED };
     const chain: Record<string, unknown> = {};
-    for (const method of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'gt', 'in', 'order', 'limit', 'single', 'maybeSingle']) {
+    for (const method of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'neq', 'is', 'gt', 'gte', 'in', 'order', 'range', 'limit', 'single', 'maybeSingle']) {
       chain[method] = () => chain;
     }
     chain.then = (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve);

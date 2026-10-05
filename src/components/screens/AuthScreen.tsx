@@ -6,9 +6,9 @@ import { supportUrl } from '../../lib/links';
 import { InstallButton } from '../shell/Install';
 
 const FEATURES: [IconName, string, string][] = [
-  ['scan', 'Track real prices', 'Your products, your stores, your prices.'],
-  ['truck', 'Delivery-smart', 'Knows each store’s delivery rules.'],
-  ['spark', 'Auto shopping lists', 'Split by store for the lowest total.'],
+  ['lists', 'Quick lists', 'Type “2 milk” and go — works offline.'],
+  ['tag', 'Where to buy', 'The cheapest stores for your whole list.'],
+  ['truck', 'Delivery-smart', 'Counts delivery fees and minimum orders.'],
 ];
 
 function BrandPanel({ big }: { big?: boolean }) {
@@ -201,7 +201,7 @@ export default function AuthScreen() {
           <div>
             <div className="mb-[26px]">
               <h2 className="m-0 font-display font-extrabold text-[27px] tracking-[-0.02em]">Welcome back</h2>
-              <p className="m-0 mt-1 text-ink-faint text-[14.5px]">Sign in to sync your cart and shopping lists.</p>
+              <p className="m-0 mt-1 text-ink-faint text-[14.5px]">Sign in to sync your lists and see where to buy them for less.</p>
             </div>
             <AuthForm />
           </div>

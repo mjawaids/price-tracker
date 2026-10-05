@@ -22,6 +22,24 @@ export interface AddResult {
   merged: ListItem[];
 }
 
+/** One item's place in an applied "Where to buy" plan. */
+export interface PlanAssignment {
+  itemId: string;
+  storeId: string;
+  productId: string;
+  /** Line total (packs × price). */
+  price: number;
+}
+
+/** An item for a list created in one go (e.g. the old Compare cart). */
+export interface NewItem {
+  name: string;
+  quantity: number | null;
+  productId: string | null;
+  /** Aisle (canonical category id), when the caller knows better than the dictionary. */
+  category?: string | null;
+}
+
 interface ListsApi {
   ready: boolean;
   lists: GroceryList[];
@@ -33,6 +51,8 @@ interface ListsApi {
   done: ListItem[];
   todoCountByList: Record<string, number>;
   addItems: (texts: string[]) => AddResult;
+  /** Add one catalogue product to the active list by name, pinned (no quick-add parsing). */
+  addProductItem: (name: string, productId: string, category?: string | null) => AddResult;
   toggle: (id: string) => ListItem | undefined;
   updateItem: (id: string, patch: Partial<Omit<ListItem, 'id' | 'listId'>>) => void;
   deleteItem: (id: string) => ListItem | undefined;
@@ -40,7 +60,16 @@ interface ListsApi {
   /** Put earlier snapshots back (undo). */
   restore: (snapshots: ListItem[]) => void;
   createList: (name: string) => GroceryList;
+  /** Create a list with items in one go (not made active). */
+  createListWithItems: (name: string, items: NewItem[]) => GroceryList;
   renameList: (id: string, name: string) => void;
+  /** Open (not cleared) items of any list. */
+  itemsForList: (listId: string) => ListItem[];
+  /** Apply a plan to a list's open items; items left out lose any earlier plan. */
+  applyPlan: (listId: string, assignments: PlanAssignment[]) => void;
+  clearPlan: (listId: string) => void;
+  /** Pin (or unpin with null) a product on an item. */
+  pinProduct: (itemId: string, productId: string | null) => void;
   deleteList: (id: string) => void;
   suggestions: (query: string, limit?: number) => Suggestion[];
   often: (limit?: number) => string[];
@@ -336,6 +365,37 @@ export const ListsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [categoryFor, commitItems],
   );
 
+  const addProductItem = useCallback(
+    (rawName: string, productId: string, category?: string | null): AddResult => {
+      const listId = activeRef.current && listsRef.current.some((l) => l.id === activeRef.current)
+        ? activeRef.current
+        : listsRef.current[0]?.id;
+      const result: AddResult = { added: [], merged: [] };
+      const name = capitalize(rawName.trim().replace(/\s+/g, ' ').slice(0, 120));
+      if (!listId || !name) return result;
+      const key = normalizeName(name);
+      const existing = itemsRef.current.find((i) => i.listId === listId && !i.clearedAt && normalizeName(i.name) === key);
+      if (existing) {
+        const merged: ListItem = existing.done
+          ? { ...existing, done: false, doneAt: null, productId }
+          : { ...existing, quantity: (existing.quantity ?? 1) + 1, productId };
+        commitItems([merged]);
+        result.merged.push(merged);
+        return result;
+      }
+      const t = nowIso();
+      const item: ListItem = {
+        id: newId(), listId, name, quantity: null, unit: null, note: null,
+        category: category || categoryFor(name), done: false, doneAt: null, clearedAt: null,
+        sortOrder: Date.now(), productId, createdAt: t, updatedAt: t, deletedAt: null,
+      };
+      commitItems([item]);
+      result.added.push(item);
+      return result;
+    },
+    [categoryFor, commitItems],
+  );
+
   const findItem = useCallback((id: string) => itemsRef.current.find((i) => i.id === id), []);
 
   const toggle = useCallback(
@@ -355,6 +415,10 @@ export const ListsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!prev) return;
       const next = { ...prev, ...patch };
       if (typeof next.name === 'string') next.name = capitalize(next.name.slice(0, 120));
+      // Renamed to something else: its pinned product and plan no longer apply.
+      if (normalizeName(next.name) !== normalizeName(prev.name)) {
+        Object.assign(next, { productId: null, planStoreId: null, planProductId: null, planPrice: null });
+      }
       commitItems([next]);
     },
     [commitItems, findItem],
@@ -381,6 +445,68 @@ export const ListsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const restore = useCallback(
     (snapshots: ListItem[]) => commitItems(snapshots.map((s) => ({ ...s, deletedAt: null }))),
     [commitItems],
+  );
+
+  const itemsForList = useCallback(
+    (listId: string) => allItems.filter((i) => i.listId === listId && !i.clearedAt).sort(byOrder),
+    [allItems],
+  );
+
+  const applyPlan = useCallback(
+    (listId: string, assignments: PlanAssignment[]) => {
+      const byItem = new Map(assignments.map((a) => [a.itemId, a]));
+      const changed: ListItem[] = [];
+      for (const i of itemsRef.current) {
+        if (i.listId !== listId || i.clearedAt || i.done) continue;
+        const a = byItem.get(i.id);
+        const next = a
+          ? { planStoreId: a.storeId, planProductId: a.productId, planPrice: Math.round(a.price * 100) / 100 }
+          : { planStoreId: null, planProductId: null, planPrice: null };
+        if (i.planStoreId !== next.planStoreId || i.planProductId !== next.planProductId || i.planPrice !== next.planPrice) {
+          changed.push({ ...i, ...next });
+        }
+      }
+      commitItems(changed);
+    },
+    [commitItems],
+  );
+
+  const clearPlan = useCallback(
+    (listId: string) =>
+      commitItems(
+        itemsRef.current
+          .filter((i) => i.listId === listId && !i.clearedAt && i.planStoreId)
+          .map((i) => ({ ...i, planStoreId: null, planProductId: null, planPrice: null })),
+      ),
+    [commitItems],
+  );
+
+  const pinProduct = useCallback(
+    (itemId: string, productId: string | null) => {
+      const prev = findItem(itemId);
+      if (prev && prev.productId !== productId) commitItems([{ ...prev, productId }]);
+    },
+    [commitItems, findItem],
+  );
+
+  const createListWithItems = useCallback(
+    (name: string, newItems: NewItem[]) => {
+      const list = makeList(name);
+      const t = nowIso();
+      let order = Date.now();
+      commitItems(
+        newItems.map((n) => {
+          const clean = capitalize(n.name.trim().slice(0, 120)) || 'Item';
+          return {
+            id: newId(), listId: list.id, name: clean, quantity: n.quantity && n.quantity > 1 ? n.quantity : null,
+            unit: null, note: null, category: n.category || categoryFor(clean), done: false, doneAt: null, clearedAt: null,
+            sortOrder: order++, productId: n.productId, createdAt: t, updatedAt: t, deletedAt: null,
+          };
+        }),
+      );
+      return list;
+    },
+    [makeList, commitItems, categoryFor],
   );
 
   const renameList = useCallback(
@@ -461,13 +587,19 @@ export const ListsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     done,
     todoCountByList,
     addItems,
+    addProductItem,
     toggle,
     updateItem,
     deleteItem,
     clearDone,
     restore,
     createList: makeList,
+    createListWithItems,
     renameList,
+    itemsForList,
+    applyPlan,
+    clearPlan,
+    pinProduct,
     deleteList,
     suggestions,
     often,

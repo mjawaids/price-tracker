@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
+import { useCompare } from '../../contexts/CompareContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useHint } from '../../hooks/useHint';
@@ -25,9 +26,14 @@ import {
   SuggestionPanel,
   SyncBadge,
 } from './listParts';
-import { groupByCategory } from './listHelpers';
+import { groupByCategory, groupByStore } from './listHelpers';
 import { ItemSheet, ListSwitcherSheet } from './listSheets';
+import { PlanBanner, StoreSectionHeader, WhereToBuyChip } from './listCompare';
+import { deliveryFeeFor } from '../../lib/compare/optimizer';
 import { InstallPill } from '../shell/Install';
+
+// Compare's item sheet loads on first use (keeps Lists' start-up small).
+const ItemChoiceSheet = lazy(() => import('./compareSheets').then((m) => ({ default: m.ItemChoiceSheet })));
 
 const TOAST_MS = 4500;
 const PLACEHOLDER_MS = 3800;
@@ -47,7 +53,12 @@ export default function ListsScreen() {
   const app = useApp();
   const lists = useLists();
   const { compact, isDesktop } = useBreakpoint();
-  const grouped = useSettings().settings.groupListsByAisle !== false;
+  const { settings, updateSettings } = useSettings();
+  const grouped = settings.groupListsByAisle !== false;
+  const compare = useCompare();
+  const [choiceFor, setChoiceFor] = useState<string | null>(null);
+  const [view, setView] = useState<'stores' | 'aisles'>('stores');
+  const [focusStore, setFocusStore] = useState<string | null>(null);
 
   const [draft, setDraft] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -140,9 +151,18 @@ export default function ListsScreen() {
     setToast(null);
   };
 
-  const goCompare = () => {
+  const compareItem = () => {
+    const id = openId;
     setOpenId(null);
-    app.openSection('compare');
+    setChoiceFor(id);
+  };
+  const openPlan = () => {
+    markHintSeen('whereToBuy');
+    app.go('plan', { listId: lists.activeList?.id });
+  };
+  const hideWhereToBuy = () => {
+    updateSettings({ features: { ...settings.features, whereToBuy: false } });
+    showToast('Where to buy is off — turn it back on in Profile → Shopping features');
   };
 
   const parsed = parseQuickAdd(draft);
@@ -153,6 +173,46 @@ export default function ListsScreen() {
     [grouped, lists.todo],
   );
   const starters = STARTER_ITEMS.filter((n) => !lists.todo.some((i) => normalizeName(i.name) === normalizeName(n)));
+
+  // ── Where to buy ─────────────────────────────────────────────────────────────
+  // The plan for the chip runs on a deferred copy of the list, so typing stays smooth.
+  const featureOn = settings.features.whereToBuy !== false;
+  const deferredTodo = useDeferredValue(lists.todo);
+  const { planFor } = compare;
+  const chipPlan = useMemo(
+    () => (featureOn && compare.ready && deferredTodo.length ? planFor(deferredTodo) : null),
+    [featureOn, compare.ready, deferredTodo, planFor],
+  );
+  const coverable = chipPlan?.set.coverable.length ?? 0;
+  // Outside live cities it waits until you have prices at your own stores.
+  const showChip = featureOn && compare.ready && lists.todo.length > 0 && (compare.isLive || !compare.regionChosen || coverable > 0);
+  const chipTitle =
+    chipPlan && chipPlan.set.savings > 0.5 ? `Save ~${compare.fmt(chipPlan.set.savings)} · Where to buy` : 'Where to buy';
+  const chipSub = coverable
+    ? `${coverable} of ${lists.todo.length} ${lists.todo.length === 1 ? 'item' : 'items'} priced at your stores`
+    : compare.regionChosen
+      ? 'See prices at stores near you'
+      : 'Pick your city to compare stores';
+
+  const planned = featureOn && lists.todo.some((i) => i.planStoreId);
+  const byStore = planned && view === 'stores';
+  const storeSections = useMemo(
+    () => (byStore ? groupByStore(lists.todo, compare.storeById) : []),
+    // storeById reads the latest catalogue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [byStore, lists.todo, compare.stores],
+  );
+  const planTotal = storeSections.reduce(
+    (a, sec) => a + sec.subtotal + (sec.store?.kind === 'online' ? deliveryFeeFor(sec.store.deliveryRule, sec.subtotal) : 0),
+    0,
+  );
+  const visibleSections = focusStore ? storeSections.filter((sec) => sec.store?.id === focusStore) : storeSections;
+  const plannedLine = (item: ListItem) => {
+    const product = item.planProductId ? compare.productById(item.planProductId) : undefined;
+    if (!product || item.planPrice == null) return undefined;
+    const q = formatQty(item.quantity, item.unit);
+    return { product: q ? `${q} · ${product.name}` : product.name, price: compare.fmt(item.planPrice) };
+  };
 
   const total = lists.items.length;
   const doneCount = lists.done.length;
@@ -177,6 +237,9 @@ export default function ListsScreen() {
   const hSwipe = useHint('swipe', compact && isTouch() && lists.todo.length >= 5);
   const hOften = useHint('often', often.length > 0 && total > 0 && !parsed);
   const hSwitcher = useHint('switcher', lists.lists.length === 1 && lists.todo.length >= 6);
+  const hWhere = useHint('whereToBuy', showChip && !planned);
+  const hSections = useHint('storeSections', byStore);
+  const hFocus = useHint('focusStore', byStore && storeSections.length >= 2 && !focusStore);
 
   // Rotating placeholder teaches quick-add tricks (paused while typing/focused).
   const rotate = onboarding.tipsOn && !inputFocused && !draft;
@@ -232,6 +295,47 @@ export default function ListsScreen() {
       {hSwitcher.show && (
         <CoachMark className="mt-2" text={hSwitcher.text} onDismiss={hSwitcher.dismiss} onHideAll={hSwitcher.hideAll} arrowLeft={60} />
       )}
+      {showChip && !planned && !isDesktop && (
+        <div className="mt-2 flex flex-col gap-2">
+          <WhereToBuyChip title={chipTitle} sub={chipSub} onOpen={openPlan} onHide={hideWhereToBuy} />
+          {hWhere.show && <CoachMark text={hWhere.text} onDismiss={hWhere.dismiss} onHideAll={hWhere.hideAll} arrowLeft={30} />}
+        </div>
+      )}
+      {planned && (
+        <div className="mt-2 flex flex-col gap-2">
+          {view === 'stores' && (
+            <PlanBanner
+              total={compare.fmt(planTotal)}
+              stores={storeSections.filter((sec) => sec.store).length}
+              onChange={openPlan}
+              onClear={() => {
+                if (lists.activeList) lists.clearPlan(lists.activeList.id);
+                setFocusStore(null);
+              }}
+            />
+          )}
+          <div role="tablist" aria-label="Group items by" className="self-start flex p-[3px] rounded-[12px] bg-[var(--backdrop)]">
+            {(['stores', 'aisles'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                onClick={() => {
+                  setView(v);
+                  setFocusStore(null);
+                  markHintSeen('storeSections');
+                }}
+                className={`rounded-[10px] text-[13.5px] ${view === v ? 'bg-surface font-extrabold shadow-[0_1px_2px_rgba(41,33,24,0.08)]' : 'font-semibold text-ink-soft'}`}
+                style={{ minHeight: 40, padding: '0 16px' }}
+              >
+                {v === 'stores' ? 'Stores' : 'Aisles'}
+              </button>
+            ))}
+          </div>
+          {hSections.show && <TipRow text={hSections.text} onDismiss={hSections.dismiss} />}
+        </div>
+      )}
     </header>
   );
 
@@ -286,7 +390,47 @@ export default function ListsScreen() {
     <TipRow text={hAisles.text} onDismiss={hAisles.dismiss} />
   ) : null;
 
-  const groupsEl = (
+  const storesEl = (
+    <div className="flex flex-col gap-[18px]">
+      {visibleSections.map((sec, idx) => (
+        <section key={sec.store?.id ?? 'anywhere'} aria-label={sec.store?.name ?? 'Anywhere'} className="flex flex-col gap-2">
+          <StoreSectionHeader
+            store={sec.store}
+            count={sec.items.length}
+            done={0}
+            subtotal={sec.subtotal}
+            fmt={compare.fmt}
+            focused={focusStore === sec.store?.id}
+            onFocus={
+              sec.store && storeSections.length > 1
+                ? () => {
+                    markHintSeen('focusStore');
+                    setFocusStore((cur) => (cur === sec.store!.id ? null : sec.store!.id));
+                  }
+                : undefined
+            }
+          />
+          <ul className="list-none m-0 p-0 flex flex-col gap-px bg-[var(--line)] rounded-[18px] overflow-hidden shadow-card">
+            {sec.items.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                fresh={fresh.has(item.id)}
+                planned={plannedLine(item)}
+                onToggle={() => toggle(item)}
+                onOpen={() => openDetails(item.id)}
+                onDelete={() => remove(item)}
+                onSwiped={() => markHintSeen('swipe')}
+              />
+            ))}
+          </ul>
+          {idx === 0 && hFocus.show && <CoachMark text={hFocus.text} onDismiss={hFocus.dismiss} onHideAll={hFocus.hideAll} arrow="up" arrowLeft={250} />}
+        </section>
+      ))}
+    </div>
+  );
+
+  const groupsEl = byStore ? storesEl : (
     <div className={isDesktop && grouped ? 'columns-2 gap-[18px]' : 'flex flex-col gap-[18px]'}>
       {groups.map((g) => (
         <div key={g.id} className={isDesktop && grouped ? 'break-inside-avoid mb-[18px]' : ''}>
@@ -339,7 +483,12 @@ export default function ListsScreen() {
 
   const sheets = (
     <>
-      <ItemSheet item={openItem} onClose={() => setOpenId(null)} onDelete={remove} onCompare={goCompare} />
+      <ItemSheet item={openItem} onClose={() => setOpenId(null)} onDelete={remove} onCompare={featureOn ? compareItem : undefined} />
+      {choiceFor && (
+        <Suspense fallback={null}>
+          <ItemChoiceSheet item={lists.items.find((i) => i.id === choiceFor) ?? null} onClose={() => setChoiceFor(null)} onDone={(m) => showToast(m)} />
+        </Suspense>
+      )}
       <ListSwitcherSheet open={switcherOpen} startCreating={!!app.params.newList} onClose={() => setSwitcherOpen(false)} />
     </>
   );
@@ -377,18 +526,12 @@ export default function ListsScreen() {
                 Ticked items collect here while you shop.
               </div>
             )}
-            <section className="rounded-card bg-accent-wash flex flex-col gap-3" style={{ padding: 18 }}>
-              <span className="grid place-items-center rounded-[12px] bg-surface text-accent-ink" style={{ width: 40, height: 40 }}>
-                <Icon name="tag" size={20} stroke={2.2} />
-              </span>
-              <div className="flex flex-col gap-1">
-                <h2 className="m-0 font-display font-extrabold text-[19px] tracking-[-0.02em]">Want to spend less?</h2>
-                <p className="m-0 text-sm leading-relaxed text-ink-soft">Track prices for items on this list and get the cheapest multi-store plan.</p>
+            {showChip && !planned && (
+              <div className="flex flex-col gap-2">
+                <WhereToBuyChip big title={chipTitle} sub={chipSub} onOpen={openPlan} onHide={hideWhereToBuy} />
+                {hWhere.show && <CoachMark text={hWhere.text} onDismiss={hWhere.dismiss} onHideAll={hWhere.hideAll} arrowLeft={30} />}
               </div>
-              <button type="button" onClick={goCompare} className="rounded-[14px] bg-accent text-accent-on font-extrabold text-[15px]" style={{ minHeight: 44 }}>
-                Compare prices
-              </button>
-            </section>
+            )}
           </aside>
         )}
       </div>

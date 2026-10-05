@@ -59,7 +59,8 @@ npm run preview    # serve the build (service worker + offline work here, not in
 |------|-------|
 | Lists (default section) | `src/components/screens/ListsScreen.tsx`, `src/contexts/ListsContext.tsx` |
 | Offline storage + sync | `src/lib/offline/` |
-| Compare (prices, cart, plan) | `src/components/screens/` (Browse, Cart, Plan, Manage…) |
+| Where to buy (plan for a list) | `src/components/screens/PlanScreen.tsx`, `listCompare.tsx`; logic in `src/lib/compare/` |
+| Compare (prices, stores, contribute) | `src/components/screens/` (Prices, Search, Detail, Stores, Contribute, Manage…), state in `src/contexts/CompareContext.tsx` |
 | Navigation shell | `src/components/shell/Shell.tsx` |
 | Design tokens | `src/index.css`, `tailwind.config.js` |
 | Database migrations | `supabase/migrations/` (pre-deploy), `supabase/post-deploy/` |

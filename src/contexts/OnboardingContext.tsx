@@ -5,7 +5,7 @@ import { HintId } from '../lib/hints';
 
 // Bump this when the walkthrough changes meaningfully — existing users
 // (whose stored version is lower) will then see it again once on next login.
-const ONBOARDING_VERSION = 1;
+const ONBOARDING_VERSION = 2;
 const STORAGE_KEY = 'price-tracker-onboarding';
 
 interface StoredState {
@@ -68,7 +68,7 @@ interface OnboardingContextType {
   open: boolean;
   start: () => void;
   dismiss: () => void;
-  /** Show the Compare walkthrough once, the first time Compare is opened. */
+  /** Show the Where to buy walkthrough once, the first time Where to buy is opened. */
   maybeStartCompareTour: () => void;
   // tips
   tipsOn: boolean;
@@ -96,8 +96,8 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [open, setOpen] = useState(false);
 
   // Lists teach themselves (empty state + hints), so the walkthrough — which is
-  // about price comparison — waits until the user first opens Compare. Checked
-  // once per signed-in user per session.
+  // about Where to buy — waits until the user first opens it on a list
+  // (PlanScreen). Checked once per signed-in user per session.
   const checkedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!user) checkedFor.current = null;

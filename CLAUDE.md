@@ -3,8 +3,10 @@
 Mobile-first shopping app with two sections:
 - **Lists** (default): quick grocery/shopping lists — type "bread" or "2 milk" and
   go; no brand/size needed. Works fully offline and syncs when back online.
-- **Compare**: users track product prices across stores, build a cart, and get an
-  optimized multi-store shopping plan.
+- **Compare**: "Where to buy" — for any list, the stores that make it cheapest
+  (delivery fees and minimum orders included); an accepted plan splits the same list
+  into store sections. Prices come from a shared catalogue (live cities, Karachi first)
+  plus each user's own stores, products and prices. Every Compare feature is optional.
 Live at https://spendless.ibexoft.com
 
 ## Tech Stack
@@ -22,6 +24,8 @@ Live at https://spendless.ibexoft.com
 - `node scripts/check-migrations.mjs` — fails if a migration touches anything outside the `spendless` schema
   (only exception: `spendless-…` policies on `storage.objects`)
 - `SUPABASE_DB_URL=… scripts/db-migrate.sh [--dry-run] <dir>` — apply migrations (CI does this on deploy)
+- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/promote-store.ts --store-id <id> --chain <name> [--apply]`
+  — make a private store public (normally run from the manual *Catalog jobs* workflow; dry run without `--apply`)
 
 ## Environment Variables (`.env`)
 ```
@@ -37,18 +41,43 @@ VITE_GA_ENABLE_IN_DEV=false
 Context-based (no Redux). Providers in `src/contexts/`:
 - `AuthContext` — session, login/logout; caches the last identity so the app opens offline
 - `ListsContext` — Lists section: lists/items, quick add, suggestions, sync status (offline-first)
-- `AppContext` — navigation stack, section, Compare cart (`Record<productId, qty>`), screen enum
-- `OnboardingContext` — Compare walkthrough + contextual tips (`useHint`)
-- `SettingsContext` — currency, location, `groupListsByAisle` (Lists: aisle groups vs order
-  added; switch in the list options sheet). Persisted to localStorage, read on first render
+- `CompareContext` — the catalogue for the user's city (regions, stores, products,
+  current prices with the user's own newer reports overlaid), "my stores", usuals
+  (`item_preferences`), plans this month; `planFor(items)` (resolve + optimize), writes
+  (own stores/products, price reports), the one-time Compare cart → list conversion.
+  Cached per user in IndexedDB (`src/lib/compare/cache.ts`) so plans work offline
+- `AppContext` — navigation stack, section, screen enum, app-level sheets
+  (`currency`, `region`, `help` + topic), sign-out
+- `OnboardingContext` — Where to buy walkthrough (`ONBOARDING_VERSION`, opened from
+  `PlanScreen`) + contextual tips (`useHint`)
+- `SettingsContext` — currency, `regionId` (null = not chosen, `'other'` = a city
+  without shared prices), `features` (`whereToBuy`, `askPrices`, `receipts`; Profile →
+  Shopping features), `groupListsByAisle` (Lists: aisle groups vs order added; switch in
+  the list options sheet). Persisted to localStorage, read on first render. `location`
+  is legacy (mapped to `regionId` once)
 - `ThemeContext` — light-only
 - `AnalyticsContext` — gtag wrappers
 
 ### Key Hooks
-- `useSupabaseData()` — CRUD for products/stores/shopping lists; 30s TTL cache
 - `useBreakpoint()` — returns `{ compact, isTablet }` for responsive logic
-- `useFmt()` — currency formatting
+- `useFmt()` — money in the user's currency (`formatPrice`: "Rs 2,800", cents only when
+  non-zero); Compare uses `compare.fmt`, which prices in the city's currency
 - `useHint(id, when)` — one-at-a-time contextual tips (copy in `src/lib/hints.ts`)
+
+### Where to buy (Lists ↔ Compare)
+- A list shows a **Where to buy** chip (hidden when the feature is off) → `PlanScreen`:
+  Cheapest · One stop · Delivered · Fewer stops (missing or duplicate choices hidden),
+  savings vs the best single store, "We picked these" (assumed products), per-store
+  cards. *Use this plan* → `ListsContext.applyPlan` writes `plan_*` on each item and
+  `recordPlan` stores the savings.
+- With a plan applied the list gets a Stores/Aisles switch, store sections
+  (`listCompare.tsx`, `groupByStore`), *Shop here* focus and an *Open* link for online
+  stores (`storeLink()`, http(s) only).
+- An item's product: pinned (`list_items.product_id`, "Just this time") → usual
+  (`item_preferences`) → named in the text → assumed (last bought, else most carried).
+  `ItemChoiceSheet` (`compareSheets.tsx`) changes it.
+- Help: `src/lib/help.ts` topics in a lazy `HelpSheet` (`app.openSheet('help', id)`);
+  `WhatsNewSheet` once per existing user (`spendless-whatsnew:<uid>`).
 
 ### Offline (Lists)
 - `src/lib/offline/db.ts` — IndexedDB (`idb`) per user: `lists`, `items`, `outbox`, `meta`
@@ -71,9 +100,10 @@ Context-based (no Redux). Providers in `src/contexts/`:
   `/`, `/index.html`, `/sw.js` and `/site.webmanifest` as `no-cache` and the hashed
   `/assets/*` as immutable. `src/main.tsx` reloads once on `vite:preloadError` (a tab
   on an old build asking for a chunk the new deploy removed).
-- Lists data survives the reload (IndexedDB + outbox); in-memory state (navigation
-  stack, Compare cache) starts fresh.
-- Compare still needs a network; it shows an offline notice instead of breaking.
+- Lists data survives the reload (IndexedDB + outbox), and so does the Compare
+  catalogue snapshot (IndexedDB); the navigation stack starts fresh.
+- Offline, Compare reads the saved snapshot (Where to buy and prices work, with an
+  offline note); adding stores, products and prices needs a connection.
 
 ### Installing the app (PWA)
 - `src/lib/install.ts` (imported first thing in `src/main.tsx`) keeps the browser's
@@ -97,17 +127,20 @@ Context-based (no Redux). Providers in `src/contexts/`:
   hidden inside the installed app.
 
 ### Navigation
-Stack-based within `AppContext`. Screen enum values: `lists`, `browse`, `search`,
-`detail`, `cart`, `plan`, `profile`, `mproducts`, `mstores`, `mprices`.
-Sections (`app.section` / `app.openSection`): `lists` (default), `compare`, `profile`.
+Stack-based within `AppContext`. Screen enum values: `lists`, `plan` (Where to buy,
+`{ listId }`), `prices`, `search`, `detail`, `stores`, `contribute`, `mproducts`, `profile`.
+Sections (`app.section` / `app.openSection`): `lists` (default; includes `plan`),
+`compare` (opens `prices`), `profile`.
 - Mobile (<768px): bottom tab bar **Lists · Compare · Profile**; Compare has a
-  Browse · Cart · Catalogue segmented control (Catalogue → Products/Stores/Prices)
+  Prices · Stores · Contribute segmented control (Contribute → Your products)
 - Tablet (768–1099px): collapsed sidebar
-- Desktop (≥1100px): full sidebar (your lists on top, then Compare and Catalogue)
+- Desktop (≥1100px): full sidebar (your lists on top, then Compare: Prices, Stores,
+  Contribute); Compare screens get a top bar with search and the city
 - Sidebar nav scrolls (scrollbar hidden) above the pinned install card + profile;
   `useNavOverflow` in `Shell.tsx` shows edge fades and a "More ⌄" button when items are hidden
-- Code splitting: `Shell.tsx` lazy-loads every screen except Lists (Suspense skeleton),
-  and `src/pages/lazy.ts` lazy-loads the legal/pricing pages. The service worker
+- Code splitting: `Shell.tsx` lazy-loads every screen except Lists (Suspense skeleton)
+  and the region/help sheets; `ListsScreen` lazy-loads the item choice sheet;
+  `src/pages/lazy.ts` lazy-loads the legal/pricing pages. The service worker
   precaches all chunks, so lazy screens still open offline.
 
 ## Database (Supabase — schema `spendless`, all tables have RLS, data is per-user)
@@ -154,35 +187,55 @@ are in `public`). SpendLess data must never mix with theirs:
 
 | Table (`spendless.*`) | Key Columns |
 |-------|------------|
-| `products` | id, user_id, name, category, brand, unit, **prices** (jsonb array) |
-| `stores` | id, user_id, name, type ('physical'\|'online'), location (jsonb), **delivery_rule** (jsonb) |
-| `shopping_lists` | id, user_id, name, items (jsonb array) — Compare's "My Cart" (auto-created) |
+| `products`, `stores` | legacy per-user catalogue (prices in a `products.prices` jsonb column); copied into the catalogue, no longer read by the app |
+| `shopping_lists` | legacy: the old Compare cart, read once to turn it into a list ("From Compare cart") |
 | `lists` | id (device-generated), user_id, name, sort_order, updated_at (server-set), deleted_at |
-| `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id?, updated_at (server-set), deleted_at |
+| `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id? (→ `catalog_products`, the pinned product), plan_store_id?, plan_product_id?, plan_price?, updated_at (server-set), deleted_at |
+| `regions` | id (slug, e.g. `karachi`), name, country_code, currency, status (`live` \| `gathering`) |
+| `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, city, lat/lng, delivery_rule (+`minOrder`), website, status |
+| `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into |
+| `price_reports` | **append-only**: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`) |
+| `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence — written only by the `refresh_current_prices` trigger; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
+| `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
 
-`prices` is a **jsonb column on `products`** (not a separate table). Each entry:
-`{ storeId, price, currency, lastUpdated, isAvailable, discountPercentage? }`
+**Compare catalogue (v2)**: `catalog_*`, `price_reports` and `current_prices` replace the
+per-user `products`/`stores` (their rows were copied in as private rows with the same
+ids). Public rows are read-only for clients; users write only their own private rows and
+their own price reports (rate-limited, outliers held as `pending`). Full model, price
+consensus and anti-spam rules: `docs/compare-data.md`. Item types are a curated vocabulary
+in `src/lib/compare/itemTypes.ts` (the column only checks the slug).
 
-`delivery_rule` union: `none | free | flat { fee } | over { threshold, fee }`
-Legacy `has_delivery`/`delivery_fee` columns still exist; `delivery_rule` takes precedence.
+`delivery_rule` union: `none | free | flat { fee } | over { threshold, fee }` (catalogue
+stores may add `minOrder`).
+
+The legacy `products`, `stores` and `shopping_lists` tables are kept until a later
+post-deploy migration drops them.
 
 ## Key Files
 
 | Path | Purpose |
 |------|---------|
-| `src/types/index.ts` | All TypeScript types (Product, Store, Price, DeliveryRule, etc.) |
+| `src/types/index.ts` | Lists types (`GroceryList`, `ListItem`) and `DeliveryRule`; catalogue types are in `src/lib/compare/types.ts` |
 | `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
-| `src/hooks/useSupabaseData.ts` | All Supabase CRUD + caching |
-| `src/utils/optimizer.ts` | Cart optimization (brute-force ≤300k combos, else greedy) |
-| `src/utils/currency.ts` | 50+ currencies, formatting, geolocation detection |
+| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/size), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes), `cache.ts` (IndexedDB snapshot) |
+| `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, cart conversion |
+| `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
+| `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product) |
+| `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores, add a price, your own products |
+| `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, store picker, store form, add a price; product form |
+| `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
+| `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`) and `WhatsNewSheet` |
+| `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
+| `scripts/seed/promote-store.ts` | Make a private store + its products public (with consent); run via `.github/workflows/catalog-jobs.yml` |
+| `src/utils/currency.ts` | 50+ currencies, formatting, default currency from the browser locale |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
 | `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
 | `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*`) |
-| `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`, `listHelpers.ts`) |
+| `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`, `listHelpers.ts`, `listCompare.tsx` for the Where to buy chip, plan banner and store sections) |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
 | `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |
 | `src/lib/groceryDictionary.ts` | Item → aisle (English + romanized Urdu) |
@@ -224,8 +277,9 @@ say so and propose a safe alternative.
   `dangerouslySetInnerHTML`, `eval`, `new Function` or unvalidated `href`/`src`
   (block `javascript:` URLs).
 - **Auth**: use Supabase Auth only; never roll custom auth, store passwords, or put
-  tokens in URLs. Keep sign-out clearing the cached identity and the user's offline
-  lists (`AppContext.signOut` → `ListsContext.clearLocalData`, after a final sync).
+  tokens in URLs. Keep sign-out clearing the cached identity, the user's offline
+  lists (`AppContext.signOut` → `ListsContext.clearLocalData`, after a final sync), the
+  cached catalogue (`CompareContext.clearLocalData`) and recent searches.
 - **Privacy**: no PII or user content in analytics events, logs or error messages.
 - **Dependencies**: add packages sparingly from reputable sources; keep the lockfile
   committed; check `npm audit` when adding or upgrading; no scripts from untrusted CDNs.
@@ -238,6 +292,8 @@ say so and propose a safe alternative.
 - `.github/workflows/ci-cd.yml`: PRs and pushes run checks (lint, contrast, migration
   guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
   build → Netlify → smoke test → post-deploy migrations → tag + GitHub Release.
+- `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue
+  (promote a store to public); dry run unless "apply" is ticked.
 - Versions are **CalVer `YYYY.M.N`** from git tags (`N` = release count within the
   month, not the day), injected as `VITE_APP_VERSION` / `VITE_APP_COMMIT`
   (`src/lib/version.ts`, shown in Profile and set on `<html data-app-version>` in
@@ -283,7 +339,8 @@ and feel like it came from a strong product design team, not a default template.
   friendly; 48px touch targets and 16px input text (see Conventions).
 - **Performance is UX**: fast first paint, no layout shift, optimistic updates where
   safe, lazy-load heavy screens.
-- **Copy**: short, friendly, specific microcopy; money always formatted via `useFmt()`.
+- **Copy**: short, friendly, specific microcopy; money always formatted via `useFmt()`
+  (or `compare.fmt` in Compare).
 
 ### Design System in Code
 - **Tokens**: `src/index.css` (`--paper`, `--surface`, `--ink`/`--ink-soft`/`--ink-faint`,
@@ -292,7 +349,7 @@ and feel like it came from a strong product design team, not a default template.
   `rounded-btn`, `shadow-card`, `font-display`, `animate-slide-up`, …)
 - **Typography**: `font-display` (Bricolage Grotesque) for headings, `font-sans`
   (Hanken Grotesk) for body, `font-mono` (Space Mono) for figures where it helps
-- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx` (optional pinned `footer` for actions), `Icon.tsx`)
+- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx` (a labelled `role="dialog"`; optional pinned `footer` for actions), `Icon.tsx`)
   before creating new components; put new shared pieces there
 
 ### Using Claude Design
@@ -320,7 +377,8 @@ a Claude Design pass.
 ## What to Avoid
 - Don't add a test framework — no tests exist and none are expected
 - Don't introduce CSS Modules or styled-components
-- Don't create a separate `prices` table — prices live in `products.prices` jsonb
+- Don't write prices anywhere but `price_reports` (append-only) — `current_prices` is
+  written only by its trigger
 - Don't add dark mode — `ThemeContext` is light-only by design
 - Don't add Redux/Zustand — the context pattern is intentional
 - Don't create SpendLess tables/functions in `public` or touch other apps' objects —

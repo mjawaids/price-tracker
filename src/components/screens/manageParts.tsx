@@ -27,9 +27,9 @@ export function TextIn(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputCls} px-3.5 py-[13px] ${props.className || ''}`} />;
 }
 
-export function NumIn(props: React.InputHTMLAttributes<HTMLInputElement>) {
+export function NumIn({ currency, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { currency?: string }) {
   const app = useApp();
-  const sym = getCurrencyByCode(app.currencyCode)?.symbol || '$';
+  const sym = getCurrencyByCode(currency ?? app.currencyCode)?.symbol || '$';
   return (
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint font-mono text-base">{sym}</span>
@@ -48,15 +48,17 @@ export function ManageHeader({
   title,
   sub,
   action,
+  kicker = 'Compare',
 }: {
   title: string;
   sub?: string;
   action?: React.ReactNode;
+  kicker?: string;
 }) {
   return (
     <div className="flex items-end justify-between px-[18px] pt-[18px] pb-2.5 md:px-7 md:pt-6 md:pb-3">
       <div>
-        <div className="font-mono text-[11px] tracking-[0.14em] text-accent-ink uppercase">Manage</div>
+        <div className="font-mono text-[11px] tracking-[0.14em] text-accent-ink uppercase">{kicker}</div>
         <h1 className="font-display font-extrabold text-[26px] tracking-[-0.02em]" style={{ margin: '2px 0 0' }}>
           {title}
         </h1>

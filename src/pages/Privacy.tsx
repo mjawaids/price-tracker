@@ -53,6 +53,10 @@ const Privacy: React.FC = () => {
                     <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     Usage data (e.g., features accessed, error logs).
                   </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    What you add to the app: your lists, the city you choose, and the stores, products and prices you add.
+                  </li>
                 </ul>
               </section>
 
@@ -80,6 +84,11 @@ const Privacy: React.FC = () => {
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     We do not sell your data.
+                  </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    Prices you add at shared stores are shown to other SpendLess users, without your name or account. Your lists, and
+                    the stores and products you add yourself (with their prices), stay private to you.
                   </li>
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>

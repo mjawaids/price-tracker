@@ -41,7 +41,7 @@ export const CURRENCIES: Currency[] = [
   { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', flag: '🇮🇩' },
   { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', flag: '🇲🇾' },
   { code: 'PHP', name: 'Philippine Peso', symbol: '₱', flag: '🇵🇭' },
-  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨', flag: '🇵🇰' },
+  { code: 'PKR', name: 'Pakistani Rupee', symbol: 'Rs', flag: '🇵🇰' },
   { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', flag: '🇧🇩' },
   { code: 'LKR', name: 'Sri Lankan Rupee', symbol: '₨', flag: '🇱🇰' },
   { code: 'NPR', name: 'Nepalese Rupee', symbol: '₨', flag: '🇳🇵' },
@@ -70,12 +70,18 @@ export const currencyChipLabel = (code: string): string => {
   return c ? `${c.symbol} ${c.code}` : code;
 };
 
+const WHOLE = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const CENTS = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** "Rs 2,800", "$3.49": thousands grouped, cents only when there are any. */
 export const formatPrice = (amount: number, currencyCode: string): string => {
+  const n = Number.isFinite(amount) ? amount : 0;
+  const cents = Math.round(Math.abs(n) * 100) % 100 !== 0;
+  const digits = (cents ? CENTS : WHOLE).format(n);
   const currency = getCurrencyByCode(currencyCode);
-  if (!currency) return `${amount.toFixed(2)} ${currencyCode}`;
-  
-  // Always use the same format: symbol + amount for consistency
-  return `${currency.symbol}${amount.toFixed(2)}`;
+  if (!currency) return `${digits} ${currencyCode}`;
+  // Letter symbols ("Rs", "CHF", "kr") read better with a space.
+  return /\p{L}$/u.test(currency.symbol) ? `${currency.symbol} ${digits}` : `${currency.symbol}${digits}`;
 };
 
 const COUNTRY_TO_CURRENCY: Record<string, string> = {

@@ -1,41 +1,41 @@
 import { ComponentType, ReactNode, Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useApp, ScreenName, Section } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
-import { useOnboarding } from '../../contexts/OnboardingContext';
+import { useCompare } from '../../contexts/CompareContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackPageView } from '../../utils/analytics';
-import { Chip, Icon, IconName, SegmentedControl, TipRow } from '../ui';
-import { useHint } from '../../hooks/useHint';
-import { CurrencySheet, LocationSheet } from '../screens/sheets';
+import { Icon, IconName, SegmentedControl } from '../ui';
+import { CurrencySheet } from '../screens/sheets';
 import { currencyChipLabel } from '../../utils/currency';
 import { InstallBanner, InstallSidebarCta } from './Install';
+import { WhatsNewSheet } from '../onboarding/WhatsNewSheet';
 
 import ListsScreen from '../screens/ListsScreen';
 
 // Lists (the default, offline-first section) ships in the main bundle; the other
 // screens load on first use. The service worker precaches every chunk, so they
 // still open offline.
-const BrowseScreen = lazy(() => import('../screens/BrowseScreen'));
+const PricesScreen = lazy(() => import('../screens/PricesScreen'));
 const SearchScreen = lazy(() => import('../screens/SearchScreen'));
 const DetailScreen = lazy(() => import('../screens/DetailScreen'));
-const CartScreen = lazy(() => import('../screens/CartScreen'));
+const StoresScreen = lazy(() => import('../screens/StoresScreen'));
+const ContributeScreen = lazy(() => import('../screens/ContributeScreen'));
 const PlanScreen = lazy(() => import('../screens/PlanScreen'));
 const ProfileScreen = lazy(() => import('../screens/ProfileScreen'));
 const ManageProducts = lazy(() => import('../screens/ManageScreens').then((m) => ({ default: m.ManageProducts })));
-const ManageStores = lazy(() => import('../screens/ManageScreens').then((m) => ({ default: m.ManageStores })));
-const ManagePrices = lazy(() => import('../screens/ManageScreens').then((m) => ({ default: m.ManagePrices })));
+const HelpSheet = lazy(() => import('./HelpSheet'));
+const RegionSheet = lazy(() => import('../screens/compareSheets').then((m) => ({ default: m.RegionSheet })));
 
 const SCREENS: Record<ScreenName, ComponentType> = {
   lists: ListsScreen,
-  browse: BrowseScreen,
+  plan: PlanScreen,
+  prices: PricesScreen,
   search: SearchScreen,
   detail: DetailScreen,
-  cart: CartScreen,
-  plan: PlanScreen,
-  profile: ProfileScreen,
+  stores: StoresScreen,
+  contribute: ContributeScreen,
   mproducts: ManageProducts,
-  mstores: ManageStores,
-  mprices: ManagePrices,
+  profile: ProfileScreen,
 };
 
 /** Placeholder while a screen's code loads (first visit only). */
@@ -49,14 +49,13 @@ function ScreenSkeleton() {
   );
 }
 
-const MANAGE_SCREENS: ScreenName[] = ['mproducts', 'mstores', 'mprices'];
-/** Compare screens that show the Browse · Cart · Catalogue switch (and the tab bar). */
-const COMPARE_TABBED: ScreenName[] = ['browse', 'search', 'cart', 'mproducts', 'mstores', 'mprices'];
-const NAV_SCREENS: ScreenName[] = ['lists', 'profile', ...COMPARE_TABBED];
+/** Compare screens that show the Prices · Stores · Contribute switch. */
+const COMPARE_TABBED: ScreenName[] = ['prices', 'stores', 'contribute', 'mproducts'];
+/** Screens that show the mobile tab bar (others are full-screen with their own back). */
+const NAV_SCREENS: ScreenName[] = ['lists', 'profile', 'search', ...COMPARE_TABBED];
 
-type CompareTab = 'browse' | 'cart' | 'catalogue';
-const compareTabOf = (s: ScreenName): CompareTab =>
-  MANAGE_SCREENS.includes(s) ? 'catalogue' : s === 'cart' ? 'cart' : 'browse';
+type CompareTab = 'prices' | 'stores' | 'contribute';
+const compareTabOf = (s: ScreenName): CompareTab => (s === 'stores' ? 'stores' : s === 'contribute' || s === 'mproducts' ? 'contribute' : 'prices');
 
 interface NavDef {
   id: ScreenName | Section;
@@ -117,7 +116,11 @@ function NavItem({ it, on, mini, onClick }: { it: NavDef; on: boolean; mini: boo
           </span>
         )}
       </div>
-      {!mini && <span style={{ fontSize: 14.5, fontWeight: on ? 700 : 600 }}>{it.label}</span>}
+      {!mini && (
+        <span className="min-w-0 text-left leading-snug" style={{ fontSize: 14.5, fontWeight: on ? 700 : 600 }}>
+          {it.label}
+        </span>
+      )}
     </button>
   );
 }
@@ -173,15 +176,10 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
   const app = useApp();
   const lists = useLists();
   const initials = app.user.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
-  const compare: NavDef[] = [
-    { id: 'browse', icon: 'home', label: 'Browse' },
-    { id: 'search', icon: 'search', label: 'Search' },
-    { id: 'cart', icon: 'cart', label: 'Cart', badge: app.cartCount() },
-  ];
-  const cat: NavDef[] = [
-    { id: 'mproducts', icon: 'box', label: 'Products' },
-    { id: 'mstores', icon: 'store', label: 'Stores' },
-    { id: 'mprices', icon: 'tag', label: 'Prices' },
+  const compareItems: NavDef[] = [
+    { id: 'prices', icon: 'tag', label: 'Prices' },
+    { id: 'stores', icon: 'store', label: 'Stores' },
+    { id: 'contribute', icon: 'plusSquare', label: 'Contribute' },
   ];
   const onLists = app.screen === 'lists';
   const nav = useNavOverflow();
@@ -235,14 +233,14 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
             </div>
             <SidebarLabel mini={mini}>Compare</SidebarLabel>
             <div className="flex flex-col gap-[3px]">
-              {compare.map((it) => (
-                <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
-              ))}
-            </div>
-            <SidebarLabel mini={mini}>Catalogue</SidebarLabel>
-            <div className="flex flex-col gap-[3px]">
-              {cat.map((it) => (
-                <NavItem key={it.id} it={it} mini={mini} on={app.screen === it.id} onClick={() => onPick(it.id as ScreenName)} />
+              {compareItems.map((it) => (
+                <NavItem
+                  key={it.id}
+                  it={it}
+                  mini={mini}
+                  on={app.section === 'compare' && compareTabOf(app.screen) === it.id && app.screen !== 'search' && app.screen !== 'detail'}
+                  onClick={() => onPick(it.id as ScreenName)}
+                />
               ))}
             </div>
           </div>
@@ -314,48 +312,21 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
   );
 }
 
-/** Browse · Cart · Catalogue switch for the Compare section (+ catalogue sub-tabs). */
+/** Prices · Stores · Contribute switch for the Compare section (mobile). */
 function CompareNav() {
   const app = useApp();
-  const tab = compareTabOf(app.screen);
-  const catalogueTip = useHint('catalogue', tab === 'catalogue');
-  const pick = (t: CompareTab) => {
-    if (t === 'catalogue') {
-      app.setMode('manage');
-      app.tab('mproducts');
-    } else {
-      app.setMode('shop');
-      app.tab(t);
-    }
-  };
   return (
-    <div className="shrink-0 bg-paper border-b border-line flex flex-col gap-2.5" style={{ padding: '12px 16px 10px' }}>
+    <div className="shrink-0 bg-paper border-b border-line" style={{ padding: '12px 16px 10px' }}>
       <SegmentedControl
         label="Compare sections"
-        value={tab}
-        onChange={pick}
+        value={compareTabOf(app.screen)}
+        onChange={(t) => app.tab(t)}
         options={[
-          { id: 'browse', label: 'Browse' },
-          { id: 'cart', label: app.cartCount() ? `Cart · ${app.cartCount()}` : 'Cart' },
-          { id: 'catalogue', label: 'Catalogue' },
+          { id: 'prices', label: 'Prices' },
+          { id: 'stores', label: 'Stores' },
+          { id: 'contribute', label: 'Contribute' },
         ]}
       />
-      {tab === 'catalogue' && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {(
-            [
-              ['mproducts', 'Products'],
-              ['mstores', 'Stores'],
-              ['mprices', 'Prices'],
-            ] as [ScreenName, string][]
-          ).map(([id, label]) => (
-            <Chip key={id} active={app.screen === id} onClick={() => app.tab(id)}>
-              {label}
-            </Chip>
-          ))}
-        </div>
-      )}
-      {catalogueTip.show && <TipRow text={catalogueTip.text} onDismiss={catalogueTip.dismiss} />}
     </div>
   );
 }
@@ -364,19 +335,20 @@ function CompareOfflineNote() {
   return (
     <div role="status" className="shrink-0 flex items-center gap-2.5 bg-warn-wash text-warn-ink text-[13.5px] font-semibold" style={{ padding: '10px 16px' }}>
       <Icon name="wifiOff" size={17} stroke={2.4} className="shrink-0" />
-      You’re offline — prices may be out of date. Your lists still work.
+      You’re offline — showing prices saved on this device. Your lists still work.
     </div>
   );
 }
 
 function TopBar({ onPick }: { onPick: (id: ScreenName) => void }) {
   const app = useApp();
+  const compare = useCompare();
   return (
     <div className="shrink-0 border-b border-line bg-paper flex items-center gap-3.5" style={{ height: 64, padding: '0 24px' }}>
       <button
         type="button"
         onClick={() => onPick('search')}
-        className="flex items-center gap-2.5 bg-surface rounded-[12px] text-ink-faint shadow-[inset_0_0_0_1.5px_var(--line)]"
+        className="flex items-center gap-2.5 bg-surface rounded-[12px] text-ink-soft shadow-[inset_0_0_0_1.5px_var(--line)]"
         style={{ flex: 1, maxWidth: 440, padding: '11px 14px' }}
       >
         <Icon name="search" size={19} stroke={2.2} />
@@ -385,29 +357,32 @@ function TopBar({ onPick }: { onPick: (id: ScreenName) => void }) {
       <div className="flex-1" />
       <button
         type="button"
-        onClick={() => app.openSheet('location')}
+        onClick={() => app.openSheet('region')}
         className="flex items-center gap-1.5 bg-surface rounded-full text-ink-soft shadow-[inset_0_0_0_1px_var(--line)]"
-        style={{ padding: '9px 14px' }}
+        style={{ padding: '9px 14px', minHeight: 40 }}
       >
         <Icon name="pin" size={17} stroke={2} />
-        <span className="text-[13.5px] font-semibold">{app.location ? app.location.split(',')[0] : 'Set location'}</span>
+        <span className="text-[13.5px] font-semibold">{compare.region?.name ?? (compare.regionChosen ? 'Another city' : 'Choose city')}</span>
       </button>
-      <button
-        type="button"
-        onClick={() => app.openSheet('currency')}
-        className="flex items-center gap-1.5 bg-surface rounded-full text-ink-soft font-mono font-bold text-[13.5px] shadow-[inset_0_0_0_1px_var(--line)]"
-        style={{ padding: '9px 14px' }}
-      >
-        {currencyChipLabel(app.currencyCode)}
-      </button>
+      {/* A live city prices in its own currency; elsewhere money uses yours. */}
+      {!compare.region && (
+        <button
+          type="button"
+          onClick={() => app.openSheet('currency')}
+          aria-label={`Currency: ${app.currencyCode}`}
+          className="flex items-center gap-1.5 bg-surface rounded-full text-ink-soft font-mono font-bold text-[13.5px] shadow-[inset_0_0_0_1px_var(--line)]"
+          style={{ padding: '9px 14px', minHeight: 40 }}
+        >
+          {currencyChipLabel(app.currencyCode)}
+        </button>
+      )}
     </div>
   );
 }
 
 export default function Shell() {
   const app = useApp();
-  const lists = useLists();
-  const onboarding = useOnboarding();
+  const compare = useCompare();
   const { compact, isTablet } = useBreakpoint();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -417,12 +392,6 @@ export default function Shell() {
     trackPageView(`/${app.screen}`, `${app.screen.charAt(0).toUpperCase()}${app.screen.slice(1)}`);
   }, [app.screen, app.params]);
 
-  // The Compare walkthrough runs the first time someone opens Compare.
-  const { maybeStartCompareTour } = onboarding;
-  useEffect(() => {
-    if (app.section === 'compare') maybeStartCompareTour();
-  }, [app.section, maybeStartCompareTour]);
-
   const Screen = SCREENS[app.screen] || ListsScreen;
   const screenEl = (
     <Suspense fallback={<ScreenSkeleton />}>
@@ -430,25 +399,30 @@ export default function Shell() {
     </Suspense>
   );
 
-  const navigateSidebar = (screen: ScreenName) => {
-    app.setMode(MANAGE_SCREENS.includes(screen) ? 'manage' : 'shop');
-    app.tab(screen);
-  };
-
   const tabs: NavDef[] = [
     { id: 'lists', icon: 'lists', label: 'Lists' },
-    { id: 'compare', icon: 'tag', label: 'Compare', badge: app.cartCount() },
+    { id: 'compare', icon: 'tag', label: 'Compare' },
     { id: 'profile', icon: 'user', label: 'Profile' },
   ];
 
   const showBottomNav = compact && NAV_SCREENS.includes(app.screen);
   const inCompareTabs = COMPARE_TABBED.includes(app.screen);
-  const compareOffline = app.section === 'compare' && !lists.online;
+  const compareOffline = app.section === 'compare' && !compare.online;
 
   const sheets = (
     <>
       <CurrencySheet />
-      <LocationSheet />
+      {app.sheet === 'region' && (
+        <Suspense fallback={null}>
+          <RegionSheet open onClose={() => app.openSheet(null)} />
+        </Suspense>
+      )}
+      <WhatsNewSheet />
+      {app.sheet === 'help' && (
+        <Suspense fallback={null}>
+          <HelpSheet />
+        </Suspense>
+      )}
     </>
   );
 
@@ -471,10 +445,10 @@ export default function Shell() {
 
   return (
     <div className="flex bg-paper text-ink" style={{ height: '100dvh' }}>
-      <Sidebar mini={isTablet} onPick={navigateSidebar} />
+      <Sidebar mini={isTablet} onPick={app.tab} />
       <div className="flex-1 min-w-0 flex flex-col">
         <InstallBanner />
-        {app.section === 'compare' && <TopBar onPick={navigateSidebar} />}
+        {app.section === 'compare' && <TopBar onPick={app.go} />}
         {compareOffline && <CompareOfflineNote />}
         <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden relative">
           {screenEl}

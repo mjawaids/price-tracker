@@ -7,43 +7,32 @@ export interface OnboardingStep {
   tip: string;
 }
 
-// Compare walkthrough — shown the first time someone opens Compare. Introduces
-// the price loop: find products → track prices → build cart → optimized plan.
+// Where to buy walkthrough — shown the first time someone opens Where to buy on a
+// list (PlanScreen), and replayable from Profile → Help. Keep it to the flow:
+// a list → the cheapest stores → choosing products → the list split by store.
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    icon: 'spark',
-    title: 'Compare prices, spend less',
-    body: 'Track prices across your stores, build a cart, and let us work out the cheapest way to shop. Here’s a quick 30-second tour.',
-    tip: 'You can replay this anytime from Profile → Help.',
-  },
-  {
-    icon: 'search',
-    title: 'Find products',
-    body: 'Browse the shared catalogue or use search to jump straight to what you need. Tap a product to see its price at every store.',
-    tip: 'Use Browse, or the search button up top.',
-  },
-  {
     icon: 'tag',
-    title: 'Track prices',
-    body: 'Add your stores and the prices you’ve spotted under the Catalogue — products, stores and prices. Keep them fresh to get the best comparisons.',
-    tip: 'Your catalogue is private — only you can see it.',
+    title: 'Where to buy your list',
+    body: 'We look at the whole list and find the stores that make it cheapest — delivery fees and minimum orders included.',
+    tip: 'Pick Cheapest, One stop, Delivered or Fewer stops.',
   },
   {
-    icon: 'cart',
-    title: 'Build your cart',
-    body: 'Add the items you plan to buy and set quantities. Your cart is private to you and stays synced to your account.',
-    tip: 'Tap + on any product to drop it in your cart.',
+    icon: 'box',
+    title: 'Any bread, or your bread',
+    body: 'Write items the way you always do. We pick a sensible product and tell you which. Tap any item to choose the brand and size — just this time, or as your usual.',
+    tip: '“Dawn bread” sticks to Dawn; “bread” lets brands compete.',
   },
   {
-    icon: 'receipt',
-    title: 'Get an optimized plan',
-    body: 'SpendLess crunches every store combination — including delivery fees — to give you a multi-store shopping plan that spends the least.',
-    tip: 'Open the Plan tab once your cart has a few items.',
+    icon: 'store',
+    title: 'Your stores',
+    body: 'Choose the stores you shop at. Where shared prices are live they’re filled in for you; anywhere else, add your own stores and the prices you see.',
+    tip: 'Compare → Stores, any time.',
   },
   {
-    icon: 'coin',
-    title: 'Make it yours',
-    body: 'Set your currency and location in Profile so prices and stores match where you shop.',
-    tip: 'Replay this tour anytime from Profile → Help.',
+    icon: 'lists',
+    title: 'One list, split by store',
+    body: 'Use a plan and your list splits into a section per store, with what to buy and roughly what it costs. In the shop, tap Shop here to see just that part.',
+    tip: 'Replay this from Profile → Help.',
   },
 ];

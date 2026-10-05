@@ -90,15 +90,52 @@ service worker.
 - [ ] Profile → Help → **Tips** toggles them; **Show tips again** resets them.
 - [ ] The add box placeholder rotates through examples when idle.
 
+## Where to buy
+
+- [ ] A list with open items shows the **Where to buy** chip; tapping it opens the plan.
+      The walkthrough appears the first time (and can be replayed from Profile → Help).
+- [ ] No city chosen yet: the plan asks for a city, then the stores to compare (Skip works).
+- [ ] The plan shows Cheapest and, when they exist and differ, One stop, Delivered
+      (online stores only) and Fewer stops; totals include delivery fees; savings compare
+      with the best single store.
+- [ ] "We picked these" lists assumed items; tapping one opens the item choice sheet
+      (Exactly this one / *Brand*, similar size / Any brand, similar size). *Just this
+      time* changes only this item; *Save as my usual* applies to every list.
+- [ ] **Use this plan** returns to the list split by store, with a plan banner
+      (Change / Clear), a Stores/Aisles switch and *Shop here* on each store.
+      *Open* on an online store opens its website in a new tab.
+- [ ] Renaming a planned item clears its plan and pinned product.
+- [ ] Offline: the plan still opens from saved prices, with an offline note.
+- [ ] Profile → Shopping features → Where to buy **off**: no chip, no store sections,
+      lists look as before. Ask for prices / Receipt import show "Coming soon".
+- [ ] The **x** on the chip turns Where to buy off (with a toast saying where to turn it on).
+
 ## Compare
 
-- [ ] The tab bar shows **Lists · Compare · Profile**; Compare has Browse · Cart · Catalogue.
-- [ ] The Compare walkthrough appears the first time Compare is opened (not on sign-in).
-- [ ] Catalogue → Products / Stores / Prices: add, edit and delete work.
-- [ ] Cart → **Build my cheapest plan** produces a plan.
-- [ ] Catalogue → Products: add, replace and remove a product photo (stored in the
-      `spendless-product-images` bucket).
-- [ ] Offline, Compare shows the "prices may be out of date" notice instead of breaking.
+- [ ] The tab bar shows **Lists · Compare · Profile**; Compare has Prices · Stores ·
+      Contribute (desktop: sidebar items + a top bar with search and the city).
+- [ ] Prices: search, browse by aisle, your usuals; a product page shows prices at your
+      stores and other stores with unit prices and how old each price is.
+- [ ] Product page → **Add to list** adds it to the active list with that product pinned;
+      adding it again bumps the quantity.
+- [ ] Stores: choose your city; *Choose* picks the stores to compare (all = compare every
+      store); add, edit and delete a store of your own (website must be http(s)).
+- [ ] Contribute: find a product → add a price (or mark out of stock); "Not here? Add …"
+      creates your own product (brand, type and size are read from the name), then asks
+      for its price. Your products: add, edit, delete, and add/replace/remove a photo
+      (stored in `spendless-product-images` under your `<user id>/` folder).
+- [ ] A price more than 40% off the current price at a shared store says it's kept for you.
+- [ ] Offline, Compare shows the offline notice and saved prices; adding is disabled.
+- [ ] Profile → Help → **How SpendLess works** opens the help topics; the "?" buttons in
+      the plan open the matching topic.
+
+## Upgrading an existing account
+
+- [ ] An account with an old Compare cart gets a new list "From Compare cart" (once, with
+      pinned products and quantities); its old stores, products and prices appear as
+      private ones.
+- [ ] "New: Where to buy" shows once for an account with earlier activity, and never for
+      a new account.
 
 ## Support link
 
@@ -124,7 +161,8 @@ service worker.
 - [ ] Profile shows the same version (`SpendLess · v2026.10.N (commit)`).
 - [ ] https://spendless.ibexoft.com/privacy loads directly (SPA redirect works).
 - [ ] Sign in, add a list item on one device, see it on another.
-- [ ] Compare data (products, stores, cart) is still there.
+- [ ] Compare data (your stores, products and prices) is still there; an old cart is now
+      the "From Compare cart" list.
 
 ## Accessibility & design
 
