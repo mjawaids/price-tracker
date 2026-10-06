@@ -47,35 +47,84 @@ FROM b, jsonb_to_recordset(b.j->'rows') AS r(
   size_value numeric, size_unit text, pack_count integer, match_key text
 );
 
--- 3. Which catalogue product each listing is: the one we mapped before, else a
---    public product with the same match key, else a new public product (one per
---    match key in this batch, or one per listing when there's no key).
-UPDATE incoming i SET product_id = l.product_id
-FROM spendless.store_listings l
-WHERE l.store_id = :'store_id' AND l.external_id = i.external_id AND l.product_id IS NOT NULL AND i.included;
+-- 3. Which catalogue product each listing is.
+--    Other stores' prices for a product (the median), to tell a carton of 12 or a
+--    twin pack from the single unit that shares its key.
+CREATE TEMP TABLE others ON COMMIT DROP AS
+SELECT product_id, percentile_cont(0.5) WITHIN GROUP (ORDER BY price) AS median
+FROM spendless.current_prices
+WHERE store_id <> :'store_id' AND n_reports > 0 AND price > 0
+GROUP BY product_id;
 
-UPDATE incoming i SET product_id = m.id
-FROM (
-  SELECT DISTINCT ON (match_key) match_key, id
-  FROM spendless.catalog_products
-  WHERE owner_id IS NULL AND status = 'active' AND match_key IS NOT NULL AND match_key <> ''
-  ORDER BY match_key, created_at
-) m
-WHERE i.product_id IS NULL AND i.included AND i.match_key <> '' AND i.match_key = m.match_key
-  -- Never two live listings of one store on one product: that key isn't specific enough.
-  AND NOT EXISTS (
-    SELECT 1 FROM spendless.store_listings l
-    WHERE l.store_id = :'store_id' AND l.product_id = m.id AND l.active AND l.external_id <> i.external_id
-  );
+--    For each listing: the product it mapped to before (and whether that product is
+--    this listing's alone: no other listing, no other store's price), and the
+--    oldest other public product with its match key (and whether we may join it:
+--    never two live listings of one store on one product).
+CREATE TEMP TABLE cand ON COMMIT DROP AS
+SELECT i.external_id, i.match_key,
+  l.product_id AS prev_id,
+  coalesce(p.match_key, '') AS prev_key,
+  l.product_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM spendless.store_listings x
+                    WHERE x.product_id = l.product_id AND NOT (x.store_id = :'store_id' AND x.external_id = i.external_id))
+    AND op.product_id IS NULL AS prev_sole,
+  op.median IS NULL OR i.price BETWEEN op.median / 3 AND op.median * 3 AS prev_sane,
+  q.id AS key_id,
+  q.id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM spendless.store_listings x
+    WHERE x.store_id = :'store_id' AND x.product_id = q.id AND x.active AND x.external_id <> i.external_id
+  ) AS key_free,
+  oq.median IS NULL OR i.price BETWEEN oq.median / 3 AND oq.median * 3 AS key_sane,
+  NULL::uuid AS target,
+  false AS rekey,
+  false AS apart
+FROM incoming i
+LEFT JOIN spendless.store_listings l ON l.store_id = :'store_id' AND l.external_id = i.external_id AND l.product_id IS NOT NULL
+LEFT JOIN spendless.catalog_products p ON p.id = l.product_id
+LEFT JOIN others op ON op.product_id = l.product_id
+LEFT JOIN LATERAL (
+  SELECT m.id FROM spendless.catalog_products m
+  WHERE i.match_key <> '' AND m.owner_id IS NULL AND m.status = 'active'
+    AND m.match_key IS NOT NULL AND m.match_key <> '' AND m.match_key = i.match_key
+    AND m.id IS DISTINCT FROM l.product_id
+  ORDER BY m.created_at, m.id
+  LIMIT 1
+) q ON true
+LEFT JOIN others oq ON oq.product_id = q.id
+WHERE i.included AND NOT coalesce(i.gone, false);
+
+--    a. The product we mapped before, while it still fits: same key (a blank
+--       incoming key says nothing new) and a price in line with the other stores'.
+UPDATE cand SET target = prev_id
+WHERE prev_id IS NOT NULL AND prev_sane AND (match_key = '' OR match_key = prev_key);
+--    b. Else the public product with this key, if the price is in line.
+UPDATE cand SET target = key_id
+WHERE target IS NULL AND key_id IS NOT NULL AND key_free AND key_sane;
+--    c. Else a product that is this listing's alone stays, and takes the new key
+--       (none when another product already has it).
+UPDATE cand SET target = prev_id, rekey = true
+WHERE target IS NULL AND prev_id IS NOT NULL AND prev_sole;
+--    d. Else a new product; held apart (no key) when it's priced unlike the others with its key.
+UPDATE cand SET apart = true
+WHERE target IS NULL AND (
+  (key_id IS NOT NULL AND key_free AND NOT key_sane) OR (prev_id IS NOT NULL AND match_key = prev_key AND NOT prev_sane)
+);
+
+UPDATE incoming i SET product_id = c.target
+FROM cand c WHERE c.external_id = i.external_id AND c.target IS NOT NULL;
+
+UPDATE incoming i SET match_key = ''
+FROM cand c WHERE c.external_id = i.external_id AND c.apart;
 
 UPDATE incoming i SET product_id = f.new_id
 FROM (
   SELECT DISTINCT ON (k) k, new_product_id AS new_id
   FROM (SELECT coalesce(nullif(match_key, ''), 'x:' || external_id) AS k, new_product_id, external_id
-        FROM incoming WHERE product_id IS NULL AND included) x
+        FROM incoming WHERE product_id IS NULL AND included AND NOT coalesce(gone, false)) x
   ORDER BY k, external_id
 ) f
-WHERE i.product_id IS NULL AND i.included AND coalesce(nullif(i.match_key, ''), 'x:' || i.external_id) = f.k;
+WHERE i.product_id IS NULL AND i.included AND NOT coalesce(i.gone, false)
+  AND coalesce(nullif(i.match_key, ''), 'x:' || i.external_id) = f.k;
 
 INSERT INTO spendless.catalog_products
   (id, owner_id, name, brand, variant, item_type, category, size_value, size_unit, pack_count, match_key)
@@ -85,6 +134,17 @@ FROM incoming
 WHERE included AND product_id = new_product_id
 ORDER BY product_id
 ON CONFLICT (id) DO NOTHING;
+
+--    A product that is only this listing's follows what we now read from its name.
+UPDATE spendless.catalog_products p
+SET name = i.name, brand = i.brand, variant = i.variant, item_type = i.item_type, category = i.category,
+    size_value = i.size_value, size_unit = i.size_unit, pack_count = i.pack_count,
+    match_key = CASE WHEN c.key_id IS NULL THEN i.match_key ELSE '' END
+FROM cand c JOIN incoming i ON i.external_id = c.external_id
+WHERE c.rekey AND p.id = c.prev_id AND p.owner_id IS NULL
+  AND (p.name, p.brand, p.variant, p.item_type, p.category, p.size_value, p.size_unit, p.pack_count, p.match_key)
+      IS DISTINCT FROM (i.name, i.brand, i.variant, i.item_type, i.category, i.size_value, i.size_unit, i.pack_count,
+                        CASE WHEN c.key_id IS NULL THEN i.match_key ELSE '' END);
 
 -- 4. Prices. Compare with this store's latest import report for each product:
 --    changed (or new) → a new report; unchanged → move its observed_at to now.
@@ -129,6 +189,14 @@ FROM spendless.store_listings l
 JOIN incoming i ON i.external_id = l.external_id AND NOT coalesce(i.gone, false) AND i.included IS FALSE
 WHERE l.store_id = :'store_id' AND l.active AND l.included;
 
+-- A listing that moved to another product: the old one stops showing this store's price.
+INSERT INTO gone
+SELECT c.external_id, c.prev_id, l.last_price, true
+FROM cand c
+JOIN spendless.store_listings l ON l.store_id = :'store_id' AND l.external_id = c.external_id
+JOIN incoming i ON i.external_id = c.external_id
+WHERE c.prev_id IS NOT NULL AND i.product_id IS DISTINCT FROM c.prev_id;
+
 INSERT INTO spendless.price_reports (user_id, store_id, product_id, price, currency, is_available, observed_at, source)
 SELECT DISTINCT ON (g.product_id) NULL, :'store_id', g.product_id, g.last_price, 'PKR', false, now(), 'import'
 FROM gone g
@@ -138,6 +206,16 @@ ORDER BY g.product_id;
 
 UPDATE spendless.store_listings l SET active = false, last_checked_at = now()
 FROM gone g WHERE l.store_id = :'store_id' AND l.external_id = g.external_id AND NOT g.dropped;
+
+-- A product every listing has moved away from, with no price in stock anywhere,
+-- stops matching: a later listing with its old key gets a product of its own.
+UPDATE spendless.catalog_products p SET match_key = ''
+FROM cand c JOIN incoming i ON i.external_id = c.external_id
+WHERE c.prev_id IS NOT NULL AND i.product_id IS DISTINCT FROM c.prev_id
+  AND p.id = c.prev_id AND p.owner_id IS NULL AND p.match_key <> ''
+  AND NOT EXISTS (SELECT 1 FROM spendless.store_listings x
+                  WHERE x.product_id = p.id AND NOT (x.store_id = :'store_id' AND x.external_id = c.external_id))
+  AND NOT EXISTS (SELECT 1 FROM spendless.current_prices cp WHERE cp.product_id = p.id AND cp.n_reports > 0 AND cp.is_available);
 
 -- A gone marker for a listing that was already gone: just note that we looked.
 UPDATE spendless.store_listings l SET last_checked_at = now()
@@ -153,7 +231,7 @@ SELECT :'store_id', external_id, product_id, url, source_name, source_category, 
 FROM incoming
 WHERE NOT coalesce(gone, false)
 ON CONFLICT (store_id, external_id) DO UPDATE SET
-  product_id = coalesce(sl.product_id, EXCLUDED.product_id),
+  product_id = coalesce(EXCLUDED.product_id, sl.product_id),
   url = coalesce(EXCLUDED.url, sl.url),
   source_name = EXCLUDED.source_name,
   source_category = EXCLUDED.source_category,

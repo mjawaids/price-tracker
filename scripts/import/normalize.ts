@@ -115,7 +115,8 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   // uses the type as read even when we don't show it: a misreading is still the same
   // misreading at every store, so it still fingerprints the product.
   const confidence = parsed.confidence + (!parsed.brand && storeBrand ? 0.3 : 0);
-  const keyFields = { ...fields, item_type: parsed.itemType?.id ?? null };
+  // Sizes in different units ("20ml+20g") don't fingerprint the product: no key.
+  const keyFields = { ...fields, item_type: parsed.itemType?.id ?? null, size_value: parsed.size?.mixed ? null : fields.size_value };
   return {
     ...base,
     product: {

@@ -99,12 +99,24 @@ skips it).
    - the adapter (`scripts/import/adapters/`) reads listings;
    - `normalize.ts` parses each name (`src/lib/compare/productName.ts`) and decides the aisle;
    - `write.sql` writes it in **one transaction**.
-3. **Matching a listing to a catalogue product**, in order:
-   - the product this listing mapped to before;
-   - else a public product with the same `match_key`;
-   - else a new public product.
+3. **Matching a listing to a catalogue product**, checked every time it's read, in order:
+   - the product this listing mapped to before, while it still fits: the same
+     `match_key`, and a price in line with the other stores' (within ⅓× to 3× of
+     their median price for it);
+   - else a public product with the same `match_key`, if the price is in line;
+   - else, when the old product was this listing's alone, it stays and takes the new
+     key, name, size and pack;
+   - else a new public product. One priced unlike the others with its key (a carton
+     of 12 listed as "1 Ltr") is held apart, with no key.
+   - A listing that moves to another product leaves one "out of stock" report on the
+     old one. A product every listing has left, with nothing in stock, loses its key.
    - `match_key` = brand | item type | variant words | size | pack | the name's other
      numbers (so "BF1" and "BF2", or "Nido 3+", stay apart).
+   - Variant words keep what tells products of one type apart: "Shami" and "Chapli"
+     kabab masala, "Nihari" masala, "Canola" oil. Words that only name the item
+     ("Tomato" ketchup, "Shower Gel") don't count.
+   - Sizes: "50g+50g" is a pack of two, "195g+100g" is 295 g, and parts in different
+     units ("20ml+20g" hair colour) give no key.
    - It's only set when brand, type and size were all read with confidence.
    - A key shared by two listings of one store is not trusted.
 4. **Prices** are `price_reports` with `user_id NULL` and `source 'import'`.
