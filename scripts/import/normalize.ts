@@ -49,7 +49,7 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
 // Sizes, pack counts and price points ("900Gm", "1.5 Ltr", "12 x 250ml", "5Pcs", "Rs 50"), which the key already holds.
 const SIZE_LIKE =
-  /\d+(?:[.,]\d+)?\s*(?:x\s*\d+(?:[.,]\d+)?\s*)?(?:kgs?|kilo(?:gram)?s?|grams?|gms?|gr|g|mg|mls?|ltrs?|lt|litres?|liters?|l|cl|oz|lbs?|pcs?|pieces?|packs?|pk|sachets?|bags?|rolls?|sheets?|tabs?|tablets?|capsules?|caps|ply|count|ct|units?|eggs?|dozen|s)\b|\bx\s*\d+\b|\b\d+\s*x\b|rs\.?\s*\d+/gi;
+  /\d+(?:[.,]\d+)?\s*(?:x\s*\d+(?:[.,]\d+)?\s*)?(?:kgs?|kilo(?:gram)?s?|grams?|gms?|gr|g|mg|mls?|ltrs?|lt|litres?|liters?|l|cl|oz|lbs?|pcs?|pieces?|packs?|pk|sachets?|bags?|rolls?|sheets?|tabs?|tablets?|capsules?|caps|ply|count|ct|units?|eggs?|dozen|s)\b|\bx\s*\d+\b|\b\d+\s*x\b|\brs\.?\s*\d+/gi;
 
 /** The other numbers in a name ("Bf1" → 1, "Nido 3+" → 3): they tell stage 1 from stage 2. */
 export function nameNumbers(name: string): string {
