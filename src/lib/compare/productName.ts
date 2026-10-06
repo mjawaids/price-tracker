@@ -4,7 +4,7 @@
 // Used when importing a store catalogue and, on the fly, for products typed in
 // by hand. Plain TS with no app imports so scripts can use it too.
 
-import { matchItemType, tokens } from './itemTypes.ts';
+import { matchItemType, modifierWords, tokens } from './itemTypes.ts';
 import type { ItemType } from './itemTypes.ts';
 
 export type SizeUnit = 'g' | 'ml' | 'pc';
@@ -15,6 +15,8 @@ export interface ParsedSize {
   unit: SizeUnit;
   /** Units in the pack (12 for "12 x 250 ml"). */
   pack: number;
+  /** Parts in different units ("20ml + 20g" hair colour): `value` is the first one only. */
+  mixed?: boolean;
 }
 
 export interface ParsedProduct {
@@ -114,6 +116,9 @@ const RE = {
   range: new RegExp(`${NUM}\\s*${UNIT_RE}?\\s*-\\s*${NUM}\\s*${UNIT_RE}(?![a-z])`),
   size: new RegExp(`${NUM}\\s*${UNIT_RE}(?![a-z])`),
   packOf: /pack\s+of\s+(\d+)/,
+  // Every part has its unit: "SPF 50+ 150ml" is not a bundle.
+  bundle: new RegExp(`(?:${NUM}\\s*${UNIT_RE}\\s*\\+\\s*)+${NUM}\\s*${UNIT_RE}(?![a-z])`),
+  part: new RegExp(`^${NUM}\\s*${UNIT_RE}$`),
   stripX: /(\d+)\s*strips?\s*x\s*(\d+)\s*(?:tablets?|capsules?|softgels?)/,
   count: new RegExp(`(\\d+)\\s*'?\\s*${COUNT_WORDS}(?![a-z])`),
   dozen: /(\d+(?:\.\d+)?)?\s*dozen/,
@@ -135,6 +140,22 @@ export function parseSize(rawName: string): ParsedSize | null {
     const m = unitOf(u);
     return m ? { value: Number(n) * m.mult, unit: m.unit } : null;
   };
+
+  // "50g+50g" is a twin pack; "195g+100g" (a bonus) is the total; "20ml+20g" is
+  // two different things, so only the first size is kept and flagged.
+  const bundle = s.match(RE.bundle);
+  if (bundle) {
+    const sizes = bundle[0].split('+').map((p) => {
+      const part = p.trim().match(RE.part);
+      return part ? metric(part[1], part[2]) : null;
+    });
+    if (sizes.every((x) => x && x.value > 0)) {
+      const ok = sizes as { value: number; unit: SizeUnit }[];
+      if (ok.some((x) => x.unit !== ok[0].unit)) return { ...ok[0], pack: 1, mixed: true };
+      if (ok.every((x) => x.value === ok[0].value)) return { ...ok[0], pack: ok.length };
+      return { value: round(ok.reduce((a, x) => a + x.value, 0)), unit: ok[0].unit, pack: 1 };
+    }
+  }
 
   let m = s.match(RE.nxSize);
   if (m) {
@@ -250,7 +271,9 @@ export function parseProductName(
   const itemType = typeMatch?.type ?? null;
 
   // Variant: what's left once brand, item words, sizes, prices and packaging are gone.
-  const typeWords = new Set(typeMatch?.words ?? []);
+  // A word that tells products of the type apart stays: "Shami Kabab Masala" keeps "shami".
+  const kept = typeMatch ? modifierWords(typeMatch.type.id, typeMatch.words) : [];
+  const typeWords = new Set((typeMatch?.words ?? []).filter((w) => !kept.includes(w)));
   const variantWords = afterBrand
     .replace(/\([^)]*\)/g, ' ')
     .replace(/rs\.?\s*-?\s*\d+/gi, ' ')

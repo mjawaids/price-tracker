@@ -303,6 +303,34 @@ for (const k of KEYWORDS) {
   BY_FIRST_WORD.set(k.words[0], list);
 }
 
+const PHRASES = new Map<string, Set<string>>(
+  ITEM_TYPES.map((type) => [type.id, new Set(type.keywords.map((k) => tokens(k).join(' ')))]),
+);
+const NAME_WORDS = new Map<string, Set<string>>(
+  ITEM_TYPES.map((type) => [type.id, new Set([...tokens(type.name), ...tokens(type.id)])]),
+);
+
+// Longer keywords that are just how the plain item is named: their extra word
+// doesn't make a different product ("Tomato Ketchup" is the ketchup).
+const PLAIN_PHRASES = new Set(
+  ['tomato ketchup', 'french fries', 'body lotion', 'mineral water', 'drinking water', 'bottled water'].map((p) => tokens(p).join(' ')),
+);
+
+/**
+ * The words of a matched keyword that tell products apart: a word whose removal
+ * leaves another keyword of the same type ("shami" in "shami kabab", "nihari" in
+ * "nihari masala", "canola" in "canola oil"). Words of a plain synonym ("shower
+ * gel", "tooth paste") and the type's own name ("cooking" oil) don't count.
+ */
+export function modifierWords(typeId: string, words: string[]): string[] {
+  const phrases = PHRASES.get(typeId);
+  const own = NAME_WORDS.get(typeId);
+  if (!phrases || words.length < 2 || PLAIN_PHRASES.has(words.join(' '))) return [];
+  return words.filter(
+    (w, i) => !own?.has(w) && phrases.has(words.filter((_, j) => j !== i).join(' ')),
+  );
+}
+
 /** Phrases that look like an item but describe something else ("sugar free", "full cream milk"). */
 const NOT_ITEMS = [['sugar', 'free'], ['fat', 'free'], ['gluten', 'free'], ['full', 'cream']];
 
