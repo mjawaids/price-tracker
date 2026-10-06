@@ -1,6 +1,6 @@
 // A store listing → the catalogue product it describes, plus a match key so the
 // same product from two stores becomes one catalogue row.
-import { parseProductName, tidyName } from '../../src/lib/compare/productName.ts';
+import { parseProductName, tidyName, type ParsedSize } from '../../src/lib/compare/productName.ts';
 import { decideAisle, pharmacyLookalike } from './aisles.ts';
 
 /** What every adapter produces. */
@@ -70,6 +70,16 @@ export function matchKey(p: Omit<ProductFields, 'match_key' | 'name' | 'category
     .slice(0, 200);
 }
 
+/** A parsed size as stored: one unit's size (rounded) and a pack of 1–1000. */
+export function sizeFields(size: ParsedSize | null): Pick<ProductFields, 'size_value' | 'size_unit' | 'pack_count'> {
+  const sized = !!size && size.value > 0 && size.value < 1_000_000;
+  return {
+    size_value: sized ? Math.round(size!.value * 1000) / 1000 : null,
+    size_unit: sized ? size!.unit : null,
+    pack_count: Math.min(1000, Math.max(1, Math.round(size?.pack ?? 1))),
+  };
+}
+
 const httpsOnly = (u: string | null | undefined) => (u && /^https:\/\/[^\s]+$/i.test(u) && u.length <= 500 ? u : null);
 
 export function normalize(raw: RawListing, brands: string[]): Normalized | null {
@@ -102,14 +112,11 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   if (!decision.include || base.price == null) return { ...base, included: false, product: null };
 
   const brand = (parsed.brand ?? storeBrand)?.slice(0, 60) || null;
-  const sized = !!parsed.size && parsed.size.value > 0 && parsed.size.value < 1_000_000;
   const fields = {
     brand,
     variant: parsed.variant?.slice(0, 80) || null,
     item_type: itemType?.id ?? null,
-    size_value: sized ? Math.round(parsed.size!.value * 1000) / 1000 : null,
-    size_unit: sized ? parsed.size!.unit : null,
-    pack_count: Math.min(1000, Math.max(1, Math.round(parsed.size?.pack ?? 1))),
+    ...sizeFields(parsed.size),
   };
   // A brand the store told us about counts like one we read from the name. The key
   // uses the type as read even when we don't show it: a misreading is still the same

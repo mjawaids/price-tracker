@@ -64,12 +64,14 @@ CREATE TEMP TABLE cand ON COMMIT DROP AS
 SELECT i.external_id, i.match_key,
   l.product_id AS prev_id,
   coalesce(p.match_key, '') AS prev_key,
+  p.created_at AS prev_created,
   l.product_id IS NOT NULL
     AND NOT EXISTS (SELECT 1 FROM spendless.store_listings x
                     WHERE x.product_id = l.product_id AND NOT (x.store_id = :'store_id' AND x.external_id = i.external_id))
     AND op.product_id IS NULL AS prev_sole,
   op.median IS NULL OR i.price BETWEEN op.median / 3 AND op.median * 3 AS prev_sane,
   q.id AS key_id,
+  q.created_at AS key_created,
   q.id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM spendless.store_listings x
     WHERE x.store_id = :'store_id' AND x.product_id = q.id AND x.active AND x.external_id <> i.external_id
@@ -83,7 +85,7 @@ LEFT JOIN spendless.store_listings l ON l.store_id = :'store_id' AND l.external_
 LEFT JOIN spendless.catalog_products p ON p.id = l.product_id
 LEFT JOIN others op ON op.product_id = l.product_id
 LEFT JOIN LATERAL (
-  SELECT m.id FROM spendless.catalog_products m
+  SELECT m.id, m.created_at FROM spendless.catalog_products m
   WHERE i.match_key <> '' AND m.owner_id IS NULL AND m.status = 'active'
     AND m.match_key IS NOT NULL AND m.match_key <> '' AND m.match_key = i.match_key
     AND m.id IS DISTINCT FROM l.product_id
@@ -95,8 +97,13 @@ WHERE i.included AND NOT coalesce(i.gone, false);
 
 --    a. The product we mapped before, while it still fits: same key (a blank
 --       incoming key says nothing new) and a price in line with the other stores'.
+--       If an older product has the same key and we may join it, we move there, so
+--       two products that came to share a key end up as one.
 UPDATE cand SET target = prev_id
-WHERE prev_id IS NOT NULL AND prev_sane AND (match_key = '' OR match_key = prev_key);
+WHERE prev_id IS NOT NULL AND prev_sane AND (
+  match_key = ''
+  OR (match_key = prev_key AND NOT (key_id IS NOT NULL AND key_free AND key_sane AND key_created < prev_created))
+);
 --    b. Else the public product with this key, if the price is in line.
 UPDATE cand SET target = key_id
 WHERE target IS NULL AND key_id IS NOT NULL AND key_free AND key_sane;

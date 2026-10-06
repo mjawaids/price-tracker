@@ -8,7 +8,7 @@
 // .github/workflows/price-import.yml; sources and their rules: docs/data-sources.md.
 // The log is public (GitHub Actions): counts and a short sample of store listings only.
 import { randomUUID } from 'node:crypto';
-import { learnBrands, parseProductName } from '../../src/lib/compare/productName.ts';
+import { learnBrands } from '../../src/lib/compare/productName.ts';
 import { blinkPages } from './adapters/blink-pages.ts';
 import { hydri } from './adapters/hydri.ts';
 import { imtiazMenu } from './adapters/imtiaz-menu.ts';
@@ -16,7 +16,8 @@ import { magentoGraphql } from './adapters/magento-graphql.ts';
 import type { AdapterContext, AdapterResult, KnownListing } from './adapters/types.ts';
 import { lastJson, runFile, runWithJson } from './db.ts';
 import { Blocked, CapReached, PoliteClient } from './http.ts';
-import { matchKey, normalize, type Normalized } from './normalize.ts';
+import { refreshMatchKeys } from './keys.ts';
+import { normalize, type Normalized } from './normalize.ts';
 import { SOURCES, type Source } from './sources.ts';
 
 function arg(name: string): string | undefined {
@@ -174,31 +175,10 @@ async function runSource(src: Source): Promise<Outcome> {
   return { source: src.id, status: result.status, summary };
 }
 
-/** Public products with no match key yet (e.g. promoted ones) get one, so imports join them. */
-async function backfillMatchKeys() {
-  const rows = lastJson<
-    { id: string; name: string; brand: string | null; variant: string | null; item_type: string | null; size_value: number | null; size_unit: 'g' | 'ml' | 'pc' | null; pack_count: number | null }[]
-  >(await runFile(dbUrl, 'backfill-read.sql'));
-  if (!rows.length) return;
-  const brands = learnBrands(rows.map((r) => r.name));
-  const data = rows.map((r) => {
-    const parsed = parseProductName(r.name, { brands: r.brand ? [...brands, r.brand] : brands });
-    const confidence = parsed.confidence + (!parsed.brand && r.brand ? 0.3 : 0);
-    const key = matchKey(
-      { brand: r.brand, variant: r.variant, item_type: r.item_type, size_value: r.size_value, size_unit: r.size_unit, pack_count: r.pack_count ?? 1 },
-      confidence,
-      r.name,
-    );
-    return { id: r.id, match_key: key };
-  });
-  const left = (await runWithJson(dbUrl, 'backfill-write.sql', 'backfill.json', data)).trim().split('\n').pop();
-  console.log(`[backfill] match keys for ${data.length} public products (${data.filter((d) => d.match_key).length} confident); ${left} still without`);
-}
-
 async function main() {
   console.log(`${dryRun ? 'Dry run' : 'Import'}: ${chosen.map((s) => s.id).join(', ')}${maxPages ? ` · max ${maxPages} pages each` : ''}`);
   if (which === 'all') for (const s of SOURCES.filter((x) => x.paused)) console.log(`[${s.id}] paused: ${s.paused}`);
-  if (!dryRun) await backfillMatchKeys();
+  if (!dryRun) console.log(await refreshMatchKeys(dbUrl));
 
   // Different sites, so they run side by side; each one is polite on its own and
   // a failure in one doesn't stop the others.
