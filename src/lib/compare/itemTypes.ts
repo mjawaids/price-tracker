@@ -313,7 +313,10 @@ const NAME_WORDS = new Map<string, Set<string>>(
 // Longer keywords that are just how the plain item is named: their extra word
 // doesn't make a different product ("Tomato Ketchup" is the ketchup).
 const PLAIN_PHRASES = new Set(
-  ['tomato ketchup', 'french fries', 'body lotion', 'mineral water', 'drinking water', 'bottled water'].map((p) => tokens(p).join(' ')),
+  [
+    'tomato ketchup', 'french fries', 'body lotion', 'mineral water', 'drinking water', 'bottled water',
+    'bar soap', 'soap bar', 'chocolate bar', 'liquid hand wash', 'tissue box',
+  ].map((p) => tokens(p).join(' ')),
 );
 
 /**

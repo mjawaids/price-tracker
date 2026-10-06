@@ -93,7 +93,11 @@ skips it).
 
 `node --experimental-strip-types scripts/import/run.ts [--source <id>|all] [--dry-run] [--max-pages N]`
 
-1. Public products with no `match_key` yet (e.g. Panda Mart's) get one (`backfill-*.sql`).
+1. **Keys no listing gives** (`keys.ts`, `backfill-*.sql`): public products with no
+   `match_key` yet, and the ones sold at a public store we don't import (the promoted
+   Panda Mart rows), have their variant, size, pack and key read again from the name
+   with the current parser. Their keys then match imported listings read the same way.
+   Brand and item type stay as stored, and nothing is written unless it changed.
 2. Each store runs side by side (different sites), and each is independent:
    - read robots.txt;
    - the adapter (`scripts/import/adapters/`) reads listings;
@@ -103,7 +107,8 @@ skips it).
    - the product this listing mapped to before, while it still fits: the same
      `match_key`, and a price in line with the other stores' (within ⅓× to 3× of
      their median price for it);
-   - else a public product with the same `match_key`, if the price is in line;
+   - else a public product with the same `match_key`, if the price is in line. When
+     two products have come to share a key, listings move to the older one;
    - else, when the old product was this listing's alone, it stays and takes the new
      key, name, size and pack;
    - else a new public product. One priced unlike the others with its key (a carton
@@ -114,7 +119,7 @@ skips it).
      numbers (so "BF1" and "BF2", or "Nido 3+", stay apart).
    - Variant words keep what tells products of one type apart: "Shami" and "Chapli"
      kabab masala, "Nihari" masala, "Canola" oil. Words that only name the item
-     ("Tomato" ketchup, "Shower Gel") don't count.
+     ("Tomato" ketchup, Soap "Bar", "Shower Gel") don't count.
    - Sizes: "50g+50g" is a pack of two, "195g+100g" is 295 g, and parts in different
      units ("20ml+20g" hair colour) give no key.
    - It's only set when brand, type and size were all read with confidence.
