@@ -95,9 +95,13 @@ skips it).
 
 1. **Keys no listing gives** (`keys.ts`, `backfill-*.sql`): public products with no
    `match_key` yet, and the ones sold at a public store we don't import (the promoted
-   Panda Mart rows), have their variant, size, pack and key read again from the name
-   with the current parser. Their keys then match imported listings read the same way.
-   Brand and item type stay as stored, and nothing is written unless it changed.
+   Panda Mart rows), are read again from the name with the current parser and the
+   catalogue's brands, as imported listings are, so their keys match:
+   - a missing brand or item type (and then category) is filled from the name; a
+     stored one stays (the parser misreads some flavours as the item, e.g. "Rani
+     Juice … Orange" as an orange);
+   - variant, size and pack follow the name when it reads as the product's type;
+   - nothing is written unless it changed.
 2. Each store runs side by side (different sites), and each is independent:
    - read robots.txt;
    - the adapter (`scripts/import/adapters/`) reads listings;
