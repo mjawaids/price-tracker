@@ -121,15 +121,21 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
    importer moves its latest import report's `observed_at` forward instead of adding
    a row every day, so "updated today" stays true and the table stays small. A listing
    that disappears gets one "out of stock" report.
-3. **People's prices** — while shopping, and from receipts (image, PDF or text,
-   read on the device; the file never leaves it).
+3. **People's prices** — while shopping, and from receipts (image or text, read on
+   the device; the file never leaves it). A receipt is saved as one insert of
+   `source 'receipt'` reports (all or nothing: the daily limit or a refused row saves
+   none), one per product, with `observed_at` = local noon of the receipt date (or now
+   for today). Medicines become the user's own private products, so their prices are
+   visible to them only. What the user chose for a receipt line is remembered on the
+   device only.
 
 ## Roadmap
 
 - More import sources as feeds or partnerships allow (see `docs/data-sources.md`).
 - Trip capture (confirm the price when you tick an item), disputes, corroboration of
   pending reports, reporter trust, freshness badges, "your contributions".
-- Receipt import: text and PDF with a text layer, then photos/scans via on-device OCR,
-  and "share to SpendLess".
+- Receipt import: screenshots, photos and pasted text first (on-device OCR, built;
+  the screen is next), then PDFs and "share to SpendLess", then public in-store branches
+  and suggested branches.
 - More cities: readiness meter, promoting corroborated private stores, merging
   duplicate products, a small moderation queue.

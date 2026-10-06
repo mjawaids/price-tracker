@@ -48,6 +48,9 @@ Context-based (no Redux). Providers in `src/contexts/`:
   current prices with the user's own newer reports overlaid), "my stores", usuals
   (`item_preferences`), plans this month; `planFor(items)` (resolve + optimize), writes
   (own stores/products, price reports), the one-time Compare cart → list conversion.
+  Receipt saves: `reportPrices` (one insert per receipt, all or nothing; maps the daily
+  limit / a refused row / offline to a reason), `retractReports` (Undo), `pricesAtStore`,
+  `addProducts` (a receipt's medicines as private products).
   Cached per user in IndexedDB (`src/lib/compare/cache.ts`) so plans work offline
 - `AppContext` — navigation stack, section, screen enum, app-level sheets
   (`currency`, `region`, `help` + topic), sign-out
@@ -82,13 +85,44 @@ Context-based (no Redux). Providers in `src/contexts/`:
 - Help: `src/lib/help.ts` topics in a lazy `HelpSheet` (`app.openSheet('help', id)`);
   `WhatsNewSheet` once per existing user (`spendless-whatsnew:<uid>`).
 
+### Receipts (in progress: reading, matching and saving are built; the screen isn't yet)
+`features.receipts` still shows "Coming soon". The pipeline, all on the device:
+- **Read**: pasted text, or images via `ocr.ts` — tesseract.js in a Web Worker, loaded
+  only when needed and **self-hosted** (never a CDN): `vite.config.ts` copies the worker,
+  the LSTM engines (`.js` + `.wasm`, plain/SIMD/relaxed-SIMD) and `eng.traineddata.gz`
+  (4.0.0_best_int) from `node_modules` into `dist/ocr/<tesseract.js version>/` (dev
+  serves the same list). Not precached (`globIgnores: ['ocr/**']`, ≈6 MB): a runtime
+  `CacheFirst` cache (`spendless-ocr`) keeps it after the first use; `public/_headers`
+  makes `/ocr/*` immutable. `VITE_OCR_PATH` / `VITE_OCR_BYTES` come from the config;
+  `OCR_MB` is the size shown before the one-time download. `image.ts` uprights,
+  resizes, greys and stretches the image (dark screenshots inverted); `layout.ts` joins
+  the reader's split rows. The image is never uploaded or kept.
+- **Parse** (`parse.ts`, plain TS): items (name, quantity, price for one after the
+  item's own discount), fees, discounts, totals; numbers are explained by arithmetic
+  (qty × rate − discount = total) rather than layout templates. `addsUp` checks the items
+  against the printed subtotal/total. `dates.ts` finds the purchase date (day-first
+  unless an FBR/receipt number says otherwise; ambiguous dates are flagged; >90 days
+  can't be saved). `stores.ts` guesses the chain, online vs in-store, pharmacy, area.
+- **Match** (`match.ts`): IDF word overlap, brand, size, type, price at that store.
+  Picked on its own only from the store's own products, when every telling word matches
+  both ways (packaging words aside), same size, near the store's price, and well ahead
+  of the next; otherwise up to three suggestions. Tuned so wrong automatic picks stay
+  ~0 (harness numbers in the PR).
+- **Review** (`review.ts`): ready / check / choose / medicine. Medicines (`medicine.ts`:
+  PHARMACY section, medicine code, strength like "500mg"; weaker signals only when the
+  line doesn't match a shared product) are saved as the user's own private products, so
+  their prices stay private (`current_prices` needs both store and product visible).
+- **Save**: `CompareContext.reportPrices` → `api.insertReports` (`source 'receipt'`,
+  one row per product, `observed_at` = local noon of the receipt date, or now).
+
 ### Offline (Lists)
 - `src/lib/offline/db.ts` — IndexedDB (`idb`) per user: `lists`, `items`, `outbox`, `meta`
 - `src/lib/offline/sync.ts` — every change is a full-row upsert queued in `outbox`;
   `flush()` pushes (lists before items), `pull()` fetches rows with `updated_at` >
   cursor. Last write wins; rows with unsent local edits are never overwritten.
 - Ids are generated on the device; deletes are soft (`deleted_at`).
-- Service worker (vite-plugin-pwa) precaches the app shell and caches Google Fonts.
+- Service worker (vite-plugin-pwa) precaches the app shell and caches Google Fonts
+  (and, after first use, the receipt reader under `/ocr/`).
 
 ### App updates (new deploys)
 - `registerType: 'prompt'` in `vite.config.ts`: a new deploy's service worker installs
@@ -227,7 +261,8 @@ post-deploy migration drops them.
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
 | `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes), `cache.ts` (IndexedDB snapshot) |
-| `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, cart conversion |
+| `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, receipt saves, cart conversion |
+| `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
 | `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product) |
 | `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores, add a price, your own products |
@@ -244,7 +279,7 @@ post-deploy migration drops them.
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
 | `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
-| `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*`) |
+| `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*` and `/ocr/*`) |
 | `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`, `listHelpers.ts`, `listCompare.tsx` for the Where to buy chip, plan banner and store sections) |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
 | `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |

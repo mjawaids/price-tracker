@@ -10,6 +10,10 @@ interface ImportMetaEnv {
   readonly VITE_APP_VERSION?: string;
   /** Set by CI/CD: git commit SHA of the build */
   readonly VITE_APP_COMMIT?: string;
+  /** Set by vite.config.ts: folder of the receipt reader files, e.g. /ocr/7.0.0/ */
+  readonly VITE_OCR_PATH: string;
+  /** Set by vite.config.ts: bytes one device downloads for the receipt reader */
+  readonly VITE_OCR_BYTES: string;
 }
 
 interface ImportMeta {

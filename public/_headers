@@ -5,6 +5,10 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Receipt reader files sit in a versioned folder (/ocr/<tesseract.js version>/).
+/ocr/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /
   Cache-Control: no-cache
 
