@@ -114,13 +114,20 @@ skips it).
    - else a public product with the same `match_key`, if the price is in line. When
      two products have come to share a key, listings move to the older one;
    - else, when the old product was this listing's alone, it stays and takes the new
-     key, name, size and pack;
+     key, name, size and pack (a blank key too: a product only one listing uses
+     doesn't keep a key its name no longer gives);
    - else a new public product. One priced unlike the others with its key (a carton
      of 12 listed as "1 Ltr") is held apart, with no key.
    - A listing that moves to another product leaves one "out of stock" report on the
      old one. A product every listing has left, with nothing in stock, loses its key.
    - `match_key` = brand | item type | variant words | size | pack | the name's other
      numbers (so "BF1" and "BF2", or "Nido 3+", stay apart).
+   - A listing never joins (or stays on) a product whose name says a different pack:
+     pouch, refill or stand-up on one side, jar, bottle or tin on the other (a pickle
+     pouch isn't the jar). A name that doesn't say is no clash. Of products sharing a
+     key, one with the same pack is preferred.
+   - Some keywords of one type still name different products: "Hot" sauce stays
+     apart from "Chilli" sauce.
    - Variant words keep what tells products of one type apart: "Shami" and "Chapli"
      kabab masala, "Nihari" masala, "Canola" oil. Words that only name the item
      ("Tomato" ketchup, Soap "Bar", "Shower Gel") don't count.

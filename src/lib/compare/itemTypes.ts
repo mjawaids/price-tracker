@@ -319,15 +319,21 @@ const PLAIN_PHRASES = new Set(
   ].map((p) => tokens(p).join(' ')),
 );
 
+// Keywords filed under one type that still name a different product: their own
+// words stay in the variant ("Dipitt Hot Sauce" isn't "Dipitt Chilli Sauce").
+const DISTINCT_PHRASES = new Set(['hot sauce'].map((p) => tokens(p).join(' ')));
+
 /**
  * The words of a matched keyword that tell products apart: a word whose removal
  * leaves another keyword of the same type ("shami" in "shami kabab", "nihari" in
- * "nihari masala", "canola" in "canola oil"). Words of a plain synonym ("shower
- * gel", "tooth paste") and the type's own name ("cooking" oil) don't count.
+ * "nihari masala", "canola" in "canola oil"), or any word of a distinct phrase
+ * ("hot" sauce). Words of a plain synonym ("shower gel", "tooth paste") and the
+ * type's own name ("cooking" oil) don't count.
  */
 export function modifierWords(typeId: string, words: string[]): string[] {
   const phrases = PHRASES.get(typeId);
   const own = NAME_WORDS.get(typeId);
+  if (DISTINCT_PHRASES.has(words.join(' '))) return words.filter((w) => !own?.has(w));
   if (!phrases || words.length < 2 || PLAIN_PHRASES.has(words.join(' '))) return [];
   return words.filter(
     (w, i) => !own?.has(w) && phrases.has(words.filter((_, j) => j !== i).join(' ')),

@@ -60,11 +60,15 @@ GROUP BY product_id;
 --    this listing's alone: no other listing, no other store's price), and the
 --    oldest other public product with its match key (and whether we may join it:
 --    never two live listings of one store on one product).
+--    A pack clash (one name says pouch or refill, the other jar, bottle or tin: a
+--    pickle pouch isn't the jar) keeps a listing off a product; a name that doesn't
+--    say is no clash.
 CREATE TEMP TABLE cand ON COMMIT DROP AS
 SELECT i.external_id, i.match_key,
   l.product_id AS prev_id,
   coalesce(p.match_key, '') AS prev_key,
   p.created_at AS prev_created,
+  coalesce(((i.source_name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M' AND p.name ~* '\m(jar|bottle|btl|tin|can|glass)\M') OR (i.source_name ~* '\m(jar|bottle|btl|tin|can|glass)\M' AND p.name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M')), false) AS prev_clash,
   l.product_id IS NOT NULL
     AND NOT EXISTS (SELECT 1 FROM spendless.store_listings x
                     WHERE x.product_id = l.product_id AND NOT (x.store_id = :'store_id' AND x.external_id = i.external_id))
@@ -72,6 +76,7 @@ SELECT i.external_id, i.match_key,
   op.median IS NULL OR i.price BETWEEN op.median / 3 AND op.median * 3 AS prev_sane,
   q.id AS key_id,
   q.created_at AS key_created,
+  coalesce(q.clash, false) AS key_clash,
   q.id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM spendless.store_listings x
     WHERE x.store_id = :'store_id' AND x.product_id = q.id AND x.active AND x.external_id <> i.external_id
@@ -85,11 +90,12 @@ LEFT JOIN spendless.store_listings l ON l.store_id = :'store_id' AND l.external_
 LEFT JOIN spendless.catalog_products p ON p.id = l.product_id
 LEFT JOIN others op ON op.product_id = l.product_id
 LEFT JOIN LATERAL (
-  SELECT m.id, m.created_at FROM spendless.catalog_products m
+  SELECT m.id, m.created_at, ((i.source_name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M' AND m.name ~* '\m(jar|bottle|btl|tin|can|glass)\M') OR (i.source_name ~* '\m(jar|bottle|btl|tin|can|glass)\M' AND m.name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M')) AS clash
+  FROM spendless.catalog_products m
   WHERE i.match_key <> '' AND m.owner_id IS NULL AND m.status = 'active'
     AND m.match_key IS NOT NULL AND m.match_key <> '' AND m.match_key = i.match_key
     AND m.id IS DISTINCT FROM l.product_id
-  ORDER BY m.created_at, m.id
+  ORDER BY 3, m.created_at, m.id
   LIMIT 1
 ) q ON true
 LEFT JOIN others oq ON oq.product_id = q.id
@@ -98,17 +104,18 @@ WHERE i.included AND NOT coalesce(i.gone, false);
 --    a. The product we mapped before, while it still fits: same key (a blank
 --       incoming key says nothing new) and a price in line with the other stores'.
 --       If an older product has the same key and we may join it, we move there, so
---       two products that came to share a key end up as one.
-UPDATE cand SET target = prev_id
-WHERE prev_id IS NOT NULL AND prev_sane AND (
+--       two products that came to share a key end up as one. A product that is this
+--       listing's alone still follows its name: a blank key clears its old one.
+UPDATE cand SET target = prev_id, rekey = (match_key = '' AND prev_sole)
+WHERE prev_id IS NOT NULL AND prev_sane AND NOT prev_clash AND (
   match_key = ''
-  OR (match_key = prev_key AND NOT (key_id IS NOT NULL AND key_free AND key_sane AND key_created < prev_created))
+  OR (match_key = prev_key AND NOT (key_id IS NOT NULL AND key_free AND key_sane AND NOT key_clash AND key_created < prev_created))
 );
---    b. Else the public product with this key, if the price is in line.
+--    b. Else the public product with this key, if the price is in line and the pack agrees.
 UPDATE cand SET target = key_id
-WHERE target IS NULL AND key_id IS NOT NULL AND key_free AND key_sane;
+WHERE target IS NULL AND key_id IS NOT NULL AND key_free AND key_sane AND NOT key_clash;
 --    c. Else a product that is this listing's alone stays, and takes the new key
---       (none when another product already has it).
+--       (none when another product of the same pack already has it).
 UPDATE cand SET target = prev_id, rekey = true
 WHERE target IS NULL AND prev_id IS NOT NULL AND prev_sole;
 --    d. Else a new product; held apart (no key) when it's priced unlike the others with its key.
@@ -146,12 +153,12 @@ ON CONFLICT (id) DO NOTHING;
 UPDATE spendless.catalog_products p
 SET name = i.name, brand = i.brand, variant = i.variant, item_type = i.item_type, category = i.category,
     size_value = i.size_value, size_unit = i.size_unit, pack_count = i.pack_count,
-    match_key = CASE WHEN c.key_id IS NULL THEN i.match_key ELSE '' END
+    match_key = CASE WHEN c.key_id IS NULL OR c.key_clash THEN i.match_key ELSE '' END
 FROM cand c JOIN incoming i ON i.external_id = c.external_id
 WHERE c.rekey AND p.id = c.prev_id AND p.owner_id IS NULL
   AND (p.name, p.brand, p.variant, p.item_type, p.category, p.size_value, p.size_unit, p.pack_count, p.match_key)
       IS DISTINCT FROM (i.name, i.brand, i.variant, i.item_type, i.category, i.size_value, i.size_unit, i.pack_count,
-                        CASE WHEN c.key_id IS NULL THEN i.match_key ELSE '' END);
+                        CASE WHEN c.key_id IS NULL OR c.key_clash THEN i.match_key ELSE '' END);
 
 -- 4. Prices. Compare with this store's latest import report for each product:
 --    changed (or new) → a new report; unchanged → move its observed_at to now.
