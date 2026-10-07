@@ -4,6 +4,8 @@ import { useSettings } from './SettingsContext';
 import { useLists } from './ListsContext';
 import { useCompare } from './CompareContext';
 import { useFmt } from '../hooks/useFmt';
+import { deleteReceiptMemory } from '../lib/receipt/memory';
+import { resetReceipt } from '../lib/receipt/session';
 
 export type ScreenName =
   | 'lists'
@@ -14,6 +16,7 @@ export type ScreenName =
   | 'stores'
   | 'contribute'
   | 'mproducts'
+  | 'receipt'
   | 'profile';
 
 /** Top-level app sections: quick Lists (default) and price Compare. */
@@ -106,8 +109,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       signOut: async () => {
         setStack([{ screen: 'lists', params: {} }]);
+        resetReceipt();
         await clearLocalLists();
         await clearLocalCatalog();
+        if (authUser?.id) await deleteReceiptMemory(authUser.id);
         try {
           localStorage.removeItem('spendless-recent-searches'); // SearchScreen's recent terms
         } catch {

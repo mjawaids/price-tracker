@@ -132,7 +132,7 @@ export function parseSize(rawName: string): ParsedSize | null {
     .toLowerCase()
     .replace(/×/g, 'x')
     .replace(/\(\s*0{3,}\d*\s*\)/g, ' ')
-    .replace(/rs\.?\s*-?\s*\d+/g, ' ') // "Rs. 30" is a price point, not a size
+    .replace(/\brs\.?\s*-?\s*\d+/g, ' ') // "Rs. 30" is a price point, not a size ("Wafers 8s" isn't one)
     .replace(/\d+(?:\.\d+)?\s*mg\b/g, ' ') // medicine strength, not a size
     .replace(/\d+(?:\.\d+)?\s*%/g, ' ');
 
@@ -258,7 +258,7 @@ export function parseProductName(
 ): ParsedProduct {
   const name = tidyName(raw);
   const size = parseSize(name);
-  const pp = name.match(/rs\.?\s*-?\s*(\d+)/i);
+  const pp = name.match(/\brs\.?\s*-?\s*(\d+)/i);
   const pricePoint = pp ? Number(pp[1]) : null;
   const brand = findBrand(name, opts.brands);
   // The brand is always the leading words (see findBrand).
@@ -276,7 +276,7 @@ export function parseProductName(
   const typeWords = new Set((typeMatch?.words ?? []).filter((w) => !kept.includes(w)));
   const variantWords = afterBrand
     .replace(/\([^)]*\)/g, ' ')
-    .replace(/rs\.?\s*-?\s*\d+/gi, ' ')
+    .replace(/\brs\.?\s*-?\s*\d+/gi, ' ')
     .replace(/\d+(?:\.\d+)?\s*[a-z%']*/gi, ' ')
     .replace(/[|,+\-–/]/g, ' ')
     .split(/\s+/)

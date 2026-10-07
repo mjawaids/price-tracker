@@ -10,7 +10,7 @@ Logic: `src/lib/compare/`. Store imports: `docs/data-sources.md`.
 A list item ("bread") is matched to products ("Dawn Milky Bread 800g"), products
 have prices at stores, and the optimizer picks the cheapest way to buy the whole
 list — delivery fees and minimum orders included. Prices come from store imports,
-from people's own entries, and (later) from receipts. Shared prices are live in
+from people's own entries, and from receipts. Shared prices are live in
 **Karachi** first; everywhere else Compare runs on the user's own stores and prices.
 
 ## Tables (`spendless` schema)
@@ -101,7 +101,8 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
   cart" once per user (flag `spendless-cart-migrated:<userId>` in localStorage), after
   the user's lists have synced and only if no list with that name exists.
 - Analytics events carry counts only (`plan_applied`, `price_reported`,
-  `cart_converted`) — never names, prices or ids.
+  `cart_converted`, `receipt_read`, `receipt_failed` (with a reason like `nothing`),
+  `receipt_saved`, `receipt_undone`) — never names, prices, ids or receipt text.
 
 ## Regions
 
@@ -121,15 +122,25 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
    importer moves its latest import report's `observed_at` forward instead of adding
    a row every day, so "updated today" stays true and the table stays small. A listing
    that disappears gets one "out of stock" report.
-3. **People's prices** — while shopping, and from receipts (image, PDF or text,
-   read on the device; the file never leaves it).
+3. **People's prices** — while shopping, and from receipts (image or text, read on
+   the device; the file never leaves it). A receipt is saved by one call to
+   `spendless.save_receipt` (SECURITY INVOKER: RLS and the report trigger apply as for
+   any insert), which runs as one transaction: it makes a private product for each
+   medicine that needs one — reusing the user's own active product with the same name,
+   spaces and case ignored — then inserts the `source 'receipt'` reports, one per
+   product, with `observed_at` = local noon of the receipt date (or now for today).
+   All or nothing: the daily limit or a refused row saves no prices and leaves no new
+   products behind. Medicines are the user's own private products, so their prices
+   are visible to them only. What the user chose for a receipt line is remembered on
+   the device only.
 
 ## Roadmap
 
 - More import sources as feeds or partnerships allow (see `docs/data-sources.md`).
 - Trip capture (confirm the price when you tick an item), disputes, corroboration of
   pending reports, reporter trust, freshness badges, "your contributions".
-- Receipt import: text and PDF with a text layer, then photos/scans via on-device OCR,
-  and "share to SpendLess".
+- Receipt import: screenshots, photos and pasted text are live (Compare → Contribute →
+  Add a receipt, on-device OCR); next public in-store branches, then PDFs and "share to
+  SpendLess", then suggested branches.
 - More cities: readiness meter, promoting corroborated private stores, merging
   duplicate products, a small moderation queue.

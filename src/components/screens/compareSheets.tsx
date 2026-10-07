@@ -455,7 +455,20 @@ const RULES: { id: StoreDeliveryRule['type']; label: string; desc: string }[] = 
   { id: 'flat', label: 'Flat fee', desc: 'The same fee on every order' },
 ];
 
-export function StoreFormSheet({ target, onClose, onSaved }: { target: 'new' | CatalogStore | null; onClose: () => void; onSaved?: (s: CatalogStore) => void }) {
+export function StoreFormSheet({
+  target,
+  initialName = '',
+  initialKind = 'physical',
+  onClose,
+  onSaved,
+}: {
+  target: 'new' | CatalogStore | null;
+  /** Prefill for a new store (e.g. the shop named on a receipt). */
+  initialName?: string;
+  initialKind?: CatalogStore['kind'];
+  onClose: () => void;
+  onSaved?: (s: CatalogStore) => void;
+}) {
   const compare = useCompare();
   const store = target && target !== 'new' ? target : null;
   const [name, setName] = useState('');
@@ -471,8 +484,8 @@ export function StoreFormSheet({ target, onClose, onSaved }: { target: 'new' | C
 
   useEffect(() => {
     const r = store?.deliveryRule;
-    setName(store?.name ?? '');
-    setKind(store?.kind ?? 'physical');
+    setName(store?.name ?? initialName);
+    setKind(store?.kind ?? initialKind);
     setRule(r?.type ?? 'none');
     setFee(r && 'fee' in r ? String(r.fee) : '');
     setThreshold(r && 'threshold' in r ? String(r.threshold) : '');

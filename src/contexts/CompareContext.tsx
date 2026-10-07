@@ -80,12 +80,32 @@ interface CompareApi {
   /** Delete an image this user uploaded (anything outside their folder is left alone). */
   removeProductImage: (url: string | null | undefined) => Promise<void>;
   reportPrice: (r: { storeId: string; productId: string; price: number | null; isAvailable?: boolean; source?: api.ReportSource }) => Promise<'accepted' | 'pending' | null>;
+  /** Prices at one store: shared, with the user's own newer reports on top. */
+  pricesAtStore: (storeId: string) => CurrentPrice[];
+  /** The user's own reports at one store (last 30 days, newest first). */
+  ownReportsAt: (storeId: string) => CurrentPrice[];
+  /**
+   * Save a receipt's prices at one store in one transaction (all or nothing): rows
+   * name a product, or a new private product (a medicine; the user's own product with
+   * the same name is reused). A refused save leaves no new products behind.
+   */
+  reportPrices: (storeId: string, rows: api.ReceiptPrice[], observedAt: string | null) => Promise<ReceiptSaveResult>;
+  /** Undo a receipt: delete its reports and re-read those prices. */
+  retractReports: (storeId: string, ids: string[], productIds: string[]) => Promise<boolean>;
   refresh: (force?: boolean) => Promise<void>;
   /** Set when the old Compare cart was turned into a list on this device. */
   convertedCart: { listId: string; count: number } | null;
   /** Sign-out helper: delete this user's cached catalogue. */
   clearLocalData: () => Promise<void>;
 }
+
+export type ReceiptSaveResult =
+  /** `productIds`: the product each row was saved to, in order (given, reused or new). */
+  | { ok: true; ids: string[]; productIds: string[]; accepted: number; pending: number }
+  /** offline · rate_limit (500 a day) · denied (refused by a policy, e.g. a date over 90 days) · error */
+  | { ok: false; reason: 'offline' | 'rate_limit' | 'denied' | 'error' };
+
+const newestFirst = (a: CurrentPrice, b: CurrentPrice) => Date.parse(b.observedAt) - Date.parse(a.observedAt);
 
 /** A product's list aisle (a canonical category id), when we know it. */
 const aisleOf = (p: CatalogProduct): string | null => {
@@ -372,6 +392,18 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return m;
   }, [snap.prices, snap.ownReports, storeMap]);
 
+  const ownByStore = useMemo(() => {
+    const m = new Map<string, CurrentPrice[]>();
+    for (const r of snap.ownReports) m.set(r.storeId, [...(m.get(r.storeId) || []), r]);
+    return m;
+  }, [snap.ownReports]);
+
+  const byStore = useMemo(() => {
+    const m = new Map<string, CurrentPrice[]>();
+    for (const p of effective.values()) m.set(p.storeId, [...(m.get(p.storeId) || []), p]);
+    return m;
+  }, [effective]);
+
   const byProduct = useMemo(() => {
     const m = new Map<string, CurrentPrice[]>();
     for (const p of effective.values()) m.set(p.productId, [...(m.get(p.productId) || []), p]);
@@ -599,6 +631,81 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [commit, region],
   );
 
+  const reportPrices = useCallback<CompareApi['reportPrices']>(
+    async (storeId, rows, observedAt) => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return { ok: false, reason: 'offline' };
+      const currency = region?.currency ?? settingsRef.current.currency;
+      // One row per product (and per new product name): a second report within 10
+      // minutes would replace the first. The last one wins.
+      const unique = new Map<string, api.ReceiptPrice>();
+      for (const r of rows) {
+        if (!(r.price > 0)) continue;
+        unique.set('productId' in r ? `p:${r.productId}` : `n:${api.productKey(r.newProduct.name)}`, r);
+      }
+      const items = [...unique.values()];
+      let saved: api.ReceiptSaved;
+      try {
+        saved = await api.saveReceipt(storeId, observedAt, currency, items);
+      } catch (error) {
+        const code = error instanceof api.ApiError ? error.code : null;
+        console.error('Saving receipt prices failed:', code ?? (error instanceof Error ? error.message : error));
+        const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+        return { ok: false, reason: code === '54000' ? 'rate_limit' : code === '42501' ? 'denied' : offline ? 'offline' : 'error' };
+      }
+      const pending = saved.reports.filter((r) => r.status === 'pending').length;
+      track('receipt_saved', { count: saved.reports.length, pending });
+      const at = observedAt ?? new Date().toISOString();
+      const priceOf = new Map(items.map((it, i) => [saved.itemProducts[i], it.price]));
+      const mine: CurrentPrice[] = saved.reports.map((r) => ({
+        storeId, productId: r.productId, price: priceOf.get(r.productId) ?? null, currency, isAvailable: true, observedAt: at, nReports: 1, confidence: 1, mine: true,
+      }));
+      const touched = new Set(saved.reports.map((r) => r.productId));
+      const fresh = await guard('Reading the new prices', () => api.fetchPricesAt(storeId, [...touched]));
+      // Read the snapshot only now, so a refresh that landed meanwhile isn't undone.
+      const cur = snapRef.current;
+      const here = (p: CurrentPrice) => p.storeId === storeId && touched.has(p.productId);
+      const known = new Set(cur.products.map((p) => p.id));
+      commit({
+        ...cur,
+        products: [...saved.created.filter((p) => !known.has(p.id)), ...cur.products],
+        ownReports: [...mine, ...cur.ownReports.filter((r) => !here(r))].sort(newestFirst),
+        prices: fresh ? [...cur.prices.filter((p) => !here(p)), ...fresh.prices] : cur.prices,
+      });
+      // Each input row → its product (rows dropped as duplicates share their product).
+      const keyOf = (r: api.ReceiptPrice) => ('productId' in r ? `p:${r.productId}` : `n:${api.productKey(r.newProduct.name)}`);
+      const productOfKey = new Map([...unique.keys()].map((k, i) => [k, saved.itemProducts[i]]));
+      const productIds = rows.map((r) => productOfKey.get(keyOf(r)) ?? ('productId' in r ? r.productId : ''));
+      return { ok: true, ids: saved.reports.map((r) => r.id), productIds, accepted: saved.reports.length - pending, pending };
+    },
+    [commit, region],
+  );
+
+  const retractReports = useCallback<CompareApi['retractReports']>(
+    async (storeId, ids, productIds) => {
+      const done = await guard('Taking back prices', async () => {
+        await api.deleteReports(ids);
+        return true;
+      });
+      if (!done) return false;
+      track('receipt_undone', { count: ids.length });
+      const uid = userIdRef.current;
+      const [fresh, own] = await Promise.all([
+        guard('Reading prices after undo', () => api.fetchPricesAt(storeId, productIds)),
+        uid ? guard('Reading your prices', () => api.fetchOwnReports(uid)) : Promise.resolve(null),
+      ]);
+      const cur = snapRef.current;
+      const touched = new Set(productIds);
+      const here = (p: CurrentPrice) => p.storeId === storeId && touched.has(p.productId);
+      commit({
+        ...cur,
+        ownReports: own ?? cur.ownReports.filter((r) => !here(r)),
+        prices: fresh ? [...cur.prices.filter((p) => !here(p)), ...fresh.prices] : cur.prices,
+      });
+      return true;
+    },
+    [commit],
+  );
+
   const clearLocalData = useCallback(async () => {
     if (userId) await deleteSnapshot(userId);
   }, [userId]);
@@ -643,6 +750,10 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     uploadProductImage,
     removeProductImage,
     reportPrice,
+    pricesAtStore: (id) => byStore.get(id) || [],
+    ownReportsAt: (id) => ownByStore.get(id) || [],
+    reportPrices,
+    retractReports,
     refresh,
     convertedCart,
     clearLocalData,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Toast } from '../ui';
+import { isReviewOpen } from '../../lib/receipt/session';
 
 // How often an open app asks the server for a new service worker. Browsers
 // only check on navigation, and an installed PWA can stay open for days.
@@ -12,7 +13,8 @@ const AUTO_APPLY_AFTER_HIDDEN_MS = 30 * 60 * 1000;
 /**
  * Keeps the app on the latest deploy. A new service worker waits until the
  * user taps "Update" (or the app comes back after a long time in the
- * background), then takes over and the page reloads with the new build.
+ * background, unless a receipt is open), then takes over and the page reloads
+ * with the new build.
  * Lists data is safe across the reload — it lives in IndexedDB.
  */
 export default function UpdatePrompt() {
@@ -58,7 +60,8 @@ export default function UpdatePrompt() {
       }
       const awayFor = hiddenAt.current == null ? 0 : Date.now() - hiddenAt.current;
       hiddenAt.current = null;
-      if (needRefresh && awayFor >= AUTO_APPLY_AFTER_HIDDEN_MS) apply();
+      // Not while a receipt is being read or reviewed: it lives only in memory.
+      if (needRefresh && awayFor >= AUTO_APPLY_AFTER_HIDDEN_MS && !isReviewOpen()) apply();
       else checkForUpdate();
     };
     document.addEventListener('visibilitychange', onVisibility);

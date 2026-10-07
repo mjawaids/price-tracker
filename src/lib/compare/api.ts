@@ -115,9 +115,19 @@ const STORE_COLS = 'id,owner_id,region_id,chain,name,kind,address,city,lat,lng,d
 const PRODUCT_COLS =
   'id,owner_id,name,brand,variant,item_type,category,size_value,size_unit,pack_count,unit_label,gtin,image_url,status,merged_into,updated_at';
 
+/** A Supabase error with its Postgres/PostgREST code ("42501" refused by a policy, "54000" daily limit). */
+export class ApiError extends Error {
+  readonly code: string | null;
+  constructor(message: string, code: string | null) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+  }
+}
+
 /** Throws on a Supabase error so callers can keep their cached data. */
-function check<T>(res: { data: T | null; error: { message: string } | null }): T {
-  if (res.error) throw new Error(res.error.message);
+function check<T>(res: { data: T | null; error: { message: string; code?: string } | null }): T {
+  if (res.error) throw new ApiError(res.error.message, res.error.code ?? null);
   return (res.data ?? ([] as unknown)) as T;
 }
 
@@ -348,7 +358,84 @@ export async function insertReport(r: {
   return row.status;
 }
 
-/** The current price of one pair after a report (the trigger has already updated it). */
+/** Most prices saved from one receipt (the daily limit is 500). */
+export const MAX_RECEIPT_REPORTS = 150;
+
+/** How a product name is compared when a receipt reuses one (spaces and case ignored; same as save_receipt). */
+export const productKey = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/** One price on a receipt: for a product, or for a new private product (a medicine). */
+export type ReceiptPrice = { price: number } & ({ productId: string } | { newProduct: ProductInput });
+
+export interface ReceiptSaved {
+  reports: { id: string; productId: string; status: 'accepted' | 'pending' }[];
+  /** The product each item was saved to, in order (new, reused or given). */
+  itemProducts: string[];
+  /** Products made by this save (to add to the snapshot). */
+  created: CatalogProduct[];
+}
+
+/**
+ * A receipt in one transaction (spendless.save_receipt): new private products,
+ * reusing the user's own product with the same name, then every price. All saved
+ * or none — the daily limit or a refused row rolls back the new products too.
+ */
+export async function saveReceipt(storeId: string, observedAt: string | null, currency: string | null, items: ReceiptPrice[]): Promise<ReceiptSaved> {
+  if (!items.length) return { reports: [], itemProducts: [], created: [] };
+  if (items.length > MAX_RECEIPT_REPORTS) throw new ApiError('Too many prices in one receipt', 'batch');
+  const payload = items.map((it) => {
+    const price = Math.round(it.price * 100) / 100;
+    if ('productId' in it) return { product_id: it.productId, price };
+    const { name, brand, variant, item_type, category, size_value, size_unit, pack_count } = productPayload(it.newProduct);
+    return { new_product: { name, brand, variant, item_type, category, size_value, size_unit, pack_count }, price };
+  });
+  const out = check(
+    await supabase.rpc('save_receipt', {
+      p_store_id: storeId,
+      p_observed_at: observedAt,
+      p_currency: currency && /^[A-Z]{3}$/.test(currency) ? currency : null,
+      p_items: payload,
+    }),
+  ) as {
+    reports: { id: string; product_id: string; status: 'accepted' | 'pending' }[];
+    products: { key: string; id: string; created: boolean; row: ProductRow | null }[];
+    item_products: string[];
+  };
+  return {
+    reports: (out.reports ?? []).map((r) => ({ id: r.id, productId: r.product_id, status: r.status })),
+    itemProducts: out.item_products ?? [],
+    created: (out.products ?? []).filter((p) => p.created && p.row).map((p) => toProduct(p.row as ProductRow)),
+  };
+}
+
+/** Take back the user's own reports (Undo). */
+export async function deleteReports(ids: string[]): Promise<void> {
+  for (let i = 0; i < ids.length; i += 150) {
+    check(await supabase.from('price_reports').delete().in('id', ids.slice(i, i + 150)));
+  }
+}
+
+/** Current prices of some products at one store; products with none come back in `removed`. */
+export async function fetchPricesAt(storeId: string, productIds: string[]): Promise<{ prices: CurrentPrice[]; removed: string[] }> {
+  const prices: CurrentPrice[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < productIds.length; i += 150) {
+    const rows = check(
+      await supabase
+        .from('current_prices')
+        .select('store_id,product_id,price,currency,is_available,observed_at,n_reports,confidence,updated_at')
+        .eq('store_id', storeId)
+        .in('product_id', productIds.slice(i, i + 150)),
+    ) as PriceRow[];
+    for (const r of rows) {
+      if (r.n_reports <= 0) continue;
+      prices.push(toPrice(r));
+      seen.add(r.product_id);
+    }
+  }
+  return { prices, removed: productIds.filter((id) => !seen.has(id)) };
+}
+
 /** The current price of one pair; `price: null` when there is none (or it's a tombstone). */
 export async function fetchPrice(storeId: string, productId: string): Promise<{ price: CurrentPrice | null }> {
   const rows = check(

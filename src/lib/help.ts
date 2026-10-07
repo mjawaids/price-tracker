@@ -82,6 +82,21 @@ export const HELP_TOPICS: HelpTopic[] = [
       'A price at a shared store helps everyone in your city. It’s shared without your name or account.',
       'To keep shared prices honest, a price far from the usual one at a shared store is used for you only, for now. Adding a new price for the same product and store within 10 minutes replaces your last one, and you can add up to 500 prices a day.',
       'Your own stores and products — and the prices you add to them — stay private.',
+      'Have a receipt? Add a whole shop’s prices in one go — see Adding a receipt.',
+    ],
+  },
+  {
+    id: 'receipts',
+    title: 'Adding a receipt',
+    icon: 'receipt',
+    summary: 'A whole shop’s prices from a screenshot, photo or text',
+    body: [
+      'In Compare → Contribute, tap Add a receipt. Pick one or more screenshots of an online order, take a photo of a till receipt, or paste the text of an order email or message.',
+      'The receipt is read on your device. The first time you add a picture, SpendLess downloads its text reader once (about 6 MB); after that it works offline. The picture or text is never uploaded or kept.',
+      'Check what we found. Lines that match a product at that store are ticked. Check this and Which product is this? need you to confirm or pick the product. Fees, discounts and payment lines are left out. Tap a line to fix its price or quantity.',
+      'Prices are saved for the receipt’s date, as the price for one after the item’s own discount. Receipts from the last 90 days can be added, and Undo takes them back.',
+      'Medicines are saved as your own products, so only you see their prices. A shop you add yourself is private too.',
+      'The products you pick for a store’s receipt lines are remembered on this device, so next time they match on their own.',
     ],
   },
   {
@@ -91,7 +106,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     summary: 'Turn features on or off',
     body: [
       'SpendLess works as a simple shopping list. Compare is there when you want it.',
-      'Profile → Shopping features turns Where to buy and Tips on or off. Lists look exactly as before when they’re off.',
+      'Profile → Shopping features turns Where to buy, Receipt import and Tips on or off. Lists look exactly as before when they’re off.',
       'You can replay the Where to buy walkthrough from Profile → Help.',
     ],
   },

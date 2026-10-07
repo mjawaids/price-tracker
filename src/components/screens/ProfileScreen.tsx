@@ -465,7 +465,13 @@ export default function ProfileScreen() {
             onChange={(v) => updateSettings({ features: { ...settings.features, whereToBuy: v } })}
           />
           <SwitchRow icon="history" label="Ask for prices after a trip" sub="Add what you paid in a couple of taps" on={false} soon />
-          <SwitchRow icon="receipt" label="Receipt import" sub="Add a whole shop’s prices from a photo, PDF or text receipt" on={false} soon />
+          <SwitchRow
+            icon="receipt"
+            label="Receipt import"
+            sub="Add a whole shop’s prices from a screenshot, photo or text — read on your device"
+            on={settings.features.receipts}
+            onChange={(v) => updateSettings({ features: { ...settings.features, receipts: v } })}
+          />
           <SwitchRow icon="bulb" label="Tips" sub="Short hints as you go, one at a time" on={onboarding.tipsOn} onChange={onboarding.setTipsOn} last />
         </Group>
 

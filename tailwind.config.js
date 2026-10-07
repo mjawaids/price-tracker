@@ -29,6 +29,10 @@ export default {
           ink: 'var(--warn-ink)',
           wash: 'var(--warn-wash)',
         },
+        ok: {
+          ink: 'var(--ok-ink)',
+          wash: 'var(--ok-wash)',
+        },
       },
       borderRadius: {
         card: 'var(--r-card)',
