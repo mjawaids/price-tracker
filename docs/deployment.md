@@ -201,11 +201,20 @@ Update"**; tapping it switches over and reloads. If the app was in the backgroun
 `src/components/shell/UpdatePrompt.tsx`.
 
 This only works if `sw.js` and `index.html` are never served stale. `public/_headers`
-sets `Cache-Control: no-cache` on `/`, `/index.html`, `/sw.js` and
-`/site.webmanifest`, and `immutable` on the content-hashed `/assets/*`. The public
-domain is behind **Cloudflare**: keep its *Browser Cache TTL* on **Respect Existing
-Headers** and don't add Cache Rules that cache HTML or `sw.js` at the edge (or purge
-the cache after each deploy if you do).
+sets `Cache-Control: no-cache` on `/`, `/index.html`, `/sw.js`, `/site.webmanifest` and
+`/share-target-sw.js` (the "Share to SpendLess" handler `sw.js` imports), and
+`immutable` on the content-hashed `/assets/*` and the versioned reader folders `/ocr/*`
+and `/pdf/*` (the PDF reader's folder also gets a `Content-Security-Policy` for the
+pdf.js worker: its own files only, no other connections). The public domain is behind
+**Cloudflare**: keep its *Browser Cache TTL* on **Respect Existing Headers** and don't
+add Cache Rules that cache HTML or `sw.js` at the edge (or purge the cache after each
+deploy if you do).
+
+"Share to SpendLess" is a POST to `/share-receipt` that the service worker answers. If
+one reaches Netlify instead (no service worker in control yet, e.g. straight after a
+deploy), `public/_redirects` sends it back to `/?share=failed` and the app says so. The
+deploy's smoke test checks the manifest's `share_target`, that `sw.js` imports the
+handler, the handler's and the PDF reader's headers, and that fallback.
 
 Rolling back is a new deploy too: users get the previous build through the same prompt.
 

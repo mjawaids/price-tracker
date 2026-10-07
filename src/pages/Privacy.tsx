@@ -59,9 +59,10 @@ const Privacy: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                    Receipts are read on your device. The picture or text is never uploaded or kept — only the prices you choose to
-                    save. The products you pick for a shop’s receipt lines are remembered on your device only, and deleted when you
-                    sign out.
+                    Receipts (pictures, PDFs or text) are read on your device and never uploaded — only the prices you choose to
+                    save are. A receipt you share to SpendLess from another app stays on your device until you read it or tap Not
+                    now (and is deleted when you sign out). The products you pick for a shop’s receipt lines are remembered on your
+                    device only, and deleted when you sign out.
                   </li>
                 </ul>
               </section>

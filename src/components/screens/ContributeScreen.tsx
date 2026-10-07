@@ -149,7 +149,7 @@ export default function ContributeScreen() {
                     ? 'Reading it now…'
                     : receiptWaiting
                       ? 'It’s waiting for you to check the prices'
-                      : 'A whole shop’s prices from a screenshot, photo or text — read on your device'}
+                      : 'A whole shop’s prices from a screenshot, PDF, photo or text — read on your device'}
               </span>
             </span>
             <Icon name="chevR" size={17} stroke={2.2} color="var(--ink-soft)" />

@@ -1,2 +1,6 @@
+# A share that reaches the network (no service worker in control yet, e.g. right
+# after a deploy) can't be received: back to the app, which says so.
+/share-receipt    /?share=failed    302
+
 # SPA routing: serve the app for every path (React Router handles /privacy, /terms, …).
 /*    /index.html    200

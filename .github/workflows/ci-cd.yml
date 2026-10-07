@@ -168,6 +168,31 @@ jobs:
             exit 1
           fi
           echo "Production is serving v$VERSION ✔" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Receipts: "Share to SpendLess" and the PDF reader (public/_headers, _redirects).
+          if ! fetch "$ORIGIN_URL/site.webmanifest" | jq -e '.share_target.action == "/share-receipt"' >/dev/null; then
+            echo "::error::site.webmanifest has no share_target"; exit 1
+          fi
+          if ! fetch "$ORIGIN_URL/sw.js" | grep -qF 'share-target-sw.js'; then
+            echo "::error::sw.js doesn't import share-target-sw.js"; exit 1
+          fi
+          share_headers="$(fetch -I "$ORIGIN_URL/share-target-sw.js")"
+          if ! grep -qiE '^content-type: [a-z/]*javascript' <<<"$share_headers" || ! grep -qi '^cache-control: no-cache' <<<"$share_headers"; then
+            echo "::error::share-target-sw.js must be served as JavaScript with Cache-Control: no-cache"; exit 1
+          fi
+          pdf_dir="pdf/$(node -p "require('./package.json').dependencies['pdfjs-dist']")-legacy"
+          pdf_headers="$(fetch -I "$ORIGIN_URL/$pdf_dir/pdf.worker.min.js")"
+          if ! grep -qiE '^content-type: [a-z/]*javascript' <<<"$pdf_headers"; then
+            echo "::error::/$pdf_dir/pdf.worker.min.js isn't served as JavaScript"; exit 1
+          fi
+          if ! grep -qi "^content-security-policy: default-src 'none'" <<<"$pdf_headers"; then
+            echo "::warning::/$pdf_dir/ has no Content-Security-Policy header (public/_headers)"
+          fi
+          # A share that reaches the network is sent back to the app (no service worker yet).
+          share="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' -X POST -F text=smoke "$ORIGIN_URL/share-receipt" || true)"
+          case "$share" in
+            30[23]\ *'/?share=failed') echo "Share fallback ✔ ($share)" ;;
+            *) echo "::warning::POST /share-receipt answered '$share', not a redirect to /?share=failed (public/_redirects)" ;;
+          esac
           # The public domain, best effort only (see above).
           code="$(curl -sS -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/" || true)"
           if [ "$code" != "200" ]; then

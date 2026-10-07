@@ -47,10 +47,13 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
   at, branches grouped by chain, add your own) and **Contribute** (add a price, add a
   product, add a receipt)
-- **Add a receipt**: a whole shop's prices in one go from order screenshots, a photo of a
-  till receipt or pasted text. It's read on the device (a one-time ≈6 MB text reader,
-  self-hosted, works offline after that) — the receipt is never uploaded or kept, only
-  the prices you confirm are saved. Medicines are saved as your own private products
+- **Add a receipt**: a whole shop's prices in one go from order screenshots, a PDF
+  invoice, a photo of a till receipt or pasted text. It's read on the device (a one-time
+  ≈6 MB text reader for pictures and scanned PDFs, ≈2 MB for a PDF's own text; both
+  self-hosted and kept for offline use) — the receipt is never uploaded, only the prices
+  you confirm are saved. Medicines are saved as your own private products
+- **Share to SpendLess** (the installed app on Android): share a screenshot, a PDF or an
+  order's text from another app; SpendLess asks "Read this receipt?"
 - Prices at shared stores are shared without your name; prices far from the usual one
   are kept for you only; your own stores and products stay private
 - Use as much as you like: Profile → **Shopping features** turns Where to buy and receipt
@@ -287,7 +290,7 @@ how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 .github/workflows/ci-cd.yml # CI checks + production deploy pipeline
 .github/workflows/price-import.yml # Daily store price import (docs/data-sources.md)
 .github/workflows/catalog-jobs.yml # Manual catalogue jobs (add in-store branches, promote a store to public)
-public/                     # Static assets (favicons, PWA icons, manifest, _redirects, _headers)
+public/                     # Static assets (favicons, PWA icons, manifest + share target, _redirects, _headers, share-target-sw.js)
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
 ├── check-contrast.mjs      # WCAG contrast check for the colour tokens
@@ -354,7 +357,7 @@ src/
 │   ├── supabaseClient.ts       # Supabase client (pinned to the `spendless` schema)
 │   ├── offline/                # IndexedDB store + sync engine for Lists
 │   ├── compare/                # Compare: item types, name parser, unit prices, matching, optimizer, API, offline cache
-│   ├── receipt/                # Receipts: on-device reader, parser, dates, store guess, matching, review, memory
+│   ├── receipt/                # Receipts: on-device reader, PDFs, parser, dates, store guess, matching, review, memory, share inbox
 │   ├── help.ts                 # Help topic copy
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy

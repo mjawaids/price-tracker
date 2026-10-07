@@ -14,6 +14,8 @@ interface ImportMetaEnv {
   readonly VITE_OCR_PATH: string;
   /** Set by vite.config.ts: bytes one device downloads for the receipt reader */
   readonly VITE_OCR_BYTES: string;
+  /** Set by vite.config.ts: folder of the PDF reader files, e.g. /pdf/6.4.299-legacy/ */
+  readonly VITE_PDF_PATH: string;
 }
 
 interface ImportMeta {

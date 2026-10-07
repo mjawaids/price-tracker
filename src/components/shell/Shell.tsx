@@ -1,10 +1,12 @@
 import { ComponentType, ReactNode, Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp, ScreenName, Section } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useCompare } from '../../contexts/CompareContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackPageView } from '../../utils/analytics';
-import { Icon, IconName, SegmentedControl } from '../ui';
+import { Icon, IconName, SegmentedControl, Toast } from '../ui';
+import { peekShared, shareParam, useShared } from '../../lib/receipt/inbox';
 import { CurrencySheet } from '../screens/sheets';
 import { currencyChipLabel } from '../../utils/currency';
 import { InstallBanner, InstallSidebarCta } from './Install';
@@ -26,6 +28,7 @@ const ManageProducts = lazy(() => import('../screens/ManageScreens').then((m) =>
 const ReceiptScreen = lazy(() => import('../screens/ReceiptScreen'));
 const HelpSheet = lazy(() => import('./HelpSheet'));
 const RegionSheet = lazy(() => import('../screens/compareSheets').then((m) => ({ default: m.RegionSheet })));
+const SharedReceiptSheet = lazy(() => import('./SharedReceiptSheet'));
 
 const SCREENS: Record<ScreenName, ComponentType> = {
   lists: ListsScreen,
@@ -388,6 +391,22 @@ export default function Shell() {
   const compare = useCompare();
   const { compact, isTablet } = useBreakpoint();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const shared = useShared();
+  const [shareFailed, setShareFailed] = useState(shareParam === 'failed');
+
+  // Something shared to SpendLess waits on the device? Looked for on every start, not
+  // only on /?share=receipt: signing in first drops the query.
+  useEffect(() => {
+    void peekShared();
+    if (shareParam) navigate({ search: '' }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!shareFailed) return;
+    const t = setTimeout(() => setShareFailed(false), 6000);
+    return () => clearTimeout(t);
+  }, [shareFailed]);
 
   // Reset scroll position + track navigation on screen change.
   useEffect(() => {
@@ -425,6 +444,16 @@ export default function Shell() {
         <Suspense fallback={null}>
           <HelpSheet />
         </Suspense>
+      )}
+      {shared && (
+        <Suspense fallback={null}>
+          <SharedReceiptSheet summary={shared} />
+        </Suspense>
+      )}
+      {shareFailed && !shared && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50" style={{ width: 'min(440px, calc(100vw - 32px))' }}>
+          <Toast message="That share didn’t come through. Try sharing it again." icon="alert" onDismiss={() => setShareFailed(false)} />
+        </div>
       )}
     </>
   );

@@ -135,14 +135,21 @@ service worker.
 ## Receipts (Compare → Contribute → Add a receipt)
 
 Use a recent order of your own (under 90 days). Nothing is uploaded: check the Network
-tab — reading fetches only `/ocr/<version>/…` (first picture only); Save makes one
-`rpc/save_receipt` call (new medicine products and all the prices, in one transaction)
-and re-reads those prices.
+tab — reading fetches only `/ocr/<version>/…` (first picture or scanned PDF only) and
+`/pdf/<version>-legacy/…` (first PDF only); Save makes one `rpc/save_receipt` call (new
+medicine products and all the prices, in one transaction) and re-reads those prices.
 - [ ] **Screenshot or image**: pick one or more screenshots of one online order. The
       first time, "Get the receipt reader" shows the size (≈6 MB) and Data Saver / offline
       notes; *Download and read* shows progress, *Cancel* stops it. Later pictures don't ask.
 - [ ] **Take a photo** (phone/tablet): the camera opens; a flat, well-lit till receipt
       reads; a blurry one says "We couldn't find any prices" with what to try.
+- [ ] **PDF**: an order invoice PDF goes straight to the review (no reader download); a
+      scanned PDF (pages that are pictures) asks for the reader first ("This PDF is a
+      scan…"), then reads. A password-protected PDF says "This PDF is locked"; a damaged
+      one "We couldn't open that PDF"; over 10 MB "This PDF is too big"; on an old
+      browser (before Chrome 125 / Safari 18) "PDFs can't be read on this browser".
+      The first PDF while offline says "The reader didn't start"; *Try again* works once
+      back online.
 - [ ] **Paste text**: an order email's text reads the same way.
 - [ ] Review: store, date and "Adds up" chips. Online orders pick the online store;
       in-store receipts never go to the online store (the store picker opens instead).
@@ -171,6 +178,22 @@ and re-reads those prices.
       off and opens Profile; the screen shows "Receipt import is off" with *Turn on*.
 - [ ] Sign out and back in: remembered choices are gone (IndexedDB
       `spendless-receipts-<uid>` deleted).
+
+### Share to SpendLess (installed app on Android)
+
+Needs a deployed build, installed from Chrome. Android picks up a changed share menu
+when the installed app is opened and its manifest is a day old, or on a fresh install.
+- [ ] Gallery → a screenshot → Share → SpendLess: the app opens with "Read this
+      receipt?" ("You shared 1 image…"); *Read receipt* reads it (asking for the reader
+      the first time); *Not now* drops it.
+- [ ] Files or WhatsApp → a PDF invoice → Share → SpendLess: "You shared a PDF…" → review.
+- [ ] Gmail → an order email → Share (text) → SpendLess: "You shared some text…" → review.
+- [ ] Share while signed out: sign in, and the question is still asked (within 30 minutes).
+- [ ] Sharing reloads the app: an unsaved receipt you were checking is gone (expected).
+- [ ] Profile → Shopping features → Receipt import off: the sheet offers *Turn on and read*.
+- [ ] Sign out with a share waiting: it's gone (Cache Storage `spendless-share-inbox`).
+- [ ] iPhone: SpendLess isn't in the share menu (no web share target on iOS); the PDF
+      tile and Paste text work.
 
 ## Store price import
 

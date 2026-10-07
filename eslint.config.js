@@ -7,6 +7,16 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   { ignores: ['dist'] },
   {
+    // The "Share to SpendLess" handler the service worker imports (plain JS, no build).
+    extends: [js.configs.recommended],
+    files: ['public/share-target-sw.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: globals.serviceworker,
+    },
+  },
+  {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {

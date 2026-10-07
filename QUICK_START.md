@@ -61,7 +61,8 @@ npm run preview    # serve the build (service worker + offline work here, not in
 | Offline storage + sync | `src/lib/offline/` |
 | Where to buy (plan for a list) | `src/components/screens/PlanScreen.tsx`, `listCompare.tsx`; logic in `src/lib/compare/` |
 | Compare (prices, stores, contribute) | `src/components/screens/` (Prices, Search, Detail, Stores, Contribute, Manage…), state in `src/contexts/CompareContext.tsx` |
-| Add a receipt | `src/components/screens/ReceiptScreen.tsx` (+ `receipt*.ts(x)`); reading, parsing and matching in `src/lib/receipt/` |
+| Add a receipt | `src/components/screens/ReceiptScreen.tsx` (+ `receipt*.ts(x)`); reading (pictures, PDFs, text), parsing and matching in `src/lib/receipt/` |
+| Share to SpendLess | `public/site.webmanifest` (`share_target`), `public/share-target-sw.js`, `src/lib/receipt/inbox.ts`, `src/components/shell/SharedReceiptSheet.tsx` (test it with `npm run build && npm run preview`: no service worker in dev) |
 | Navigation shell | `src/components/shell/Shell.tsx` |
 | Design tokens | `src/index.css`, `tailwind.config.js` |
 | Database migrations | `supabase/migrations/` (pre-deploy), `supabase/post-deploy/` |

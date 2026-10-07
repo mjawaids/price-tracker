@@ -69,3 +69,47 @@ export function linesFromOcr(lines: OcrLine[]): TextLine[] {
       return { text: words.map((w) => w.text).join(' '), confidence: Math.round(confidence) };
     });
 }
+
+/** A piece of a PDF's own text, placed on the page (top-left origin, y grows down). */
+export interface PdfRun extends Box {
+  text: string;
+}
+
+/**
+ * A PDF's text layer → receipt lines. PDFs cut text into pieces (sometimes inside a
+ * word): pieces at the same height form a row, read left to right, joined without a
+ * space when they touch. The text is exact, so the lines carry no confidence (like
+ * pasted text).
+ */
+export function linesFromPdf(runs: PdfRun[]): TextLine[] {
+  const rows: { y0: number; y1: number; runs: PdfRun[] }[] = [];
+  const usable = runs.filter((r) => r.text.trim() && r.y1 > r.y0 && r.x1 >= r.x0).sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
+  for (const r of usable) {
+    const h = r.y1 - r.y0;
+    const row = rows.find((w) => overlapY(w, r) >= 0.5 * Math.min(h, w.y1 - w.y0));
+    if (!row) {
+      rows.push({ y0: r.y0, y1: r.y1, runs: [r] });
+      continue;
+    }
+    // Fake bold: the same text drawn twice a hair apart.
+    if (row.runs.some((o) => o.text === r.text && Math.abs(o.x0 - r.x0) < 0.3 * h)) continue;
+    row.runs.push(r);
+    row.y0 = Math.min(row.y0, r.y0);
+    row.y1 = Math.max(row.y1, r.y1);
+  }
+  return rows
+    .sort((a, b) => a.y0 - b.y0)
+    .map((row) => {
+      const sorted = [...row.runs].sort((a, b) => a.x0 - b.x0);
+      let text = '';
+      let prev: PdfRun | null = null;
+      for (const r of sorted) {
+        const gap = prev ? r.x0 - prev.x1 : 0;
+        const touching = prev && gap < 0.15 * Math.min(r.y1 - r.y0, prev.y1 - prev.y0);
+        text += prev && !touching && !/\s$/.test(text) && !/^\s/.test(r.text) ? ` ${r.text}` : r.text;
+        prev = r;
+      }
+      return { text: text.replace(/\s+/g, ' ').trim() };
+    })
+    .filter((l) => l.text);
+}

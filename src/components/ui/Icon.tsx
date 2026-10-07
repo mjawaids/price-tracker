@@ -54,6 +54,7 @@ import {
   CalendarDays,
   AlertCircle,
   Pill,
+  FileText,
   LucideProps,
 } from 'lucide-react';
 import { ComponentType } from 'react';
@@ -115,6 +116,7 @@ const MAP: Record<string, ComponentType<LucideProps>> = {
   calendar: CalendarDays,
   alert: AlertCircle,
   pill: Pill,
+  file: FileText,
 };
 
 export type IconName = keyof typeof MAP | string;

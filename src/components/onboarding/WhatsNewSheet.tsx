@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompare, CART_LIST_NAME } from '../../contexts/CompareContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useShared } from '../../lib/receipt/inbox';
 import { Btn, Icon, IconName, Sheet } from '../ui';
 
 const seenKey = (uid: string) => `spendless-whatsnew:${uid}`;
@@ -49,13 +50,15 @@ export function WhatsNewSheet() {
   const compare = useCompare();
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
+  // A receipt shared to SpendLess is asked about first.
+  const sharing = !!useShared();
   const uid = user?.id ?? null;
 
   const hadActivity =
     lists.hasHistory || lists.lists.some((l) => (lists.todoCountByList[l.id] || 0) > 0) || compare.products.some((p) => p.ownerId) || !!compare.convertedCart;
 
   useEffect(() => {
-    if (!uid || open || !lists.ready || !compare.ready || !settings.features.whereToBuy) return;
+    if (!uid || open || sharing || !lists.ready || !compare.ready || !settings.features.whereToBuy) return;
     if (seen(uid)) return;
     if (!hadActivity) {
       // Started after this release: nothing to catch up on.
@@ -65,7 +68,7 @@ export function WhatsNewSheet() {
     // Let the app settle (and any update toast show) before asking for attention.
     const t = setTimeout(() => setOpen(true), 1200);
     return () => clearTimeout(t);
-  }, [uid, open, lists.ready, compare.ready, settings.features.whereToBuy, hadActivity]);
+  }, [uid, open, sharing, lists.ready, compare.ready, settings.features.whereToBuy, hadActivity]);
 
   if (!uid || !open) return null;
 

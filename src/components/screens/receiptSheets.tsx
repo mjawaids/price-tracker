@@ -34,7 +34,20 @@ function Point({ icon, children }: { icon: IconName; children: ReactNode }) {
 }
 
 // ── One-time reader download ─────────────────────────────────────────────────
-export function ReaderConsentSheet({ open, onClose, onDownload, onPaste }: { open: boolean; onClose: () => void; onDownload: () => void; onPaste: () => void }) {
+export function ReaderConsentSheet({
+  open,
+  kind = 'image',
+  onClose,
+  onDownload,
+  onPaste,
+}: {
+  open: boolean;
+  /** pdf = a PDF whose pages are pictures (a scan), so it needs the reader too. */
+  kind?: 'image' | 'pdf';
+  onClose: () => void;
+  onDownload: () => void;
+  onPaste: () => void;
+}) {
   const compare = useCompare();
   const device = useDeviceWord();
   const offline = !compare.online;
@@ -55,7 +68,8 @@ export function ReaderConsentSheet({ open, onClose, onDownload, onPaste }: { ope
       }
     >
       <p className="m-0 text-[15px] leading-relaxed text-ink-soft">
-        To read pictures, SpendLess needs its text reader on this {device}. It’s a one-time download of about {OCR_MB} MB.
+        {kind === 'pdf' ? 'This PDF is a scan — a picture of the receipt — so SpendLess needs its text reader' : 'To read pictures, SpendLess needs its text reader'} on
+        this {device}. It’s a one-time download of about {OCR_MB} MB.
       </p>
       <div className="flex flex-col gap-3 mt-4">
         <Point icon="lock">Your receipts are read on the {device}. Nothing is sent anywhere.</Point>
