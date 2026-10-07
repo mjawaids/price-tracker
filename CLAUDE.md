@@ -26,6 +26,8 @@ Live at https://spendless.ibexoft.com
 - `SUPABASE_DB_URL=… scripts/db-migrate.sh [--dry-run] <dir>` — apply migrations (CI does this on deploy)
 - `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/promote-store.ts --store-id <id> --chain <name> [--apply]`
   — make a private store public (normally run from the manual *Catalog jobs* workflow; dry run without `--apply`)
+- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/add-branches.ts [--file scripts/seed/branches/karachi.json] [--apply]`
+  — add/update a city's public in-store branches from the reviewed list (*Catalog jobs*, job `add-branches`; dry run without `--apply`)
 - `node --experimental-strip-types scripts/import/run.ts --dry-run [--source <id>|all] [--max-pages N]` — daily store
   price import, fetch + parse only (needs `NODE_USE_ENV_PROXY=1` behind a proxy). Without `--dry-run` it needs
   `SUPABASE_DB_URL` and writes; normally run by the *Price import* workflow
@@ -46,7 +48,10 @@ Context-based (no Redux). Providers in `src/contexts/`:
 - `ListsContext` — Lists section: lists/items, quick add, suggestions, sync status (offline-first)
 - `CompareContext` — the catalogue for the user's city (regions, stores, products,
   current prices with the user's own newer reports overlaid), "my stores", usuals
-  (`item_preferences`), plans this month; `planFor(items)` (resolve + optimize), writes
+  (`item_preferences`), plans this month; `consideredStores` (what Where to buy and "your
+  stores" prices use: the picks, else `defaultStoreIds` = active stores minus shared
+  in-store branches, i.e. online stores + the user's own; a branch counts once picked);
+  `planFor(items)` (resolve + optimize), writes
   (own stores/products, price reports), the one-time Compare cart → list conversion.
   Receipt saves: `reportPrices` (one `spendless.save_receipt` call per receipt — new
   private products for its medicines and all its prices in one transaction, all or
@@ -113,8 +118,9 @@ Contribute shows "Finish your receipt". Everything runs on the device:
   unless an FBR/receipt number says otherwise; ambiguous dates are flagged; >90 days
   can't be saved). `stores.ts` guesses the chain, online vs in-store, pharmacy, area;
   `receiptHelpers.storeForGuess` picks the store only when exactly one fits (same kind —
-  an in-store receipt never goes to the online store), else the one last used for that
-  chain (`memory.ts`), else the store picker opens.
+  an in-store receipt never goes to the online store; with several branches, the printed
+  area decides), else the one last used for that chain (`memory.ts`), else the store
+  picker opens (`storePicker.tsx`, filtered to the chain).
 - **Match** (`match.ts`): IDF word overlap, brand, size, type, price at that store.
   Picked on its own only from the store's own products, when every telling word matches
   both ways (packaging words aside), same size, near the store's price, and well ahead
@@ -262,7 +268,7 @@ are in `public`). SpendLess data must never mix with theirs:
 | `lists` | id (device-generated), user_id, name, sort_order, updated_at (server-set), deleted_at |
 | `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id? (→ `catalog_products`, the pinned product), plan_store_id?, plan_product_id?, plan_price?, updated_at (server-set), deleted_at |
 | `regions` | id (slug, e.g. `karachi`), name, country_code, currency, status (`live` \| `gathering`) |
-| `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, city, lat/lng, delivery_rule (+`minOrder`), website, status |
+| `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, phone, city, lat/lng, delivery_rule (+`minOrder`), website, status. Public `physical` = a shared in-store branch (`<chain> · <area>`, same chain as the online store, from `scripts/seed/branches/`) |
 | `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into, match_key (importer: same product across stores; `''` = not confident) |
 | `price_reports` | **append-only** for users: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`). The importer moves its own latest `import` report's `observed_at` forward while a price is unchanged |
 | `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence — written only by the `refresh_current_prices` trigger; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
@@ -275,7 +281,8 @@ per-user `products`/`stores` (their rows were copied in as private rows with the
 ids). Public rows are read-only for clients; users write only their own private rows and
 their own price reports (rate-limited, outliers held as `pending`). Full model, price
 consensus and anti-spam rules: `docs/compare-data.md`. Public Karachi prices also come
-from a daily import of five online stores (Hydri paused; `scripts/import/`, `docs/data-sources.md`). Item types are a curated vocabulary
+from a daily import of five online stores (Hydri paused; `scripts/import/`, `docs/data-sources.md`); its 26
+in-store branches (Imtiaz, Spar, Diamond) come from the chains' own store lists and get prices from people. Item types are a curated vocabulary
 in `src/lib/compare/itemTypes.ts` (the column only checks the slug).
 
 `delivery_rule` union: `none | free | flat { fee } | over { threshold, fee }` (catalogue
@@ -292,14 +299,15 @@ post-deploy migration drops them.
 | `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
-| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes), `cache.ts` (IndexedDB snapshot) |
+| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes; `fetchPrices` asks for `STORE_CHUNK` stores per request), `cache.ts` (IndexedDB snapshot) |
 | `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, receipt saves, cart conversion |
 | `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js), `flow.ts` (read → parse → session), `session.ts` (the receipt in progress, memory only), `memory.ts` (remembered line choices + last store per chain, IndexedDB) |
 | `src/components/screens/ReceiptScreen.tsx` | Add a receipt (+ `receiptParts.tsx`, `receiptSheets.tsx` for the reader download, paste, date, store, product and line sheets, `receiptHelpers.ts` for the review rows, store guess and save) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
 | `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product) |
-| `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores, add a price (and the Add a receipt entry), your own products |
-| `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, store picker, store form, add a price; product form |
+| `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Add a receipt entry), your own products |
+| `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, My stores (`StoresSheet`: online, your shops, branches by chain), store form (a branch: address, phone, *Add to My stores*), add a price (*Another store…*); product form |
+| `src/components/screens/storePicker.tsx` | Shared store picker (`StorePickerSheet`: Online / In a shop, search over name, chain and address, branches grouped by chain), `ChainGroup`, `StoreSearch` — used by receipts, Add a price, My stores and the Stores screen |
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
 | `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`) and `WhatsNewSheet` |
 | `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
@@ -307,6 +315,7 @@ post-deploy migration drops them.
 | `scripts/import/` | Daily price import: `run.ts` (CLI), `sources.ts` (stores, delivery rules, caps, `paused`), `adapters/` (Magento GraphQL, Hydri, Imtiaz menu, Blink product pages), `http.ts` (polite client: honest UA, robots.txt, 1 req/s, stop on a block; redirects followed by hand, each target checked for same site + robots.txt before it's requested), `robots.ts`, `aisles.ts` (what we leave out + aisle → category; pharmacy-typed products left out in any aisle, minus cosmetic look-alikes; mixed aisles decided per product name; `RULES_CHANGED_AT` re-reads listings newly included), `normalize.ts` (name → product + `match_key`), `keys.ts` (re-keys public products no listing keys, e.g. Panda Mart's, before the stores run; fills a missing brand/type from the name, keeps stored ones), `write.sql` (one transaction per store; re-checks each listing's product: key changed → re-match or re-key its own product in place (a blank key clears it), price outside ⅓×–3× of other stores' → held apart, a pack clash — pouch/refill vs jar/bottle/tin in the names — never joins), `db.ts` |
 | `src/pages/Bot.tsx` | `/bot`: what SpendLessBot does and how to opt out (its user agent links here) |
 | `scripts/seed/promote-store.ts` | Make a private store + its products public (with consent); run via `.github/workflows/catalog-jobs.yml` |
+| `scripts/seed/add-branches.ts` (+ `add-branches-read.sql`, `add-branches-write.sql`, `branches/<city>.json`) | A city's public in-store branches from a reviewed list (fixed ids; validates, dry run, one transaction; never deletes or touches private/online stores); job `add-branches` in `catalog-jobs.yml` |
 | `src/utils/currency.ts` | 50+ currencies, formatting, default currency from the browser locale |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
@@ -371,8 +380,9 @@ say so and propose a safe alternative.
 - `.github/workflows/ci-cd.yml`: PRs and pushes run checks (lint, contrast, migration
   guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
   build → Netlify → smoke test → post-deploy migrations → tag + GitHub Release.
-- `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue
-  (promote a store to public); dry run unless "apply" is ticked.
+- `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue, picked
+  by the `job` input (`add-branches`: a city's in-store branches; `promote-store`: a
+  private store to public); dry run unless "apply" is ticked.
 - `.github/workflows/price-import.yml`: daily store price import (03:17 Karachi), also
   manual with *source* / *dry run* / *max pages*. Scheduled workflows stop after 60 days
   without repo activity — re-enable from the Actions tab.

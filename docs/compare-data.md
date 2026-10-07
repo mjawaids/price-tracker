@@ -18,11 +18,11 @@ from people's own entries, and from receipts. Shared prices are live in
 | Table | What it holds | Who can write |
 |---|---|---|
 | `regions` | Cities. `status`: `live` (shared prices on) or `gathering` (personal mode) | Migrations only |
-| `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
+| `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `kind` `online` or `physical`; a public `physical` store is a shared in-store **branch** (`<chain> · <area>`, same `chain` as the chain's online store, no delivery). `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
 | `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`); `match_key` (set by the importer: the same product at two stores → one row; `''` = not confident, or held apart because its price is unlike the others with that key; see `docs/data-sources.md`) | Same as stores |
 | `price_reports` | **Append-only** observations: price (one pack), `observed_at`, `source`, `status`. `user_id NULL` = system source | Users add their own (user sources only); read and delete only their own; nobody updates |
 | `current_prices` | The price shown per (store, product), derived from reports; `n_reports = 0` = no price any more (tombstone) | Only the trigger |
-| `user_stores` | "My stores" (empty = all public stores in the city + your private ones) | Owner |
+| `user_stores` | "My stores" (empty = the default set: the city's public online stores + your private ones; branches count only once picked) | Owner |
 | `item_preferences` | A user's "usual" per list item name: `mode` (`exact` / `brand_size` / `any_size`), `product_ids`, `ref_product_id` | Owner |
 | `plans` | Plans applied to a list (totals, savings) — powers "saved this month" | Owner |
 | `store_listings` | The importer's memory: each store's own product id → our product, last price, when checked, `included` (false = an aisle we leave out) | Importer only; clients can't read it |
@@ -93,8 +93,17 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
   when the city changes, after 24 hours, or when new stores appear. A refresh asked
   for while one is running is queued, not dropped, and a run whose city or user
   changed meanwhile is thrown away. Sign-out deletes the cache.
-- "Stores considered" = the user's picks (`user_stores`), else every active store in
-  the snapshot.
+- "Stores considered" (`consideredStores`: what Where to buy compares, and the "your
+  stores" prices on Prices, Search and product pages) = the user's picks
+  (`user_stores`), else the **default set** (`defaultStoreIds`): every active store
+  except shared in-store branches, i.e. the city's online stores plus the user's own.
+  A branch counts once the user adds it to My stores (Compare → Stores → *Choose*, or
+  *Add to My stores* on the branch) — a plan shouldn't send anyone across the city.
+  Picks that equal the default set are saved as none, so new online stores still join.
+  Branch prices still show everywhere else: a product page's "Other stores", the
+  Add a price and receipt store pickers.
+- Prices are fetched for every store in the snapshot, branches included, a few dozen
+  store ids per request so the URL stays short (`fetchPrices`, `STORE_CHUNK`).
 - *Use this plan* writes `plan_store_id` / `plan_product_id` / `plan_price` on each
   open item (through the offline Lists outbox) and inserts a `plans` row.
 - The old Compare cart (`shopping_lists`) is turned into a list called "From Compare
@@ -122,7 +131,18 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
    importer moves its latest import report's `observed_at` forward instead of adding
    a row every day, so "updated today" stays true and the table stays small. A listing
    that disappears gets one "out of stock" report.
-3. **People's prices** — while shopping, and from receipts (image or text, read on
+3. **In-store branches** — the branches each chain publishes on its own website
+   (Karachi: Imtiaz 14, Spar 6, Diamond Super Market 6; sources and what was left out
+   in `docs/data-sources.md`). The reviewed list is `scripts/seed/branches/<city>.json`
+   (fixed ids, so a re-run updates in place); `scripts/seed/add-branches.ts` validates
+   it (UUIDs, lengths, unique ids and names, each `chain` must be a public online
+   store's chain in that city) and writes it in one transaction, inserting or updating
+   public `physical` stores only — never a private or online store, never a delete
+   (closing one is `"status": "closed"`). Run it from *Actions → Catalog jobs*, job
+   `add-branches`: first as a dry run (it lists new, changed, unchanged, and public
+   branches in the city that aren't in the file), then with *apply* ticked. A branch
+   has no prices until people add them (receipts match a branch by chain and area).
+4. **People's prices** — while shopping, and from receipts (image or text, read on
    the device; the file never leaves it). A receipt is saved by one call to
    `spendless.save_receipt` (SECURITY INVOKER: RLS and the report trigger apply as for
    any insert), which runs as one transaction: it makes a private product for each
@@ -140,7 +160,7 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
 - Trip capture (confirm the price when you tick an item), disputes, corroboration of
   pending reports, reporter trust, freshness badges, "your contributions".
 - Receipt import: screenshots, photos and pasted text are live (Compare → Contribute →
-  Add a receipt, on-device OCR); next public in-store branches, then PDFs and "share to
-  SpendLess", then suggested branches.
+  Add a receipt, on-device OCR) and public in-store branches (Karachi); next PDFs and
+  "share to SpendLess", then suggested branches.
 - More cities: readiness meter, promoting corroborated private stores, merging
   duplicate products, a small moderation queue.

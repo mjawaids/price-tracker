@@ -3,13 +3,15 @@ import { useCompare } from '../../contexts/CompareContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useHint } from '../../hooks/useHint';
 import { deliveryLabel } from '../../lib/compare/describe';
+import { tokens } from '../../lib/compare/itemTypes';
 import { CatalogStore } from '../../lib/compare/types';
 import { storeLink } from '../../lib/links';
 import { Btn, Icon, StoreDot, TipRow } from '../ui';
 import { ManageHeader } from './manageParts';
 import { CompareNotice } from './compareParts';
-import { sectionLabel } from './compareHelpers';
+import { branchArea, groupByChain, isBranch, sectionLabel, storeMatches } from './compareHelpers';
 import { RegionSheet, StoreFormSheet, StoresSheet } from './compareSheets';
+import { ChainGroup, StoreSearch } from './storePicker';
 
 /** Compare → Stores: the stores Where to buy compares, plus your own. */
 export default function StoresScreen() {
@@ -18,13 +20,20 @@ export default function StoresScreen() {
   const [cityOpen, setCityOpen] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
   const [form, setForm] = useState<'new' | CatalogStore | null>(null);
+  const [q, setQ] = useState('');
+  const [opened, setOpened] = useState<Set<string>>(new Set());
   const hint = useHint('myStores', compare.ready && compare.stores.length > 1);
 
   const considered = new Set(compare.consideredStores.map((s) => s.id));
   const active = compare.stores.filter((s) => s.status === 'active');
   const mine = active.filter((s) => s.ownerId);
-  const shared = active.filter((s) => !s.ownerId);
+  const shared = active.filter((s) => !s.ownerId && !isBranch(s));
+  const branches = active.filter(isBranch);
   const picking = compare.myStoreIds.length > 0;
+  const city = compare.region?.name ?? 'your city';
+  const words = tokens(q);
+  const branchGroups = groupByChain(branches.filter((s) => storeMatches(s, words)));
+  const groupOpen = (chain: string) => words.length > 0 || opened.has(chain) || branchGroups.length === 1;
 
   const row = (s: CatalogStore) => {
     const link = storeLink(s.website);
@@ -66,6 +75,30 @@ export default function StoresScreen() {
     );
   };
 
+  // A branch inside its chain's card: area, address, and whether Where to buy compares it.
+  const branchRow = (s: CatalogStore, i: number) => {
+    const on = considered.has(s.id);
+    return (
+      <button
+        key={s.id}
+        type="button"
+        onClick={() => setForm(s)}
+        aria-label={`About ${s.name}`}
+        className="w-full flex items-center gap-3 text-left"
+        style={{ padding: '10px 8px 10px 14px', minHeight: 60, borderTop: i ? '1px solid var(--line)' : 'none' }}
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block font-bold text-[15px] truncate">{branchArea(s)}</span>
+          <span className="block text-[12.5px] text-ink-soft truncate">{s.address || 'In store'}</span>
+        </span>
+        <span className={`shrink-0 text-[12px] font-bold rounded-full ${on ? 'bg-ok-wash text-ok-ink' : 'text-ink-soft'}`} style={{ padding: on ? '3px 9px' : 0 }}>
+          {on ? 'In My stores' : 'Not compared'}
+        </span>
+        <Icon name="chevR" size={17} stroke={2.2} color="var(--ink-soft)" className="shrink-0" />
+      </button>
+    );
+  };
+
   return (
     <div className="pb-8" style={{ maxWidth: compact ? '100%' : 860, margin: '0 auto' }}>
       <ManageHeader
@@ -102,7 +135,11 @@ export default function StoresScreen() {
           <span className="flex-1 text-[14px] leading-relaxed">
             {picking ? (
               <>
-                <strong>Where to buy compares {compare.consideredStores.length}</strong> of your city’s stores.
+                <strong>Where to buy compares the {compare.consideredStores.length} stores you picked.</strong>
+              </>
+            ) : branches.length ? (
+              <>
+                <strong>Where to buy compares the online stores here and your own.</strong> Add the branches you shop at.
               </>
             ) : (
               <>
@@ -147,9 +184,43 @@ export default function StoresScreen() {
             {shared.length > 0 && (
               <section className="flex flex-col gap-2" aria-labelledby="shared-stores">
                 <h2 id="shared-stores" className={`m-0 ${sectionLabel}`}>
-                  In {compare.region?.name ?? 'your city'}
+                  {branches.length ? `Online in ${city}` : `In ${city}`}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">{shared.map(row)}</div>
+              </section>
+            )}
+            {branches.length > 0 && (
+              <section className="flex flex-col gap-2" aria-labelledby="branch-stores">
+                <h2 id="branch-stores" className={`m-0 ${sectionLabel}`}>
+                  Branches · {branches.length}
+                </h2>
+                <p className="m-0 text-[13px] leading-snug text-ink-soft">Shared in-store prices. Add the ones you go to, and Where to buy compares them.</p>
+                <StoreSearch id="stores-screen-branch-search" value={q} onChange={setQ} label="Search branches by name or area" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start">
+                  {branchGroups.map((g) => {
+                    const n = g.stores.filter((s) => considered.has(s.id)).length;
+                    return (
+                      <ChainGroup
+                        key={g.chain}
+                        chain={g.chain}
+                        count={g.stores.length}
+                        note={n ? `${n} in My stores` : null}
+                        open={groupOpen(g.chain)}
+                        onToggle={() =>
+                          setOpened((cur) => {
+                            const next = new Set(cur);
+                            if (groupOpen(g.chain)) next.delete(g.chain);
+                            else next.add(g.chain);
+                            return next;
+                          })
+                        }
+                      >
+                        {g.stores.map(branchRow)}
+                      </ChainGroup>
+                    );
+                  })}
+                </div>
+                {words.length > 0 && !branchGroups.length && <p className="m-0 text-[14px] text-ink-soft">No branches match “{q.trim()}”.</p>}
               </section>
             )}
           </>

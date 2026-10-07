@@ -1,0 +1,52 @@
+{
+  "region": "karachi",
+  "city": "Karachi",
+  "checked": "2026-10-07",
+  "sources": {
+    "Imtiaz": {
+      "url": "https://imtiaz.com.pk/store-locator/",
+      "robots": "allowed (only /wp-content/uploads/wpo/wpo-plugins-tables-list.json is disallowed)",
+      "notes": "Karachi tab lists names only (no street addresses or phones); its Google short links are not used (some are copy-paste errors). 20 other-city stores left out."
+    },
+    "Spar": {
+      "url": "https://www.spar.pk/locations/",
+      "robots": "allowed (only /wp-admin/ is disallowed)",
+      "notes": "Addresses as published (spacing tidied). DHA Phase I has no street address. Phones on the contact page are inside an HTML comment (hidden, maybe stale), so none are used."
+    },
+    "Diamond Super Market": {
+      "url": "https://www.dsmonline.pk/<area>/ (footer: Branch Address / Branch Contact)",
+      "robots": "allowed for /<area>/ (/main/<area>, cart and customer paths are disallowed)",
+      "notes": "The six branches linked from the home page's area picker. Karimabad (404) and Nishtar (link commented out) are left out. Addresses and phones as published, with punctuation tidied and ', Karachi' added where missing. Scheme 33's published address reads 'Plot no, FM tower, 1, Scheme 33 Sector 15-B Gulzar E Hijri Scheme 33, Karachi' (tidied below); it has no phone. The site never says outright that each branch is a walk-in shop; its footers call them branches."
+    }
+  },
+  "branches": [
+    { "id": "09afb6e0-bda3-46ba-b0e7-ca8e4802e11c", "chain": "Imtiaz", "area": "Awami Markaz", "name": "Imtiaz · Awami Markaz", "listedAs": "Imtiaz Supermarket – Awami Markaz", "address": null, "phone": null, "status": "active" },
+    { "id": "0afdc7f4-e23e-4fd1-9998-167b4289ef3c", "chain": "Imtiaz", "area": "Bahria Town", "name": "Imtiaz · Bahria Town", "listedAs": "Imtiaz Mega – Bahria Town", "address": null, "phone": null, "status": "active" },
+    { "id": "743b9dba-3d91-4c7e-b8f6-5da3302b51d2", "chain": "Imtiaz", "area": "Bahadurabad", "name": "Imtiaz · Bahadurabad", "listedAs": "Imtiaz Supermarket – Bahadurabad", "address": null, "phone": null, "status": "active" },
+    { "id": "95eca2ff-eb81-4f93-95f8-cef15cf94a4e", "chain": "Imtiaz", "area": "Clifton (DHA Phase 5)", "name": "Imtiaz · Clifton (DHA Phase 5)", "listedAs": "Imtiaz Supermarket – Clifton (DHA Phase 5)", "address": null, "phone": null, "status": "active" },
+    { "id": "d1cdd429-1818-4ed0-9511-43ebd7b6ef35", "chain": "Imtiaz", "area": "Qayyumabad (DHA)", "name": "Imtiaz · Qayyumabad (DHA)", "listedAs": "Imtiaz Mega – Qayyumabad (DHA)", "address": null, "phone": null, "status": "active" },
+    { "id": "b0263165-039e-4005-bc81-8e35270c522c", "chain": "Imtiaz", "area": "The Place (DHA Phase 8)", "name": "Imtiaz · The Place (DHA Phase 8)", "listedAs": "Imtiaz Supermarket – The Place (DHA Phase 8)", "address": null, "phone": null, "status": "active" },
+    { "id": "de0b7465-38e9-4104-b23d-c45f27703c43", "chain": "Imtiaz", "area": "Gulshan", "name": "Imtiaz · Gulshan", "listedAs": "Imtiaz Mega – Gulshan", "address": null, "phone": null, "status": "active" },
+    { "id": "8f23a284-faa8-47db-b1d3-6397d3bb05ca", "chain": "Imtiaz", "area": "Malir Cantt", "name": "Imtiaz · Malir Cantt", "listedAs": "Imtiaz Supermarket – Malir Cantt", "address": null, "phone": null, "status": "active" },
+    { "id": "d2a9750d-8bee-42a3-81f1-8dbdb6e905f0", "chain": "Imtiaz", "area": "Nazimabad", "name": "Imtiaz · Nazimabad", "listedAs": "Imtiaz Mega – Nazimabad", "address": null, "phone": null, "status": "active" },
+    { "id": "64ac4907-0770-4959-84f9-e59c1569047e", "chain": "Imtiaz", "area": "Sharfabad", "name": "Imtiaz · Sharfabad", "listedAs": "Imtiaz Express – Sharfabad", "address": null, "phone": null, "status": "active" },
+    { "id": "90eeda7c-7df7-4d82-9dc5-381f817d14ce", "chain": "Imtiaz", "area": "Tariq Road", "name": "Imtiaz · Tariq Road", "listedAs": "Imtiaz Supermarket – Tariq Road", "address": null, "phone": null, "status": "active" },
+    { "id": "3351d3cd-f751-4955-9163-7cea30128787", "chain": "Imtiaz", "area": "Zamzama", "name": "Imtiaz · Zamzama", "listedAs": "Imtiaz Mega – Zamzama", "address": null, "phone": null, "status": "active" },
+    { "id": "19260f65-2fd4-468c-b898-8bab95204d19", "chain": "Imtiaz", "area": "Korangi", "name": "Imtiaz · Korangi", "listedAs": "Imtiaz Mega – Korangi", "address": null, "phone": null, "status": "active" },
+    { "id": "c8ba0a79-8a13-462c-a1bb-0871403bb947", "chain": "Imtiaz", "area": "Dhoraji", "name": "Imtiaz · Dhoraji", "listedAs": "Imtiaz Express – Dhoraji", "address": null, "phone": null, "status": "active" },
+
+    { "id": "e705562b-dd8a-49aa-a643-9f499b09f1ba", "chain": "Spar", "area": "Sharfabad", "name": "Spar · Sharfabad", "listedAs": "SPAR Sharfabad", "address": "MS Tower, Alamgir Road, Sharfabad, Karachi", "phone": null, "status": "active" },
+    { "id": "daeda5d1-570c-4b47-99d8-a2d52ede4bcb", "chain": "Spar", "area": "KDA", "name": "Spar · KDA", "listedAs": "SPAR KDA", "address": "Saima Twin Tower, Miran Shah Road, M.Ali Society, Karachi", "phone": null, "status": "active" },
+    { "id": "a9a54cc9-56ab-4f7e-8be5-13f99f968b4d", "chain": "Spar", "area": "North Nazimabad", "name": "Spar · North Nazimabad", "listedAs": "SPAR North Nazimabad", "address": "Shahrah-e-Humayun, North Nazimabad, Block F, Karachi", "phone": null, "status": "active" },
+    { "id": "43430858-63ec-4167-b008-91eaed415075", "chain": "Spar", "area": "DHA Phase VIII", "name": "Spar · DHA Phase VIII", "listedAs": "SPAR D.H.A Phase VIII", "address": "9-C, Lane 4, Phase VIII, Zulfiqar & Al Murtuza commercial area, Phase 8 Defence Housing Authority, Karachi, 75500", "phone": null, "status": "active" },
+    { "id": "b06eb3c6-a344-4747-a0f3-3d67c9bd7e49", "chain": "Spar", "area": "DHA Phase I", "name": "Spar · DHA Phase I", "listedAs": "SPAR DHA Phase I", "address": null, "phone": null, "status": "active" },
+    { "id": "3f7c49ef-1183-4128-9a34-a0bbcdd27919", "chain": "Spar", "area": "Naya Nazimabad", "name": "Spar · Naya Nazimabad", "listedAs": "SPAR - Naya Nazimabad", "address": "Adjacent to Jama Masjid, Naya Nazimabad, Karachi", "phone": null, "status": "active" },
+
+    { "id": "c92e2d82-75b7-4314-9c54-80e235b429b4", "chain": "Diamond Super Market", "area": "Clifton", "name": "Diamond Super Market · Clifton", "listedAs": "Clifton", "address": "G-3 28/29, Block 8, Third Embassy Villa, Clifton, near 3 Talwar, Karachi", "phone": "(021) 35305141", "status": "active" },
+    { "id": "a357b0ec-6bb0-4b49-bcbb-2da5c20ce6ce", "chain": "Diamond Super Market", "area": "FB Area", "name": "Diamond Super Market · FB Area", "listedAs": "FB Area", "address": "FB Area, near Mukka Chowk, Karachi", "phone": "(021) 36310301", "status": "active" },
+    { "id": "47b12c24-dabd-42ae-872a-665e6f855e3d", "chain": "Diamond Super Market", "area": "Garden", "name": "Diamond Super Market · Garden", "listedAs": "Garden", "address": "Garden East, near Aga Khan Jamat Khana, Karachi", "phone": "(021) 32292138", "status": "active" },
+    { "id": "8e5085d8-3151-4f5c-a66a-02d0674dfc37", "chain": "Diamond Super Market", "area": "North Karachi", "name": "Diamond Super Market · North Karachi", "listedAs": "North Karachi", "address": "A913 11-B, North Karachi, Karachi", "phone": "(021) 36904455", "status": "active" },
+    { "id": "38f6814f-a480-4206-8b2b-f275992a0880", "chain": "Diamond Super Market", "area": "Nazimabad", "name": "Diamond Super Market · Nazimabad", "listedAs": "Nazimabad", "address": "Shop E-3, Haji Tufail Market, Nazimabad No. 3, Karachi", "phone": "(021) 36612602", "status": "active" },
+    { "id": "16f39616-1cf0-4a71-86d4-8b2da2b483f6", "chain": "Diamond Super Market", "area": "Scheme 33", "name": "Diamond Super Market · Scheme 33", "listedAs": "Scheme33", "address": "FM Tower, Sector 15-B, Gulzar-e-Hijri, Scheme 33, Karachi", "phone": null, "status": "active" }
+  ]
+}

@@ -12,9 +12,10 @@ import { OCR_MB, saveDataOn } from '../../lib/receipt/ocr';
 import { MAX_UNIT_PRICE } from '../../lib/receipt/parse';
 import type { StoreGuess } from '../../lib/receipt/stores';
 import { MAX_CHARS } from '../../lib/receipt/text';
-import { Btn, Icon, SegmentedControl, Sheet, StoreDot, Toggle } from '../ui';
+import { Btn, Icon, Sheet, Toggle } from '../ui';
 import type { IconName } from '../ui';
 import { StoreFormSheet } from './compareSheets';
+import { StorePickerSheet as SharedStorePicker } from './storePicker';
 import { productSizeText, sectionLabel } from './compareHelpers';
 import { Field, NumIn, TextIn } from './manageParts';
 import { ProductFormSheet } from './productSheet';
@@ -170,8 +171,6 @@ export function DateSheet({
 }
 
 // ── Store ────────────────────────────────────────────────────────────────────
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-
 export function StorePickerSheet({
   open,
   current,
@@ -185,124 +184,26 @@ export function StorePickerSheet({
   onClose: () => void;
   onPick: (s: CatalogStore) => void;
 }) {
-  const compare = useCompare();
-  const [kind, setKind] = useState<CatalogStore['kind']>('online');
-  const [q, setQ] = useState('');
-  const [picked, setPicked] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    setKind(current?.kind ?? guess?.kind ?? 'online');
-    setQ(current ? '' : guess?.chain ?? guess?.name ?? '');
-    setPicked(current?.id ?? null);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const { shared, mine } = useMemo(() => {
-    const words = tokens(q);
-    const want = guess?.chain ? norm(guess.chain) : null;
-    const hits = compare.stores
-      .filter((s) => s.kind === kind && s.status !== 'closed')
-      .filter((s) => {
-        if (!words.length) return true;
-        const have = tokens(`${s.name} ${s.chain ?? ''} ${s.address ?? ''}`);
-        return words.every((w) => have.some((x) => x.startsWith(w)));
-      })
-      .sort((a, b) => Number(norm(b.chain ?? b.name) === want) - Number(norm(a.chain ?? a.name) === want) || a.name.localeCompare(b.name));
-    return { shared: hits.filter((s) => !s.ownerId), mine: hits.filter((s) => !!s.ownerId) };
-  }, [compare.stores, kind, q, guess]);
-
-  const chosen = picked ? compare.storeById(picked) : undefined;
-  const option = (s: CatalogStore) => (
-    <label
-      key={s.id}
-      className="flex items-center gap-3 rounded-[16px] bg-surface cursor-pointer"
-      style={{ padding: '10px 14px', minHeight: 60, boxShadow: picked === s.id ? 'inset 0 0 0 2px var(--accent)' : 'inset 0 0 0 1.5px var(--line)' }}
-    >
-      <input type="radio" name="receipt-store" checked={picked === s.id} onChange={() => setPicked(s.id)} className="m-0 shrink-0" style={{ width: 20, height: 20, accentColor: 'var(--accent)' }} />
-      <StoreDot store={s} size={11} />
-      <span className="flex-1 min-w-0">
-        <span className="block font-bold text-[15px] truncate">{s.name}</span>
-        <span className="block text-[12.5px] text-ink-soft truncate">
-          {s.ownerId ? 'Only you see its prices' : s.address || (s.kind === 'online' ? 'Online prices' : 'In-store prices')}
-        </span>
-      </span>
-    </label>
-  );
-
+  const [adding, setAdding] = useState<{ name: string; kind: CatalogStore['kind'] } | null>(null);
   return (
     <>
-      <Sheet
+      <SharedStorePicker
         open={open && !adding}
+        current={current}
+        initialKind={guess?.kind ?? 'online'}
+        initialQuery={guess?.chain ?? guess?.name ?? ''}
+        preferChain={guess?.chain ?? null}
         onClose={onClose}
-        title="Where was this?"
-        footer={
-          <Btn full size="lg" onClick={() => chosen && onPick(chosen)} disabled={!chosen}>
-            Use this shop
-          </Btn>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <SegmentedControl
-            label="Kind of shop"
-            value={kind}
-            onChange={setKind}
-            options={[
-              { id: 'online', label: 'Online' },
-              { id: 'physical', label: 'In a shop' },
-            ]}
-          />
-          <div className="flex items-center gap-2.5 bg-surface rounded-[14px] shadow-[inset_0_0_0_1.5px_var(--line)]" style={{ padding: '0 12px', height: 50 }}>
-            <Icon name="search" size={19} color="var(--ink-soft)" stroke={2.2} />
-            <label htmlFor="receipt-store-search" className="sr-only">
-              Search shops by name or area
-            </label>
-            <input
-              id="receipt-store-search"
-              type="search"
-              value={q}
-              maxLength={60}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search shops by name or area"
-              className="flex-1 min-w-0 bg-transparent outline-none border-none font-sans text-base"
-            />
-          </div>
-          {shared.length > 0 && (
-            <div role="radiogroup" aria-labelledby="receipt-shared-shops" className="flex flex-col gap-2">
-              <h3 id="receipt-shared-shops" className={`m-0 mt-1 ${sectionLabel}`}>
-                Shared shops
-              </h3>
-              {shared.map(option)}
-            </div>
-          )}
-          {mine.length > 0 && (
-            <div role="radiogroup" aria-labelledby="receipt-my-shops" className="flex flex-col gap-2">
-              <h3 id="receipt-my-shops" className={`m-0 mt-1 ${sectionLabel}`}>
-                Your shops
-              </h3>
-              {mine.map(option)}
-            </div>
-          )}
-          {!shared.length && !mine.length && <p className="m-0 text-[14px] text-ink-soft">No {kind === 'online' ? 'online shops' : 'shops'} match{q.trim() ? ` “${q.trim()}”` : ''}.</p>}
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            disabled={!compare.online}
-            className="flex items-center gap-3 text-left rounded-[16px] text-accent-ink font-bold text-[14.5px] shadow-[inset_0_0_0_1.5px_var(--line)] disabled:opacity-40"
-            style={{ padding: '12px 14px', minHeight: 56 }}
-          >
-            <Icon name="plus" size={18} stroke={2.4} />
-            Add a shop that isn’t listed
-          </button>
-          <p className="m-0 text-[12.5px] text-ink-soft leading-relaxed">A shop you add is just yours — only you see its prices.</p>
-        </div>
-      </Sheet>
+        onPick={onPick}
+        onAddStore={(q, kind) => setAdding({ name: q || guess?.name || guess?.chain || '', kind })}
+      />
       <StoreFormSheet
         target={adding ? 'new' : null}
-        initialName={q.trim() || guess?.name || guess?.chain || ''}
-        initialKind={kind}
-        onClose={() => setAdding(false)}
+        initialName={adding?.name ?? ''}
+        initialKind={adding?.kind ?? 'physical'}
+        onClose={() => setAdding(null)}
         onSaved={(s) => {
-          setAdding(false);
+          setAdding(null);
           onPick(s);
         }}
       />
