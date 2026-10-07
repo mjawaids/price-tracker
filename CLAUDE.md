@@ -50,7 +50,7 @@ Context-based (no Redux). Providers in `src/contexts/`:
   (own stores/products, price reports), the one-time Compare cart → list conversion.
   Receipt saves: `reportPrices` (one insert per receipt, all or nothing; maps the daily
   limit / a refused row / offline to a reason), `retractReports` (Undo), `pricesAtStore`,
-  `addProducts` (a receipt's medicines as private products).
+  `ownReportsAt` ("Already added"), `addProducts` (a receipt's medicines as private products).
   Cached per user in IndexedDB (`src/lib/compare/cache.ts`) so plans work offline
 - `AppContext` — navigation stack, section, screen enum, app-level sheets
   (`currency`, `region`, `help` + topic), sign-out
@@ -85,35 +85,56 @@ Context-based (no Redux). Providers in `src/contexts/`:
 - Help: `src/lib/help.ts` topics in a lazy `HelpSheet` (`app.openSheet('help', id)`);
   `WhatsNewSheet` once per existing user (`spendless-whatsnew:<uid>`).
 
-### Receipts (in progress: reading, matching and saving are built; the screen isn't yet)
-`features.receipts` still shows "Coming soon". The pipeline, all on the device:
-- **Read**: pasted text, or images via `ocr.ts` — tesseract.js in a Web Worker, loaded
-  only when needed and **self-hosted** (never a CDN): `vite.config.ts` copies the worker,
-  the LSTM engines (`.js` + `.wasm`, plain/SIMD/relaxed-SIMD) and `eng.traineddata.gz`
-  (4.0.0_best_int) from `node_modules` into `dist/ocr/<tesseract.js version>/` (dev
-  serves the same list). Not precached (`globIgnores: ['ocr/**']`, ≈6 MB): a runtime
-  `CacheFirst` cache (`spendless-ocr`) keeps it after the first use; `public/_headers`
-  makes `/ocr/*` immutable. `VITE_OCR_PATH` / `VITE_OCR_BYTES` come from the config;
-  `OCR_MB` is the size shown before the one-time download. `image.ts` uprights,
-  resizes, greys and stretches the image (dark screenshots inverted); `layout.ts` joins
-  the reader's split rows. The image is never uploaded or kept.
+### Receipts (Compare → Contribute → Add a receipt)
+`ReceiptScreen` (lazy, screen `receipt`; off with `features.receipts`). Steps: start
+(screenshots/images, a camera photo on touch devices, or pasted text) → one-time reader
+download sheet → reading (progress, Cancel) → review → saved (Undo), plus problem cards
+(too old, nothing found, couldn't open a picture, reader didn't start, offline, couldn't
+save, daily limit, feature off). The receipt in progress lives in a module store
+(`session.ts`, memory only), so reading carries on when the user leaves the screen and
+Contribute shows "Finish your receipt". Everything runs on the device:
+- **Read** (`flow.ts`): pasted text, or images via `ocr.ts` — tesseract.js in a Web
+  Worker, loaded only when needed and **self-hosted** (never a CDN): `vite.config.ts`
+  copies the worker, the LSTM engines (`.js` + `.wasm`, plain/SIMD/relaxed-SIMD) and
+  `eng.traineddata.gz` (4.0.0_best_int) from `node_modules` into
+  `dist/ocr/<tesseract.js version>/` (dev serves the same list). Not precached
+  (`globIgnores: ['ocr/**']`, ≈6 MB): a runtime `CacheFirst` cache (`spendless-ocr`)
+  keeps it after the first use; `public/_headers` makes `/ocr/*` immutable.
+  `VITE_OCR_PATH` / `VITE_OCR_BYTES` come from the config; `OCR_MB` is the size shown
+  before the one-time download. `image.ts` uprights, resizes, greys and stretches the
+  image (dark screenshots inverted); `layout.ts` joins the reader's split rows. Up to 6
+  pictures of one order are read as one receipt ("Add another screenshot" appends). The
+  image is never uploaded or kept.
 - **Parse** (`parse.ts`, plain TS): items (name, quantity, price for one after the
   item's own discount), fees, discounts, totals; numbers are explained by arithmetic
   (qty × rate − discount = total) rather than layout templates. `addsUp` checks the items
   against the printed subtotal/total. `dates.ts` finds the purchase date (day-first
   unless an FBR/receipt number says otherwise; ambiguous dates are flagged; >90 days
-  can't be saved). `stores.ts` guesses the chain, online vs in-store, pharmacy, area.
+  can't be saved). `stores.ts` guesses the chain, online vs in-store, pharmacy, area;
+  `receiptHelpers.storeForGuess` picks the store only when exactly one fits (same kind —
+  an in-store receipt never goes to the online store), else the one last used for that
+  chain (`memory.ts`), else the store picker opens.
 - **Match** (`match.ts`): IDF word overlap, brand, size, type, price at that store.
   Picked on its own only from the store's own products, when every telling word matches
   both ways (packaging words aside), same size, near the store's price, and well ahead
   of the next; otherwise up to three suggestions. Tuned so wrong automatic picks stay
   ~0 (harness numbers in the PR).
-- **Review** (`review.ts`): ready / check / choose / medicine. Medicines (`medicine.ts`:
-  PHARMACY section, medicine code, strength like "500mg"; weaker signals only when the
-  line doesn't match a shared product) are saved as the user's own private products, so
-  their prices stay private (`current_prices` needs both store and product visible).
-- **Save**: `CompareContext.reportPrices` → `api.insertReports` (`source 'receipt'`,
-  one row per product, `observed_at` = local noon of the receipt date, or now).
+- **Review** (`review.ts` + `receiptHelpers.useReview`): Ready / Check this / Which
+  product is this? / Medicines · only for you / Already added (the user's own report for
+  that product, store and day) / Not products (fees, discounts, payment, lines marked so).
+  Medicines (`medicine.ts`: PHARMACY section, medicine code, strength like "500mg";
+  weaker signals only when the line doesn't match a shared product) are saved as the
+  user's own private products, so their prices stay private (`current_prices` needs both
+  store and product visible). Edits (product, price, quantity, tick, not a product) are
+  kept per line in the session.
+- **Remember** (`memory.ts`, IndexedDB `spendless-receipts-<uid>`, this device only):
+  the product (or "not a product") the user chose per line per chain, and the last store
+  per chain. Deleted on sign-out.
+- **Save** (`receiptHelpers.saveReceipt`): new medicine products first (`addProducts`),
+  then `CompareContext.reportPrices` → `api.insertReports` (`source 'receipt'`, one row
+  per product, `observed_at` = local noon of the receipt date, or now), then the choices
+  are remembered. Analytics are counts only (`receipt_read`, `receipt_failed`,
+  `receipt_saved`, `receipt_undone`).
 
 ### Offline (Lists)
 - `src/lib/offline/db.ts` — IndexedDB (`idb`) per user: `lists`, `items`, `outbox`, `meta`
@@ -131,7 +152,9 @@ Context-based (no Redux). Providers in `src/contexts/`:
   `sw.js` hourly, on return to the app and on reconnect, and shows a top toast
   "A new version is ready · Update". Tapping it activates the new worker and reloads.
   Coming back after ≥30 min in the background with an update waiting applies it
-  automatically. A cold start always gets the newest build.
+  automatically — unless a receipt is being read or reviewed (`isReviewOpen()` in
+  `src/lib/receipt/session.ts`; it lives only in memory). A cold start always gets the
+  newest build.
 - Cache invalidation: Workbox precache entries are revisioned per build and old ones
   are removed when the new worker activates. `public/_headers` makes Netlify serve
   `/`, `/index.html`, `/sw.js` and `/site.webmanifest` as `no-cache` and the hashed
@@ -165,11 +188,12 @@ Context-based (no Redux). Providers in `src/contexts/`:
 
 ### Navigation
 Stack-based within `AppContext`. Screen enum values: `lists`, `plan` (Where to buy,
-`{ listId }`), `prices`, `search`, `detail`, `stores`, `contribute`, `mproducts`, `profile`.
+`{ listId }`), `prices`, `search`, `detail`, `stores`, `contribute`, `mproducts`,
+`receipt` (Add a receipt, highlighted as Contribute), `profile`.
 Sections (`app.section` / `app.openSection`): `lists` (default; includes `plan`),
 `compare` (opens `prices`), `profile`.
 - Mobile (<768px): bottom tab bar **Lists · Compare · Profile**; Compare has a
-  Prices · Stores · Contribute segmented control (Contribute → Your products)
+  Prices · Stores · Contribute segmented control (Contribute → Your products, Add a receipt)
 - Tablet (768–1099px): collapsed sidebar
 - Desktop (≥1100px): full sidebar (your lists on top, then Compare: Prices, Stores,
   Contribute); Compare screens get a top bar with search and the city
@@ -262,10 +286,11 @@ post-deploy migration drops them.
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
 | `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes), `cache.ts` (IndexedDB snapshot) |
 | `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, receipt saves, cart conversion |
-| `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js) |
+| `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js), `flow.ts` (read → parse → session), `session.ts` (the receipt in progress, memory only), `memory.ts` (remembered line choices + last store per chain, IndexedDB) |
+| `src/components/screens/ReceiptScreen.tsx` | Add a receipt (+ `receiptParts.tsx`, `receiptSheets.tsx` for the reader download, paste, date, store, product and line sheets, `receiptHelpers.ts` for the review rows, store guess and save) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
 | `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product) |
-| `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores, add a price, your own products |
+| `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores, add a price (and the Add a receipt entry), your own products |
 | `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, store picker, store form, add a price; product form |
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
 | `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`) and `WhatsNewSheet` |
@@ -324,7 +349,8 @@ say so and propose a safe alternative.
 - **Auth**: use Supabase Auth only; never roll custom auth, store passwords, or put
   tokens in URLs. Keep sign-out clearing the cached identity, the user's offline
   lists (`AppContext.signOut` → `ListsContext.clearLocalData`, after a final sync), the
-  cached catalogue (`CompareContext.clearLocalData`) and recent searches.
+  cached catalogue (`CompareContext.clearLocalData`), recent searches, the receipt in
+  progress (`resetReceipt`) and the remembered receipt lines (`deleteReceiptMemory`).
 - **Privacy**: no PII or user content in analytics events, logs or error messages.
 - **Dependencies**: add packages sparingly from reputable sources; keep the lockfile
   committed; check `npm audit` when adding or upgrading; no scripts from untrusted CDNs.
@@ -392,7 +418,8 @@ and feel like it came from a strong product design team, not a default template.
 
 ### Design System in Code
 - **Tokens**: `src/index.css` (`--paper`, `--surface`, `--ink`/`--ink-soft`/`--ink-faint`,
-  `--line`, `--accent` family, `--r-card`, `--r-btn`, `--shadow-card`)
+  `--line`, `--accent` family, `--warn-*`, `--danger*`, `--ok-ink`/`--ok-wash` (success,
+  e.g. "Adds up"), `--r-card`, `--r-btn`, `--shadow-card`)
 - **Tailwind mapping**: `tailwind.config.js` (`bg-paper`, `text-ink-soft`, `rounded-card`,
   `rounded-btn`, `shadow-card`, `font-display`, `animate-slide-up`, …)
 - **Typography**: `font-display` (Bricolage Grotesque) for headings, `font-sans`

@@ -42,11 +42,15 @@ The app has two sections: **Lists** (the default) and **Compare**.
   Imtiaz, Chase Up, Spar, Bin Hashim; Hydri is paused), read politely by SpendLessBot
   (see `/bot` and [docs/data-sources.md](docs/data-sources.md))
 - **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
-  at, add your own) and **Contribute** (add a price, add a product)
+  at, add your own) and **Contribute** (add a price, add a product, add a receipt)
+- **Add a receipt**: a whole shop's prices in one go from order screenshots, a photo of a
+  till receipt or pasted text. It's read on the device (a one-time ≈6 MB text reader,
+  self-hosted, works offline after that) — the receipt is never uploaded or kept, only
+  the prices you confirm are saved. Medicines are saved as your own private products
 - Prices at shared stores are shared without your name; prices far from the usual one
   are kept for you only; your own stores and products stay private
-- Use as much as you like: Profile → **Shopping features** turns Where to buy off, and
-  lists look exactly as before
+- Use as much as you like: Profile → **Shopping features** turns Where to buy and receipt
+  import off, and lists look exactly as before
 - In-app help (Profile → Help), a short walkthrough the first time you open Where to buy,
   and one-at-a-time tips
 
@@ -309,7 +313,8 @@ src/
 │   │   ├── SearchScreen.tsx    # Product search
 │   │   ├── DetailScreen.tsx    # Product page (prices per store, add to list)
 │   │   ├── StoresScreen.tsx    # Your city and stores
-│   │   ├── ContributeScreen.tsx # Add a price / a product
+│   │   ├── ContributeScreen.tsx # Add a price / a product / a receipt
+│   │   ├── ReceiptScreen.tsx   # Add a receipt (+ receiptParts, receiptSheets, receiptHelpers)
 │   │   ├── ManageScreens.tsx   # Your own products
 │   │   ├── compareSheets.tsx   # Item choice, city, store picker, store form, add a price
 │   │   ├── productSheet.tsx    # Add/edit your product
@@ -343,6 +348,7 @@ src/
 │   ├── supabaseClient.ts       # Supabase client (pinned to the `spendless` schema)
 │   ├── offline/                # IndexedDB store + sync engine for Lists
 │   ├── compare/                # Compare: item types, name parser, unit prices, matching, optimizer, API, offline cache
+│   ├── receipt/                # Receipts: on-device reader, parser, dates, store guess, matching, review, memory
 │   ├── help.ts                 # Help topic copy
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy

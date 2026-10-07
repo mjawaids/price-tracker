@@ -49,6 +49,11 @@ import {
   MoreVertical,
   Smartphone,
   MonitorDown,
+  Image as ImageIcon,
+  ClipboardPaste,
+  CalendarDays,
+  AlertCircle,
+  Pill,
   LucideProps,
 } from 'lucide-react';
 import { ComponentType } from 'react';
@@ -105,6 +110,11 @@ const MAP: Record<string, ComponentType<LucideProps>> = {
   moreV: MoreVertical,
   smartphone: Smartphone,
   monitorDown: MonitorDown,
+  image: ImageIcon,
+  clipboard: ClipboardPaste,
+  calendar: CalendarDays,
+  alert: AlertCircle,
+  pill: Pill,
 };
 
 export type IconName = keyof typeof MAP | string;

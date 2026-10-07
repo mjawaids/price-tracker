@@ -7,8 +7,8 @@ import type { OcrLine } from './layout.ts';
 import type { TextLine } from './text.ts';
 
 const BASE = import.meta.env.VITE_OCR_PATH;
-/** Download size shown before the first use, in whole MB (rounded up). */
-export const OCR_MB = Math.max(1, Math.ceil(Number(import.meta.env.VITE_OCR_BYTES) / 1_000_000));
+/** Download size shown before the first use ("about 6 MB"), to the nearest MB. */
+export const OCR_MB = Math.max(1, Math.round(Number(import.meta.env.VITE_OCR_BYTES) / 1_000_000));
 const READY_KEY = 'spendless-ocr-ready';
 
 /** Has this device downloaded the reader before (so we don't ask again)? */

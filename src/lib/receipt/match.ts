@@ -276,7 +276,9 @@ export function matchLine(ix: MatchIndex, q: LineQuery): MatchResult {
     let score = text * factor + brandBonus;
 
     if (qSize && c.size) {
-      if (similarSize(qSize, c.size, 0.03) && qSize.pack === c.size.pack) {
+      // Packs must agree (2 × 500 g isn't 1 kg), except for pieces: "12 pcs" is a dozen
+      // however it's written (12 × 1 or 1 × 12).
+      if (similarSize(qSize, c.size, 0.03) && (qSize.pack === c.size.pack || qSize.unit === 'pc')) {
         score += 0.08;
         // On its own only with the same size (440 g ≠ 430 g)
         if (!similarSize(qSize, c.size, 0.01)) covered = false;

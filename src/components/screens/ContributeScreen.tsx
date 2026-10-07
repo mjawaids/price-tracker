@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useCompare } from '../../contexts/CompareContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { tokens } from '../../lib/compare/itemTypes';
 import { CatalogProduct } from '../../lib/compare/types';
+import { useReceipt } from '../../lib/receipt/session';
 import { Icon, Toast } from '../ui';
 import { ManageHeader } from './manageParts';
 import { CompareNotice, ProductRow } from './compareParts';
@@ -17,6 +19,8 @@ const MAX_RESULTS = 30;
 export default function ContributeScreen() {
   const app = useApp();
   const compare = useCompare();
+  const { settings } = useSettings();
+  const receipt = useReceipt();
   const { compact } = useBreakpoint();
   const [q, setQ] = useState('');
   const [pricing, setPricing] = useState<CatalogProduct | null>(null);
@@ -41,6 +45,8 @@ export default function ContributeScreen() {
   }, [q, compare.resolveContext]);
 
   const own = compare.products.filter((p) => p.ownerId).length;
+  const receiptsOn = settings.features.receipts;
+  const receiptWaiting = receiptsOn && (receipt.step.name === 'reading' || receipt.step.name === 'review');
   const n = compare.recentReports;
 
   return (
@@ -127,15 +133,27 @@ export default function ContributeScreen() {
             </span>
             <Icon name="chevR" size={17} stroke={2.2} color="var(--ink-soft)" />
           </button>
-          <div className="flex items-center gap-3 rounded-[18px] bg-paper shadow-[inset_0_0_0_1.5px_var(--line)] md:col-span-2" style={{ padding: 14, minHeight: 72 }}>
-            <Icon name="receipt" size={22} stroke={2} color="var(--ink-soft)" />
+          <button
+            type="button"
+            onClick={() => (receiptsOn ? app.go('receipt') : app.openSection('profile'))}
+            className="flex items-center gap-3 text-left bg-surface rounded-[18px] shadow-[inset_0_0_0_1.5px_var(--line)] md:col-span-2"
+            style={{ padding: 14, minHeight: 72 }}
+          >
+            <Icon name="receipt" size={22} stroke={2} color={receiptsOn ? 'var(--accent-ink)' : 'var(--ink-soft)'} />
             <span className="flex-1 min-w-0">
-              <span className="block font-bold text-[15px]">
-                Receipts <span className="font-mono text-[10.5px] tracking-[0.1em] uppercase text-ink-soft align-middle">· coming soon</span>
+              <span className="block font-bold text-[15px]">{receiptWaiting ? 'Finish your receipt' : 'Add a receipt'}</span>
+              <span className="block text-[12.5px] text-ink-soft">
+                {!receiptsOn
+                  ? 'Turned off — switch it on in Profile → Shopping features'
+                  : receipt.step.name === 'reading'
+                    ? 'Reading it now…'
+                    : receiptWaiting
+                      ? 'It’s waiting for you to check the prices'
+                      : 'A whole shop’s prices from a screenshot, photo or text — read on your device'}
               </span>
-              <span className="block text-[12.5px] text-ink-soft">Add a whole shop’s prices from a photo, PDF or text receipt — read on your phone.</span>
             </span>
-          </div>
+            <Icon name="chevR" size={17} stroke={2.2} color="var(--ink-soft)" />
+          </button>
         </div>
 
         <p className="m-0 text-[12.5px] leading-relaxed text-ink-soft">

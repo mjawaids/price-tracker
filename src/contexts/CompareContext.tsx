@@ -82,6 +82,8 @@ interface CompareApi {
   reportPrice: (r: { storeId: string; productId: string; price: number | null; isAvailable?: boolean; source?: api.ReportSource }) => Promise<'accepted' | 'pending' | null>;
   /** Prices at one store: shared, with the user's own newer reports on top. */
   pricesAtStore: (storeId: string) => CurrentPrice[];
+  /** The user's own reports at one store (last 30 days, newest first). */
+  ownReportsAt: (storeId: string) => CurrentPrice[];
   /** Save a receipt's prices at one store in one go (all or nothing). */
   reportPrices: (storeId: string, rows: { productId: string; price: number }[], observedAt: string | null) => Promise<ReceiptSaveResult>;
   /** Undo a receipt: delete its reports and re-read those prices. */
@@ -386,6 +388,12 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     return m;
   }, [snap.prices, snap.ownReports, storeMap]);
+
+  const ownByStore = useMemo(() => {
+    const m = new Map<string, CurrentPrice[]>();
+    for (const r of snap.ownReports) m.set(r.storeId, [...(m.get(r.storeId) || []), r]);
+    return m;
+  }, [snap.ownReports]);
 
   const byStore = useMemo(() => {
     const m = new Map<string, CurrentPrice[]>();
@@ -737,6 +745,7 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     removeProductImage,
     reportPrice,
     pricesAtStore: (id) => byStore.get(id) || [],
+    ownReportsAt: (id) => ownByStore.get(id) || [],
     reportPrices,
     retractReports,
     addProducts,

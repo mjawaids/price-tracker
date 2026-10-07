@@ -10,7 +10,7 @@ Logic: `src/lib/compare/`. Store imports: `docs/data-sources.md`.
 A list item ("bread") is matched to products ("Dawn Milky Bread 800g"), products
 have prices at stores, and the optimizer picks the cheapest way to buy the whole
 list — delivery fees and minimum orders included. Prices come from store imports,
-from people's own entries, and (later) from receipts. Shared prices are live in
+from people's own entries, and from receipts. Shared prices are live in
 **Karachi** first; everywhere else Compare runs on the user's own stores and prices.
 
 ## Tables (`spendless` schema)
@@ -101,7 +101,8 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
   cart" once per user (flag `spendless-cart-migrated:<userId>` in localStorage), after
   the user's lists have synced and only if no list with that name exists.
 - Analytics events carry counts only (`plan_applied`, `price_reported`,
-  `cart_converted`) — never names, prices or ids.
+  `cart_converted`, `receipt_read`, `receipt_failed` (with a reason like `nothing`),
+  `receipt_saved`, `receipt_undone`) — never names, prices, ids or receipt text.
 
 ## Regions
 
@@ -134,8 +135,8 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
 - More import sources as feeds or partnerships allow (see `docs/data-sources.md`).
 - Trip capture (confirm the price when you tick an item), disputes, corroboration of
   pending reports, reporter trust, freshness badges, "your contributions".
-- Receipt import: screenshots, photos and pasted text first (on-device OCR, built;
-  the screen is next), then PDFs and "share to SpendLess", then public in-store branches
-  and suggested branches.
+- Receipt import: screenshots, photos and pasted text are live (Compare → Contribute →
+  Add a receipt, on-device OCR); next public in-store branches, then PDFs and "share to
+  SpendLess", then suggested branches.
 - More cities: readiness meter, promoting corroborated private stores, merging
   duplicate products, a small moderation queue.

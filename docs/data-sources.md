@@ -87,7 +87,7 @@ skips it).
 | Metro (metro-online.pk) | Product data needs a guest token that the page's JavaScript issues (encrypted `/api/post`); without it the API returns 401. Getting one ourselves would mean working around an access control. Its terms also forbid duplicating its "texts" and call prices "guide prices only" | A feed or partnership |
 | Springs (springs.com.pk) | robots.txt has a group titled "Scrapers and AI trainers — blocked outright" | A feed or partnership |
 | foodpanda shops (PandaMart, Springs, Spar, Bin Hashim, Meri Pharmacy, Rehmat-e-Shireen) | PerimeterX bot protection answers 403. Spar and Bin Hashim are covered by their own websites | A feed or partnership |
-| KraveMart (inDrive.Groceries) and other app-only stores | No website catalogue; reverse-engineering the app breaks its licence | Receipts and manual prices (Phases 3–4), or a feed |
+| KraveMart (inDrive.Groceries) and other app-only stores | No website catalogue; reverse-engineering the app breaks its licence | Receipts and manual prices, or a feed |
 
 ## How a run works
 

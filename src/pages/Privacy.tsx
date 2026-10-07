@@ -57,6 +57,12 @@ const Privacy: React.FC = () => {
                     <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     What you add to the app: your lists, the city you choose, and the stores, products and prices you add.
                   </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    Receipts are read on your device. The picture or text is never uploaded or kept — only the prices you choose to
+                    save. The products you pick for a shop’s receipt lines are remembered on your device only, and deleted when you
+                    sign out.
+                  </li>
                 </ul>
               </section>
 
@@ -88,7 +94,8 @@ const Privacy: React.FC = () => {
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     Prices you add at shared stores are shown to other SpendLess users, without your name or account. Your lists, and
-                    the stores and products you add yourself (with their prices), stay private to you.
+                    the stores and products you add yourself (with their prices), stay private to you. Medicines from a receipt are
+                    saved as your own products, so their prices stay private too.
                   </li>
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>

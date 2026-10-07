@@ -107,7 +107,7 @@ service worker.
 - [ ] Renaming a planned item clears its plan and pinned product.
 - [ ] Offline: the plan still opens from saved prices, with an offline note.
 - [ ] Profile → Shopping features → Where to buy **off**: no chip, no store sections,
-      lists look as before. Ask for prices / Receipt import show "Coming soon".
+      lists look as before. Ask for prices shows "Coming soon".
 - [ ] The **x** on the chip turns Where to buy off (with a toast saying where to turn it on).
 
 ## Compare
@@ -128,6 +128,42 @@ service worker.
 - [ ] Offline, Compare shows the offline notice and saved prices; adding is disabled.
 - [ ] Profile → Help → **How SpendLess works** opens the help topics; the "?" buttons in
       the plan open the matching topic.
+
+## Receipts (Compare → Contribute → Add a receipt)
+
+Use a recent order of your own (under 90 days). Nothing is uploaded: check the Network
+tab — reading fetches only `/ocr/<version>/…` (first picture only); Save sends the
+prices (one `price_reports` insert, plus a `catalog_products` insert for new medicines)
+and re-reads those prices.
+- [ ] **Screenshot or image**: pick one or more screenshots of one online order. The
+      first time, "Get the receipt reader" shows the size (≈6 MB) and Data Saver / offline
+      notes; *Download and read* shows progress, *Cancel* stops it. Later pictures don't ask.
+- [ ] **Take a photo** (phone/tablet): the camera opens; a flat, well-lit till receipt
+      reads; a blurry one says "We couldn't find any prices" with what to try.
+- [ ] **Paste text**: an order email's text reads the same way.
+- [ ] Review: store, date and "Adds up" chips. Online orders pick the online store;
+      in-store receipts never go to the online store (the store picker opens instead).
+      *Where was this?* → Online / In a shop, search, *Add a shop that isn't listed*
+      (private, only you see its prices).
+- [ ] Ready lines are ticked; *Check this* (cut-off names, unsure, hard to read) and
+      *Which product is this?* lines aren't. *Choose* → suggestions, search, *Add as my
+      product*, *Not a product*, "Remember this for …". Tap a line to edit its price for
+      one, quantity bought, and *Save this price*.
+- [ ] A pharmacy receipt puts medicines under **Medicines · only for you**; saving makes
+      them your own products (another account can't see them or their prices).
+- [ ] *Save N prices* → "N prices saved" with what was shared, kept for you (far from the
+      usual price), remembered, and not added. **Undo** takes them back and returns to
+      the review. Adding the same receipt again shows its lines under **Already added**,
+      and lines you chose last time match on their own.
+- [ ] A receipt older than 90 days says "Too old to add", with *Wrong date?*.
+- [ ] Offline at review: "Connect to save N prices" (nothing lost); back online, Save works.
+- [ ] Leave the screen while reading or reviewing: Contribute shows *Finish your
+      receipt*, and the review is still there. An app update doesn't auto-reload while
+      a receipt is open.
+- [ ] Profile → Shopping features → Receipt import **off**: Contribute's card says it's
+      off and opens Profile; the screen shows "Receipt import is off" with *Turn on*.
+- [ ] Sign out and back in: remembered choices are gone (IndexedDB
+      `spendless-receipts-<uid>` deleted).
 
 ## Store price import
 
