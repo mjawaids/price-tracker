@@ -7,7 +7,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackUserAction } from '../../utils/analytics';
 import { ageInDays, MAX_AGE_DAYS, OLDISH_DAYS } from '../../lib/receipt/dates';
-import { cancelRead, readFiles, readText, retryRead } from '../../lib/receipt/flow';
+import { cancelRead, MAX_IMAGES, readFiles, readText, retryRead } from '../../lib/receipt/flow';
 import { lastStore } from '../../lib/receipt/memory';
 import { OCR_MB, readerDownloaded } from '../../lib/receipt/ocr';
 import { getReceipt, resetReceipt, setReceipt, useReceipt } from '../../lib/receipt/session';
@@ -184,7 +184,8 @@ function ReadingStep({ r, onBack }: { r: ReceiptState; onBack: () => void }) {
   const overall = !progress || stage === 'open' ? 0 : stage === 'download' ? progress.progress * 0.15 : 0.15 + progress.progress * 0.85;
   const read = stage === 'read' && (progress?.progress ?? 0) >= 1;
   const pdf = r.source === 'pdf';
-  const noun = pdf ? 'PDF page' : r.source === 'photo' ? 'photo' : 'screenshot';
+  // A PDF read may include pictures shared with it: "pages" covers both.
+  const noun = pdf ? 'page' : r.source === 'photo' ? 'photo' : 'screenshot';
   return (
     <div aria-busy="true" className="flex flex-col flex-1">
       <ScreenHeader title={adding ? 'Reading another…' : 'Reading…'} onBack={onBack} />
@@ -465,6 +466,30 @@ function ReviewStep({ r, wide, onBack }: { r: ReceiptState; wide: boolean; onBac
           body="The rest of the receipt is still here."
           action={
             <Btn size="sm" variant="ghost" onClick={() => setReceipt({ addFailed: false })}>
+              OK
+            </Btn>
+          }
+        />
+      )}
+      {r.separate > 0 && (
+        <CompareNotice
+          icon="alert"
+          title={`${r.separate} ${r.separate === 1 ? 'file wasn’t' : 'files weren’t'} added`}
+          body={`${r.separate === 1 ? 'It looks' : 'They look'} like a separate receipt. Add ${r.separate === 1 ? 'it' : 'them'} on ${r.separate === 1 ? 'its' : 'their'} own.`}
+          action={
+            <Btn size="sm" variant="ghost" onClick={() => setReceipt({ separate: 0 })}>
+              OK
+            </Btn>
+          }
+        />
+      )}
+      {r.skipped > 0 && (
+        <CompareNotice
+          icon="alert"
+          title={`Only the first ${MAX_IMAGES} ${r.source === 'pdf' ? 'pages' : 'pictures'} were read`}
+          body={`${r.skipped} more ${r.skipped === 1 ? 'wasn’t' : 'weren’t'}. Add the rest as another receipt.`}
+          action={
+            <Btn size="sm" variant="ghost" onClick={() => setReceipt({ skipped: 0 })}>
               OK
             </Btn>
           }

@@ -35,7 +35,7 @@ const fail = (reason: ReadFailure, source: ReceiptSource, adding: boolean, probl
 };
 
 /** Lines → the review (or "nothing found"). Adding keeps the shop, date and edits. */
-function finish(lines: TextLine[], source: ReceiptSource, adding: boolean) {
+function finish(lines: TextLine[], source: ReceiptSource, adding: boolean, skipped = 0, separate = 0) {
   const parsed = parseReceipt(lines);
   const cur = getReceipt();
   // Nothing found — or nothing new in an added picture.
@@ -52,6 +52,8 @@ function finish(lines: TextLine[], source: ReceiptSource, adding: boolean) {
     lines,
     parsed,
     guess: adding && cur.guess ? cur.guess : guess,
+    skipped: (adding ? cur.skipped : 0) + skipped,
+    separate: adding ? cur.separate : separate,
     ...(adding ? {} : { storeId: null, storeLooked: false, date: null, edits: {} }),
   });
 }
@@ -65,16 +67,19 @@ export interface ReadOptions {
 
 /**
  * Read a receipt from files: pictures (several screenshots of one order are read as
- * one), or a PDF (one per receipt: if one is picked, only it is read). Asks for the
- * reader download first when it's needed and not on this device yet.
+ * one) and PDFs, in order, as one receipt — up to MAX_IMAGES pages and pictures; the
+ * review says how many more weren't read. Asks for the reader download first when
+ * it's needed and not on this device yet.
  */
 export async function readFiles(files: File[], source: ReceiptSource, opts: ReadOptions = {}): Promise<void> {
   const { adding = false } = opts;
   if (!files.length) return;
   if (!adding) {
-    for (const f of files) if (await isPdfFile(f)) return readPdf(f, opts);
+    const pdf = await Promise.all(files.map((f) => isPdfFile(f)));
+    if (pdf.some(Boolean)) return readWithPdfs(files, pdf, opts);
   }
   const picked = files.slice(0, MAX_IMAGES);
+  const skipped = files.length - picked.length;
   // Adding pictures to a review never asks: the reader read the first ones.
   if (!adding && !opts.consented && !readerDownloaded()) {
     nextRun();
@@ -90,7 +95,7 @@ export async function readFiles(files: File[], source: ReceiptSource, opts: Read
     if (!live()) return;
     onCancel(null);
     lastFiles = null;
-    finish([...before, ...pages.flat()], source, adding);
+    finish([...before, ...pages.flat()], source, adding, skipped);
   } catch (error) {
     if (!live()) return;
     stopped(error, source, adding);
@@ -126,45 +131,77 @@ function stopped(error: unknown, source: ReceiptSource, adding: boolean) {
   fail(error instanceof ImageError ? 'image' : 'reader', source, adding);
 }
 
-/** A PDF: its own text where it has some; scanned pages go through the reader. */
-async function readPdf(file: File, opts: ReadOptions): Promise<void> {
+/**
+ * PDFs (and any pictures picked or shared with them), in order: a PDF page's own text
+ * where it has some; scanned pages and pictures go through the reader.
+ */
+async function readWithPdfs(files: File[], pdf: boolean[], opts: ReadOptions): Promise<void> {
   const source: ReceiptSource = 'pdf';
-  lastFiles = { files: [file], source, adding: false };
+  lastFiles = { files, source, adding: false };
   const { run, live, signal } = begin();
-  setReceipt({ step: { name: 'reading', count: 1, progress: { stage: 'open', progress: 0 }, adding: false }, addFailed: false, source });
-  let pdf: OpenedPdf | null = null;
+  setReceipt({ step: { name: 'reading', count: files.length, progress: { stage: 'open', progress: 0 }, adding: false }, addFailed: false, source });
+  const opened: OpenedPdf[] = [];
   try {
-    pdf = await openPdf(file, { signal });
-    if (!live()) return;
-    const scans = pdf.pages.filter((p) => !p.lines);
-    if (scans.length && !opts.consented && !readerDownloaded()) {
+    // A page with its own text, or a picture (or scanned page) for the reader; `file` =
+    // which file it came from.
+    const pages: { lines: TextLine[] | null; picture: PageSource | null; file: number }[] = [];
+    let beyond = 0; // pages past a PDF's own page limit
+    for (let i = 0; i < files.length; i++) {
+      if (!pdf[i]) {
+        pages.push({ lines: null, picture: files[i], file: i });
+        continue;
+      }
+      const doc = await openPdf(files[i], { signal });
+      opened.push(doc);
+      if (!live()) return;
+      for (const p of doc.pages) pages.push({ lines: p.lines, picture: p.lines ? null : p.render, file: i });
+      beyond += doc.total - doc.pages.length;
+    }
+    const kept = pages.slice(0, MAX_IMAGES);
+    const skipped = pages.length - kept.length + beyond;
+    const toRead = kept.filter((p) => !p.lines);
+    if (toRead.length && !opts.consented && !readerDownloaded()) {
       onCancel(null);
-      setReceipt({ step: { name: 'consent', files: [file], source, kind: 'pdf' } });
+      const pictures = toRead.some((p) => p.picture instanceof Blob);
+      setReceipt({ step: { name: 'consent', files, source, kind: pictures ? 'image' : 'pdf' } });
       return;
     }
-    setReceipt((s) => (s.step.name === 'reading' ? { step: { ...s.step, count: pdf!.pages.length } } : {}));
-    const read = scans.length
-      ? await readImages(
-          scans.map((p): PageSource => p.render),
-          { signal, onProgress: progressFor(run) },
-        )
-      : [];
+    setReceipt((s) => (s.step.name === 'reading' ? { step: { ...s.step, count: kept.length } } : {}));
+    const read = toRead.length ? await readImages(toRead.map((p) => p.picture as PageSource), { signal, onProgress: progressFor(run) }) : [];
     if (!live()) return;
     onCancel(null);
     lastFiles = null;
-    // Pages in order: a page's own text, or what the reader found on it.
+    // In order: a page's own text, or what the reader found on it.
     let next = 0;
-    finish(
-      pdf.pages.flatMap((p) => p.lines ?? read[next++] ?? []),
-      source,
-      false,
-    );
+    const byPage = kept.map((p) => p.lines ?? read[next++] ?? []);
+    const lines = byPage.flat();
+    finish(lines, source, false, skipped, separateReceipts(lines, kept.map((p) => p.file), byPage));
   } catch (error) {
     if (!live()) return;
     stopped(error, source, false);
   } finally {
-    pdf?.close();
+    for (const doc of opened) doc.close();
   }
+}
+
+const nameKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/**
+ * Several files read as one receipt: the receipt ends at its total, so a file with
+ * items of which none made it in looks like a separate receipt (another order) — the
+ * review says it wasn't added. A second copy of the same order, or overlapping pages,
+ * adds nothing new and says nothing.
+ */
+function separateReceipts(lines: TextLine[], fileOf: number[], byPage: TextLine[][]): number {
+  const files = [...new Set(fileOf)];
+  if (files.length < 2) return 0;
+  const added = new Set(parseReceipt(lines).items.map((i) => nameKey(i.name)));
+  let separate = 0;
+  for (const f of files) {
+    const own = parseReceipt(byPage.filter((_, i) => fileOf[i] === f).flat()).items;
+    if (own.length && !own.some((i) => added.has(nameKey(i.name)))) separate++;
+  }
+  return separate;
 }
 
 /** Read the same files again (after the reader failed to load). */
@@ -174,7 +211,7 @@ export function retryRead(): boolean {
   return true;
 }
 
-/** Something shared to SpendLess from another app: files win over text when both come. */
+/** Something shared to SpendLess from another app: files win over text when both come (the sheet says so). */
 export function readShared(files: File[], text: string | null) {
   if (files.length) {
     void readFiles(files, 'image');

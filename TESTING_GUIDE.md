@@ -138,7 +138,8 @@ Use a recent order of your own (under 90 days). Nothing is uploaded: check the N
 tab — reading fetches only `/ocr/<version>/…` (first picture or scanned PDF only) and
 `/pdf/<version>-legacy/…` (first PDF only); Save makes one `rpc/save_receipt` call (new
 medicine products and all the prices, in one transaction) and re-reads those prices.
-- [ ] **Screenshot or image**: pick one or more screenshots of one online order. The
+- [ ] **Screenshot or image**: pick one or more screenshots of one online order (more than
+      6: the review says how many weren't read). The
       first time, "Get the receipt reader" shows the size (≈6 MB) and Data Saver / offline
       notes; *Download and read* shows progress, *Cancel* stops it. Later pictures don't ask.
 - [ ] **Take a photo** (phone/tablet): the camera opens; a flat, well-lit till receipt
@@ -187,6 +188,11 @@ when the installed app is opened and its manifest is a day old, or on a fresh in
       receipt?" ("You shared 1 image…"); *Read receipt* reads it (asking for the reader
       the first time); *Not now* drops it.
 - [ ] Files or WhatsApp → a PDF invoice → Share → SpendLess: "You shared a PDF…" → review.
+- [ ] Share a PDF and a screenshot together: "You shared 1 image and a PDF…" → one review
+      with the items from both. More than 6 pages and pictures in all: the review says
+      "Only the first 6 pages were read · N more weren't". Two different orders shared
+      together: the review says "1 file wasn't added" (a separate receipt). Files shared
+      with text: the sheet says the text isn't read.
 - [ ] Gmail → an order email → Share (text) → SpendLess: "You shared some text…" → review.
 - [ ] Share while signed out: sign in, and the question is still asked (within 30 minutes).
 - [ ] Sharing reloads the app: an unsaved receipt you were checking is gone (expected).

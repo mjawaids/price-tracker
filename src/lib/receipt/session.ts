@@ -68,6 +68,10 @@ export interface ReceiptState {
   edits: Record<string, RowEdit>;
   /** Adding another picture to this receipt failed (the review is kept). */
   addFailed: boolean;
+  /** Pages or pictures over the limit that weren't read (the review says so). */
+  skipped: number;
+  /** Files read with others that looked like a separate receipt, so weren't added (the review says so). */
+  separate: number;
 }
 
 const blank = (run: number): ReceiptState => ({
@@ -82,6 +86,8 @@ const blank = (run: number): ReceiptState => ({
   date: null,
   edits: {},
   addFailed: false,
+  skipped: 0,
+  separate: 0,
 });
 
 let state = blank(0);

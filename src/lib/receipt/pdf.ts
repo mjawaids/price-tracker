@@ -43,7 +43,10 @@ export interface PdfPageText {
 }
 
 export interface OpenedPdf {
+  /** The pages read (the first MAX_PDF_PAGES). */
   pages: PdfPageText[];
+  /** Pages in the PDF. */
+  total: number;
   close: () => void;
 }
 
@@ -191,14 +194,14 @@ export async function openPdf(file: Blob, opts: { signal?: AbortSignal } = {}): 
         const lines = await pageText(pdfjs, page);
         pages.push({ lines: readable(lines) ? lines : null, render: renderer(pdfjs, page, signal) });
       }
-      return pages;
+      return { pages, total: doc.numPages };
     })();
     opened.catch(() => {}); // after a timeout it fails on its own; handled below otherwise
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new PdfError('timeout')), OPEN_TIMEOUT_MS);
     });
-    const pages = await Promise.race([opened, timeout]);
-    return { pages, close };
+    const { pages, total } = await Promise.race([opened, timeout]);
+    return { pages, total, close };
   } catch (error) {
     close();
     if (signal?.aborted) throw new ReadCancelled();

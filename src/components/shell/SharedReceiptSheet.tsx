@@ -73,6 +73,8 @@ export default function SharedReceiptSheet({ summary }: { summary: SharedSummary
       </div>
       <p className="m-0 mt-4 text-[14px] leading-relaxed text-ink-soft">
         It’s read on your {compact ? 'phone' : 'device'}. Only the prices you confirm are saved.
+        {summary.images + summary.pdfs > 1 && ' The files are read together, as one receipt.'}
+        {summary.hasText && summary.images + summary.pdfs > 0 && ` The text that came with ${summary.images + summary.pdfs > 1 ? 'them' : 'it'} isn’t read.`}
         {off && ' Receipt import is off — reading this turns it on.'}
       </p>
     </Sheet>

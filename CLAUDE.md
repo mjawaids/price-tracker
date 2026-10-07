@@ -115,8 +115,13 @@ only), so reading carries on when the user leaves the screen and Contribute show
   image (dark screenshots inverted); `layout.ts` joins the reader's split rows. Up to 6
   pictures of one order are read as one receipt ("Add another screenshot" appends). The
   image is never uploaded or kept (one shared to SpendLess waits in the share inbox until read).
-- **PDFs** (`pdf.ts`): one PDF per receipt (by type, `.pdf` name or `%PDF-` bytes),
-  ≤10 MB, first 6 pages, a timeout. pdf.js 6 (**legacy build**, so Chrome 125+ /
+- **PDFs** (`pdf.ts`): told apart by type, `.pdf` name or `%PDF-` bytes; ≤10 MB, first 6
+  pages, a timeout. PDFs and any pictures picked or shared with them are read in order
+  as one receipt, up to 6 pages and pictures in all; the review says how many more
+  weren't read (`skipped` in the session), the same for more than 6 screenshots. The
+  receipt ends at its total, so a file whose items all fall outside it looks like a
+  separate receipt: the review says it wasn't added (`separate`); a second copy of the
+  same order says nothing. pdf.js 6 (**legacy build**, so Chrome 125+ /
   Safari 18+; older browsers get "PDFs can't be read on this browser"), self-hosted like
   the reader in `dist/pdf/<version>-legacy/` (`pdf.min.js`, `pdf.worker.min.js` renamed
   from `.mjs`, `cmaps/`, `standard_fonts/`, `iccs/`, three `.wasm` decoders; no
@@ -138,7 +143,8 @@ only), so reading carries on when the user leaves the screen and Contribute show
   `/?share=failed`; `public/_redirects` sends a POST that reaches Netlify there too).
   `src/lib/receipt/inbox.ts` (main bundle) peeks on every Shell start (sign-in drops the
   query), 30-minute TTL, `takeShared` / `clearShared`; `SharedReceiptSheet` (lazy, design
-  board 11) asks "Read this receipt?" → `flow.readShared` → `app.go('receipt')`, or
+  board 11) asks "Read this receipt?" → `flow.readShared` (all the files as one receipt;
+  text only when no files came, and the sheet says so) → `app.go('receipt')`, or
   *Not now*. `WhatsNewSheet` waits while a share is waiting; `?share=failed` shows a
   toast (and `UpdatePrompt` applies a waiting update). Sharing reloads the app, so an
   unsaved review is lost. Android only (installed app); iOS has no web share target.
