@@ -132,8 +132,8 @@ service worker.
 ## Receipts (Compare → Contribute → Add a receipt)
 
 Use a recent order of your own (under 90 days). Nothing is uploaded: check the Network
-tab — reading fetches only `/ocr/<version>/…` (first picture only); Save sends the
-prices (one `price_reports` insert, plus a `catalog_products` insert for new medicines)
+tab — reading fetches only `/ocr/<version>/…` (first picture only); Save makes one
+`rpc/save_receipt` call (new medicine products and all the prices, in one transaction)
 and re-reads those prices.
 - [ ] **Screenshot or image**: pick one or more screenshots of one online order. The
       first time, "Get the receipt reader" shows the size (≈6 MB) and Data Saver / offline
@@ -150,7 +150,11 @@ and re-reads those prices.
       product*, *Not a product*, "Remember this for …". Tap a line to edit its price for
       one, quantity bought, and *Save this price*.
 - [ ] A pharmacy receipt puts medicines under **Medicines · only for you**; saving makes
-      them your own products (another account can't see them or their prices).
+      them your own products (another account can't see them or their prices). Saving
+      a medicine again — the same receipt, another shop, another device — reuses that
+      product (Compare → Contribute → Your products shows it once).
+- [ ] When a save is refused (daily limit, a date over 90 days), no new products appear
+      under Your products.
 - [ ] *Save N prices* → "N prices saved" with what was shared, kept for you (far from the
       usual price), remembered, and not added. **Undo** takes them back and returns to
       the review. Adding the same receipt again shows its lines under **Already added**,

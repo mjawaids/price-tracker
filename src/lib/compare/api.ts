@@ -331,13 +331,6 @@ export async function deleteProductRow(id: string): Promise<void> {
   check(await supabase.from('catalog_products').delete().eq('id', id));
 }
 
-/** Several private products in one insert (a receipt's medicines). */
-export async function insertProducts(ps: ProductInput[]): Promise<CatalogProduct[]> {
-  if (!ps.length) return [];
-  const rows = check(await supabase.from('catalog_products').insert(ps.map(productPayload)).select(PRODUCT_COLS)) as ProductRow[];
-  return rows.map(toProduct);
-}
-
 export type ReportSource = 'manual' | 'trip' | 'confirm' | 'receipt';
 
 export async function insertReport(r: {
@@ -368,39 +361,51 @@ export async function insertReport(r: {
 /** Most prices saved from one receipt (the daily limit is 500). */
 export const MAX_RECEIPT_REPORTS = 150;
 
-export interface ReceiptReport {
-  storeId: string;
-  productId: string;
-  /** Price of one pack. */
-  price: number;
-  currency: string | null;
-  /** When bought (ISO); null = now. Must be within the last 90 days (policy). */
-  observedAt: string | null;
+/** How a product name is compared when a receipt reuses one (spaces and case ignored; same as save_receipt). */
+export const productKey = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/** One price on a receipt: for a product, or for a new private product (a medicine). */
+export type ReceiptPrice = { price: number } & ({ productId: string } | { newProduct: ProductInput });
+
+export interface ReceiptSaved {
+  reports: { id: string; productId: string; status: 'accepted' | 'pending' }[];
+  /** The product each item was saved to, in order (new, reused or given). */
+  itemProducts: string[];
+  /** Products made by this save (to add to the snapshot). */
+  created: CatalogProduct[];
 }
 
 /**
- * A receipt's prices in one insert: all saved or none (the daily limit or a
- * refused row fails the whole statement). One row per store and product, or the
- * correction rule would drop the earlier one.
+ * A receipt in one transaction (spendless.save_receipt): new private products,
+ * reusing the user's own product with the same name, then every price. All saved
+ * or none — the daily limit or a refused row rolls back the new products too.
  */
-export async function insertReports(rows: ReceiptReport[]): Promise<{ id: string; productId: string; status: 'accepted' | 'pending' }[]> {
-  if (!rows.length) return [];
-  if (rows.length > MAX_RECEIPT_REPORTS) throw new ApiError('Too many prices in one receipt', 'batch');
-  const payload = rows.map((r) => ({
-    store_id: r.storeId,
-    product_id: r.productId,
-    price: Math.round(r.price * 100) / 100,
-    currency: r.currency,
-    is_available: true,
-    source: 'receipt',
-    ...(r.observedAt ? { observed_at: r.observedAt } : {}),
-  }));
-  const out = check(await supabase.from('price_reports').insert(payload).select('id,product_id,status')) as {
-    id: string;
-    product_id: string;
-    status: 'accepted' | 'pending';
-  }[];
-  return out.map((r) => ({ id: r.id, productId: r.product_id, status: r.status }));
+export async function saveReceipt(storeId: string, observedAt: string | null, currency: string | null, items: ReceiptPrice[]): Promise<ReceiptSaved> {
+  if (!items.length) return { reports: [], itemProducts: [], created: [] };
+  if (items.length > MAX_RECEIPT_REPORTS) throw new ApiError('Too many prices in one receipt', 'batch');
+  const payload = items.map((it) => {
+    const price = Math.round(it.price * 100) / 100;
+    if ('productId' in it) return { product_id: it.productId, price };
+    const { name, brand, variant, item_type, category, size_value, size_unit, pack_count } = productPayload(it.newProduct);
+    return { new_product: { name, brand, variant, item_type, category, size_value, size_unit, pack_count }, price };
+  });
+  const out = check(
+    await supabase.rpc('save_receipt', {
+      p_store_id: storeId,
+      p_observed_at: observedAt,
+      p_currency: currency && /^[A-Z]{3}$/.test(currency) ? currency : null,
+      p_items: payload,
+    }),
+  ) as {
+    reports: { id: string; product_id: string; status: 'accepted' | 'pending' }[];
+    products: { key: string; id: string; created: boolean; row: ProductRow | null }[];
+    item_products: string[];
+  };
+  return {
+    reports: (out.reports ?? []).map((r) => ({ id: r.id, productId: r.product_id, status: r.status })),
+    itemProducts: out.item_products ?? [],
+    created: (out.products ?? []).filter((p) => p.created && p.row).map((p) => toProduct(p.row as ProductRow)),
+  };
 }
 
 /** Take back the user's own reports (Undo). */

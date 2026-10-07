@@ -123,12 +123,16 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
    a row every day, so "updated today" stays true and the table stays small. A listing
    that disappears gets one "out of stock" report.
 3. **People's prices** — while shopping, and from receipts (image or text, read on
-   the device; the file never leaves it). A receipt is saved as one insert of
-   `source 'receipt'` reports (all or nothing: the daily limit or a refused row saves
-   none), one per product, with `observed_at` = local noon of the receipt date (or now
-   for today). Medicines become the user's own private products, so their prices are
-   visible to them only. What the user chose for a receipt line is remembered on the
-   device only.
+   the device; the file never leaves it). A receipt is saved by one call to
+   `spendless.save_receipt` (SECURITY INVOKER: RLS and the report trigger apply as for
+   any insert), which runs as one transaction: it makes a private product for each
+   medicine that needs one — reusing the user's own active product with the same name,
+   spaces and case ignored — then inserts the `source 'receipt'` reports, one per
+   product, with `observed_at` = local noon of the receipt date (or now for today).
+   All or nothing: the daily limit or a refused row saves no prices and leaves no new
+   products behind. Medicines are the user's own private products, so their prices
+   are visible to them only. What the user chose for a receipt line is remembered on
+   the device only.
 
 ## Roadmap
 

@@ -48,9 +48,10 @@ Context-based (no Redux). Providers in `src/contexts/`:
   current prices with the user's own newer reports overlaid), "my stores", usuals
   (`item_preferences`), plans this month; `planFor(items)` (resolve + optimize), writes
   (own stores/products, price reports), the one-time Compare cart → list conversion.
-  Receipt saves: `reportPrices` (one insert per receipt, all or nothing; maps the daily
-  limit / a refused row / offline to a reason), `retractReports` (Undo), `pricesAtStore`,
-  `ownReportsAt` ("Already added"), `addProducts` (a receipt's medicines as private products).
+  Receipt saves: `reportPrices` (one `spendless.save_receipt` call per receipt — new
+  private products for its medicines and all its prices in one transaction, all or
+  nothing; maps the daily limit / a refused row / offline to a reason), `retractReports`
+  (Undo), `pricesAtStore`, `ownReportsAt` ("Already added").
   Cached per user in IndexedDB (`src/lib/compare/cache.ts`) so plans work offline
 - `AppContext` — navigation stack, section, screen enum, app-level sheets
   (`currency`, `region`, `help` + topic), sign-out
@@ -130,11 +131,17 @@ Contribute shows "Finish your receipt". Everything runs on the device:
 - **Remember** (`memory.ts`, IndexedDB `spendless-receipts-<uid>`, this device only):
   the product (or "not a product") the user chose per line per chain, and the last store
   per chain. Deleted on sign-out.
-- **Save** (`receiptHelpers.saveReceipt`): new medicine products first (`addProducts`),
-  then `CompareContext.reportPrices` → `api.insertReports` (`source 'receipt'`, one row
-  per product, `observed_at` = local noon of the receipt date, or now), then the choices
-  are remembered. Analytics are counts only (`receipt_read`, `receipt_failed`,
-  `receipt_saved`, `receipt_undone`).
+- **Save** (`receiptHelpers.saveReceipt`): `CompareContext.reportPrices` →
+  `api.saveReceipt` → `rpc('save_receipt')`, the SQL function
+  `spendless.save_receipt` (migration `20261007120000`, SECURITY INVOKER, so RLS and
+  the report trigger apply). In one transaction it makes a private product for each
+  medicine without one, reusing the user's own product with the same name (spaces and
+  case ignored, `api.productKey`), then inserts every price (`source 'receipt'`, one
+  row per product, `observed_at` = local noon of the receipt date, or now). The daily
+  limit or a refused row rolls everything back, new products included. The review shows
+  a medicine the user saved before as their product. Then the choices are remembered.
+  Analytics are counts only (`receipt_read`, `receipt_failed`, `receipt_saved`,
+  `receipt_undone`).
 
 ### Offline (Lists)
 - `src/lib/offline/db.ts` — IndexedDB (`idb`) per user: `lists`, `items`, `outbox`, `meta`
@@ -259,6 +266,7 @@ are in `public`). SpendLess data must never mix with theirs:
 | `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into, match_key (importer: same product across stores; `''` = not confident) |
 | `price_reports` | **append-only** for users: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`). The importer moves its own latest `import` report's `observed_at` forward while a price is unchanged |
 | `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence — written only by the `refresh_current_prices` trigger; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
+| *function* `save_receipt` | `spendless.save_receipt(store, observed_at, currency, items jsonb)` — a receipt's new private products (reusing same-named ones) + its price reports in one transaction; SECURITY INVOKER, EXECUTE for `authenticated` only |
 | `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
 | `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`; one row per store per run (counts, status) |
 

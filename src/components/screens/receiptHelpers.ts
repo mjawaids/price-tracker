@@ -7,6 +7,7 @@ import { useBreakpoint } from '../../hooks/useBreakpoint';
 import type { ReceiptSaveResult } from '../../contexts/CompareContext';
 import { parseProductName } from '../../lib/compare/productName';
 import type { CatalogStore, CurrentPrice } from '../../lib/compare/types';
+import { productKey } from '../../lib/compare/api';
 import type { ProductInput } from '../../lib/compare/api';
 import { ageInDays, MAX_AGE_DAYS } from '../../lib/receipt/dates';
 import { brandKeyOf, buildIndex } from '../../lib/receipt/match';
@@ -15,7 +16,7 @@ import { chainKey, linesFor, NOT_A_PRODUCT, rememberLines, setLastStore } from '
 import type { ReceiptItem } from '../../lib/receipt/parse';
 import { buildReview, lineKey } from '../../lib/receipt/review';
 import type { ReviewRow } from '../../lib/receipt/review';
-import { getReceipt, setReceipt } from '../../lib/receipt/session';
+import { getReceipt } from '../../lib/receipt/session';
 import type { ReceiptState, SavedReceipt } from '../../lib/receipt/session';
 import type { StoreGuess } from '../../lib/receipt/stores';
 
@@ -136,6 +137,13 @@ export function useReview(r: ReceiptState) {
   const ownHere = store ? compare.ownReportsAt(store.id) : EMPTY;
   const profiles = compare.resolveContext.profiles;
   const productIds = useMemo(() => new Set(compare.products.map((p) => p.id)), [compare.products]);
+  // The user's own products by name: a medicine they saved before is shown as theirs
+  // (saving reuses it on the server either way).
+  const ownByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of compare.products) if (p.ownerId && p.status === 'active' && !m.has(productKey(p.name))) m.set(productKey(p.name), p.id);
+    return m;
+  }, [compare.products]);
 
   // Every product can be suggested; only the store's own (and the user's) are picked on their own.
   const index = useMemo(() => {
@@ -211,7 +219,7 @@ export function useReview(r: ReceiptState) {
       const e = r.edits[row.item.id] ?? {};
       if (e.notProduct) continue;
       const chosen = !!e.productId;
-      const productId = e.productId ?? row.productId;
+      const productId = e.productId ?? row.productId ?? (row.status === 'medicine' ? ownByKey.get(productKey(medicineProduct(row.item.name).name)) ?? null : null);
       const unitPrice = e.unitPrice ?? row.item.unitPrice;
       const own = productId ? ownThatDay.get(productId) ?? null : null;
       // Only lines we'd save on their own move to "Already added"; a choice stays put.
@@ -235,7 +243,7 @@ export function useReview(r: ReceiptState) {
       });
     }
     return out;
-  }, [base, r.edits, ownHere, date]);
+  }, [base, r.edits, ownHere, date, ownByKey]);
 
   const notProducts = useMemo(() => {
     if (!r.parsed) return [];
@@ -287,71 +295,51 @@ export async function saveReceipt(
   if (!picked.length) return { ok: false, reason: 'error' };
   if (!compare.online) return { ok: false, reason: 'offline' };
 
-  // Medicines without a product: one private product per distinct name. Their ids go
-  // into the edits first, so trying again after a failed save doesn't make them twice.
-  const created = new Map<string, string>();
-  const needing = picked.filter((l) => !l.productId);
-  if (needing.length) {
-    const inputs = new Map<string, ProductInput>();
-    for (const l of needing) {
-      const input = medicineProduct(l.item.name);
-      inputs.set(input.name.trim().slice(0, 160).toLowerCase(), input);
-    }
-    const rows = await compare.addProducts([...inputs.values()]);
-    if (!rows || rows.length !== inputs.size) return { ok: false, reason: compare.online ? 'error' : 'offline' };
-    const byName = new Map(rows.map((p) => [p.name.toLowerCase(), p.id]));
-    for (const l of needing) {
-      const id = byName.get(medicineProduct(l.item.name).name.trim().slice(0, 160).toLowerCase());
-      if (!id) return { ok: false, reason: 'error' };
-      created.set(l.id, id);
-    }
-    setReceipt((s) => ({
-      edits: { ...s.edits, ...Object.fromEntries([...created].map(([lineId, productId]) => [lineId, { ...s.edits[lineId], productId }])) },
-    }));
-  }
-
-  const productOf = (l: Line) => (l.productId ?? created.get(l.id)) as string;
+  // One call, one transaction: a medicine without a product goes as a new private
+  // product (the server reuses the user's own product with the same name), so a
+  // refused save leaves nothing behind and trying again never makes it twice.
   const { date } = receiptDate(r);
   const res = await compare.reportPrices(
     store.id,
-    picked.map((l) => ({ productId: productOf(l), price: l.unitPrice })),
+    picked.map((l) => (l.productId ? { productId: l.productId, price: l.unitPrice } : { newProduct: medicineProduct(l.item.name), price: l.unitPrice })),
     observedAtFor(date),
   );
   if (!res.ok) return res;
+  const savedTo = new Map(picked.map((l, i) => [l.id, res.productIds[i]]));
 
-  // Remember choices for next time (on this device): picked products, new medicines
-  // and "not a product" lines — unless the user turned remembering off for one.
+  // Remember choices for next time (on this device): picked products, medicines and
+  // "not a product" lines — unless the user turned remembering off for one.
   const edits = getReceipt().edits;
   const choices: [string, string][] = [];
   for (const l of lines) {
     const e = edits[l.id];
     if (!e || e.remember === false) continue;
-    if (created.has(l.id)) continue;
     if (l.chosen && l.productId) choices.push([lineKey(l.item.name), l.productId]);
   }
   for (const item of r.parsed?.items ?? []) {
     const e = edits[item.id];
     if (e?.notProduct && e.remember !== false) choices.push([lineKey(item.name), NOT_A_PRODUCT]);
   }
-  const medicines: [string, string][] = picked.filter((l) => created.has(l.id)).map((l) => [lineKey(l.item.name), created.get(l.id) as string]);
+  const medicines: [string, string][] = picked
+    .filter((l) => !l.productId && savedTo.get(l.id))
+    .map((l) => [lineKey(l.item.name), savedTo.get(l.id) as string]);
   if (uid) {
     await rememberLines(uid, chainKey(store), [...choices, ...medicines]);
     const key = guessKey(r.guess);
     if (key) await setLastStore(uid, key, store.id);
   }
 
-  const productIds = [...new Set(picked.map(productOf))];
   return {
     ok: true,
     saved: {
       storeId: store.id,
       ids: res.ids,
-      productIds,
+      productIds: [...new Set(res.productIds.filter(Boolean))],
       accepted: res.accepted,
       pending: res.pending,
       remembered: choices.length,
       medicines: picked.filter((l) => l.group === 'medicine').length,
-      onlyYou: picked.filter((l) => created.has(l.id) || !!compare.productById(productOf(l))?.ownerId).length,
+      onlyYou: picked.filter((l) => !l.productId || !!compare.productById(l.productId)?.ownerId).length,
       skipped: Math.max(0, (r.parsed?.items.length ?? 0) - picked.length),
       date,
     },
