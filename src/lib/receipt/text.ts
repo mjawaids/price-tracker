@@ -121,7 +121,8 @@ export function tokenize(line: string): Token[] {
  * The amounts at the end of a line: the run of numbers after the last word.
  * When the line marks amounts with a currency ("Rs. 140.00"), only marked
  * amounts and those after the first mark count, so "Junior 66 Rs. 4,009.00"
- * keeps 66 in the name.
+ * keeps 66 in the name — unless the arithmetic shows it's the quantity column of
+ * an invoice table ("Milk 1 Ltr 2 Rs. 280.00 Rs. 560.00": 2 × 280 = 560).
  */
 export function trailingAmounts(tokens: Token[]): { amounts: number[]; start: number } {
   let start = tokens.length;
@@ -129,6 +130,9 @@ export function trailingAmounts(tokens: Token[]): { amounts: number[]; start: nu
   if (tokens.some((t) => t.marked)) {
     const firstMarked = tokens.findIndex((t, i) => i >= start && t.marked);
     start = firstMarked >= 0 ? firstMarked : tokens.length;
+    const qty = tokens[start - 1]?.marked === false ? tokens[start - 1].amount : null;
+    const marked = tokens.slice(start).map((t) => t.amount as number);
+    if (qty != null && Number.isInteger(qty) && qty >= 1 && qty <= 99 && marked.length >= 2 && near(qty * marked[0], marked[marked.length - 1], 0.001, 0.01)) start--;
   }
   return { amounts: tokens.slice(start).map((t) => t.amount as number), start };
 }

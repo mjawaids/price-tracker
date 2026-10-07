@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Toast } from '../ui';
+import { shareParam } from '../../lib/receipt/inbox';
 import { isReviewOpen } from '../../lib/receipt/session';
 
 // How often an open app asks the server for a new service worker. Browsers
@@ -50,6 +51,12 @@ export default function UpdatePrompt() {
       setUpdating(false);
     });
   }, [updateServiceWorker]);
+
+  // A share that missed the old service worker (a new one was waiting): take the new
+  // one now — the page has only just opened, so nothing is lost.
+  useEffect(() => {
+    if (needRefresh && shareParam === 'failed' && !isReviewOpen()) apply();
+  }, [needRefresh, apply]);
 
   useEffect(() => {
     const id = window.setInterval(checkForUpdate, CHECK_INTERVAL_MS);

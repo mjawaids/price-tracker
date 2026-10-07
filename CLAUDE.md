@@ -18,7 +18,7 @@ Live at https://spendless.ibexoft.com
 - `npm run dev` — start dev server
 - `npm run build` — typecheck + production build (output: `dist/`)
 - `npm run typecheck` — TypeScript check only, app + `vite.config.ts` + `scripts/import`, `scripts/seed` (`vite build` alone doesn't type-check)
-- `npm run lint` — ESLint (no test framework; manual testing only)
+- `npm run lint` — ESLint, incl. `public/share-target-sw.js` (no test framework; manual testing only)
 - `npm run generate:icons` — regenerate PWA/favicon icons
 - `node scripts/check-contrast.mjs` — WCAG contrast check for the colour tokens (run after editing them)
 - `node scripts/check-migrations.mjs` — fails if a migration touches anything outside the `spendless` schema
@@ -93,13 +93,17 @@ Context-based (no Redux). Providers in `src/contexts/`:
 
 ### Receipts (Compare → Contribute → Add a receipt)
 `ReceiptScreen` (lazy, screen `receipt`; off with `features.receipts`). Steps: start
-(screenshots/images, a camera photo on touch devices, or pasted text) → one-time reader
-download sheet → reading (progress, Cancel) → review → saved (Undo), plus problem cards
-(too old, nothing found, couldn't open a picture, reader didn't start, offline, couldn't
-save, daily limit, feature off). The receipt in progress lives in a module store
-(`session.ts`, memory only), so reading carries on when the user leaves the screen and
-Contribute shows "Finish your receipt". Everything runs on the device:
-- **Read** (`flow.ts`): pasted text, or images via `ocr.ts` — tesseract.js in a Web
+(screenshots/images, a PDF, a camera photo on touch devices, or pasted text) → one-time
+reader download sheet (the session's `consent` step, set by `flow.ts` when the reader is
+needed and not on the device: pictures, or a scanned PDF; never when adding or retrying)
+→ reading (progress, Cancel) → review → saved (Undo), plus problem cards (too old,
+nothing found, couldn't open a picture, a PDF locked / damaged / too big / not
+supported by this browser, reader didn't start, offline, couldn't save, daily limit,
+feature off). The receipt in progress lives in a module store (`session.ts`, memory
+only), so reading carries on when the user leaves the screen and Contribute shows
+"Finish your receipt". Everything runs on the device:
+- **Read** (`flow.ts`, `readFiles(files, source, { adding, consented })`): pasted text, a
+  PDF, or images via `ocr.ts` — tesseract.js in a Web
   Worker, loaded only when needed and **self-hosted** (never a CDN): `vite.config.ts`
   copies the worker, the LSTM engines (`.js` + `.wasm`, plain/SIMD/relaxed-SIMD) and
   `eng.traineddata.gz` (4.0.0_best_int) from `node_modules` into
@@ -110,7 +114,40 @@ Contribute shows "Finish your receipt". Everything runs on the device:
   before the one-time download. `image.ts` uprights, resizes, greys and stretches the
   image (dark screenshots inverted); `layout.ts` joins the reader's split rows. Up to 6
   pictures of one order are read as one receipt ("Add another screenshot" appends). The
-  image is never uploaded or kept.
+  image is never uploaded or kept (one shared to SpendLess waits in the share inbox until read).
+- **PDFs** (`pdf.ts`): told apart by type, `.pdf` name or `%PDF-` bytes; ≤10 MB, first 6
+  pages, a timeout. PDFs and any pictures picked or shared with them are read in order
+  as one receipt, up to 6 pages and pictures in all; the review says how many more
+  weren't read (`skipped` in the session), the same for more than 6 screenshots. The
+  receipt ends at its total, so a file whose items all fall outside it looks like a
+  separate receipt: the review says it wasn't added (`separate`); a second copy of the
+  same order says nothing. pdf.js 6 (**legacy build**, so Chrome 125+ /
+  Safari 18+; older browsers get "PDFs can't be read on this browser"), self-hosted like
+  the reader in `dist/pdf/<version>-legacy/` (`pdf.min.js`, `pdf.worker.min.js` renamed
+  from `.mjs`, `cmaps/`, `standard_fonts/`, `iccs/`, three `.wasm` decoders; no
+  scripting sandbox), `VITE_PDF_PATH`, not precached, runtime cache `spendless-pdf`,
+  `/pdf/*` immutable with a worker CSP in `public/_headers`. Loaded with a dynamic
+  `import()` of that URL after `fetch`ing both files (a failed `import()` stays failed
+  for the page; the fetch lets *Try again* work after being offline). Each page: its own
+  text (`getTextContent` → `layout.linesFromPdf`, read in the orientation where the text
+  stands upright) when it has enough real text, else drawn at ≈300 dpi (≤8 MP) and read
+  by `ocr.ts` (`readImages` takes pictures or lazy page renderers, `image.enhance`).
+  Hardening: `maxImageSize`, `verbosity: ERRORS`, `disableFontFace`, no XFA, `destroy()`
+  on every exit; errors by name (`PasswordException`, `InvalidPDFException`).
+- **Share to SpendLess**: `public/site.webmanifest` `share_target` (POST multipart to
+  `/share-receipt`: images, PDFs, text) → `public/share-target-sw.js` (pulled into the
+  generated `sw.js` by workbox `importScripts`; handles only a same-origin top-level
+  navigation POST, not from another site's page; ≤6 files of jpeg/png/webp/pdf, size
+  caps, text ≤20,000 chars) stores it in Cache Storage `spendless-share-inbox` (no file
+  names; `meta.json` written last) and redirects 303 to `/?share=receipt` (any problem:
+  `/?share=failed`; `public/_redirects` sends a POST that reaches Netlify there too).
+  `src/lib/receipt/inbox.ts` (main bundle) peeks on every Shell start (sign-in drops the
+  query), 30-minute TTL, `takeShared` / `clearShared`; `SharedReceiptSheet` (lazy, design
+  board 11) asks "Read this receipt?" → `flow.readShared` (all the files as one receipt;
+  text only when no files came, and the sheet says so) → `app.go('receipt')`, or
+  *Not now*. `WhatsNewSheet` waits while a share is waiting; `?share=failed` shows a
+  toast (and `UpdatePrompt` applies a waiting update). Sharing reloads the app, so an
+  unsaved review is lost. Android only (installed app); iOS has no web share target.
 - **Parse** (`parse.ts`, plain TS): items (name, quantity, price for one after the
   item's own discount), fees, discounts, totals; numbers are explained by arithmetic
   (qty × rate − discount = total) rather than layout templates. `addsUp` checks the items
@@ -147,7 +184,7 @@ Contribute shows "Finish your receipt". Everything runs on the device:
   limit or a refused row rolls everything back, new products included. The review shows
   a medicine the user saved before as their product. Then the choices are remembered.
   Analytics are counts only (`receipt_read`, `receipt_failed`, `receipt_saved`,
-  `receipt_undone`).
+  `receipt_undone`, `receipt_shared`).
 
 ### Offline (Lists)
 - `src/lib/offline/db.ts` — IndexedDB (`idb`) per user: `lists`, `items`, `outbox`, `meta`
@@ -156,7 +193,8 @@ Contribute shows "Finish your receipt". Everything runs on the device:
   cursor. Last write wins; rows with unsent local edits are never overwritten.
 - Ids are generated on the device; deletes are soft (`deleted_at`).
 - Service worker (vite-plugin-pwa) precaches the app shell and caches Google Fonts
-  (and, after first use, the receipt reader under `/ocr/`).
+  (and, after first use, the receipt reader under `/ocr/` and the PDF reader under
+  `/pdf/`). It also imports `public/share-target-sw.js` (Share to SpendLess, see Receipts).
 
 ### App updates (new deploys)
 - `registerType: 'prompt'` in `vite.config.ts`: a new deploy's service worker installs
@@ -165,9 +203,10 @@ Contribute shows "Finish your receipt". Everything runs on the device:
   `sw.js` hourly, on return to the app and on reconnect, and shows a top toast
   "A new version is ready · Update". Tapping it activates the new worker and reloads.
   Coming back after ≥30 min in the background with an update waiting applies it
-  automatically — unless a receipt is being read or reviewed (`isReviewOpen()` in
-  `src/lib/receipt/session.ts`; it lives only in memory). A cold start always gets the
-  newest build.
+  automatically — unless a receipt is being read or reviewed, or waits for the reader
+  download (`isReviewOpen()` in `src/lib/receipt/session.ts`; it lives only in memory).
+  Opened with `?share=failed` (a share the old worker missed), a waiting update is
+  applied at once. A cold start always gets the newest build.
 - Cache invalidation: Workbox precache entries are revisioned per build and old ones
   are removed when the new worker activates. `public/_headers` makes Netlify serve
   `/`, `/index.html`, `/sw.js` and `/site.webmanifest` as `no-cache` and the hashed
@@ -301,7 +340,8 @@ post-deploy migration drops them.
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
 | `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes; `fetchPrices` asks for `STORE_CHUNK` stores per request), `cache.ts` (IndexedDB snapshot) |
 | `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, receipt saves, cart conversion |
-| `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js), `flow.ts` (read → parse → session), `session.ts` (the receipt in progress, memory only), `memory.ts` (remembered line choices + last store per chain, IndexedDB) |
+| `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows and PDF text runs → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js), `pdf.ts` (self-hosted pdf.js: a PDF's text, or its pages for the reader), `flow.ts` (read → parse → session; `readShared`), `session.ts` (the receipt in progress, memory only), `memory.ts` (remembered line choices + last store per chain, IndexedDB), `inbox.ts` (what was shared to SpendLess, main bundle) |
+| `public/share-target-sw.js`, `src/components/shell/SharedReceiptSheet.tsx` | Share to SpendLess: the service-worker handler for the manifest's `share_target` (`POST /share-receipt` → Cache Storage inbox → `/?share=receipt`) and the "Read this receipt?" sheet |
 | `src/components/screens/ReceiptScreen.tsx` | Add a receipt (+ `receiptParts.tsx`, `receiptSheets.tsx` for the reader download, paste, date, store, product and line sheets, `receiptHelpers.ts` for the review rows, store guess and save) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
 | `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product) |
@@ -321,7 +361,7 @@ post-deploy migration drops them.
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
 | `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
-| `public/_headers` | Netlify cache headers (no-cache HTML/SW, immutable `/assets/*` and `/ocr/*`) |
+| `public/_headers` | Netlify cache headers (no-cache HTML/SW/manifest/`share-target-sw.js`, immutable `/assets/*`, `/ocr/*` and `/pdf/*` (+ the pdf.js worker CSP)) |
 | `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`, `listHelpers.ts`, `listCompare.tsx` for the Where to buy chip, plan banner and store sections) |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
 | `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |
@@ -367,7 +407,8 @@ say so and propose a safe alternative.
   tokens in URLs. Keep sign-out clearing the cached identity, the user's offline
   lists (`AppContext.signOut` → `ListsContext.clearLocalData`, after a final sync), the
   cached catalogue (`CompareContext.clearLocalData`), recent searches, the receipt in
-  progress (`resetReceipt`) and the remembered receipt lines (`deleteReceiptMemory`).
+  progress (`resetReceipt`), anything shared and not yet read (`clearShared`) and the
+  remembered receipt lines (`deleteReceiptMemory`).
 - **Privacy**: no PII or user content in analytics events, logs or error messages.
 - **Dependencies**: add packages sparingly from reputable sources; keep the lockfile
   committed; check `npm audit` when adding or upgrading; no scripts from untrusted CDNs.
@@ -379,7 +420,9 @@ say so and propose a safe alternative.
 ## Deployment (CI/CD)
 - `.github/workflows/ci-cd.yml`: PRs and pushes run checks (lint, contrast, migration
   guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
-  build → Netlify → smoke test → post-deploy migrations → tag + GitHub Release.
+  build → Netlify → smoke test (version in the entry bundle; manifest `share_target`,
+  `sw.js` importing the share handler, its and the PDF reader's headers, the
+  `/share-receipt` fallback) → post-deploy migrations → tag + GitHub Release.
 - `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue, picked
   by the `job` input (`add-branches`: a city's in-store branches; `promote-store`: a
   private store to public); dry run unless "apply" is ticked.
@@ -394,7 +437,8 @@ say so and propose a safe alternative.
 - Secrets/variables live in the GitHub `production` environment; runbook, setup and
   rollback in `docs/deployment.md`. Bolt is no longer used — don't add Bolt files.
 - New services go in as steps of the `deploy` job (see `docs/deployment.md`).
-- SPA routing on Netlify comes from `public/_redirects`; keep it. Cache headers come
+- SPA routing on Netlify comes from `public/_redirects` (after the `/share-receipt` →
+  `/?share=failed` fallback); keep it. Cache headers come
   from `public/_headers`; never give `sw.js` or `index.html` a long cache lifetime.
 
 ## Keep Docs in Sync

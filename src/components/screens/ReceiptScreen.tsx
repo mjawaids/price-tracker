@@ -7,7 +7,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackUserAction } from '../../utils/analytics';
 import { ageInDays, MAX_AGE_DAYS, OLDISH_DAYS } from '../../lib/receipt/dates';
-import { cancelRead, readFiles, readText, retryRead } from '../../lib/receipt/flow';
+import { cancelRead, MAX_IMAGES, readFiles, readText, retryRead } from '../../lib/receipt/flow';
 import { lastStore } from '../../lib/receipt/memory';
 import { OCR_MB, readerDownloaded } from '../../lib/receipt/ocr';
 import { getReceipt, resetReceipt, setReceipt, useReceipt } from '../../lib/receipt/session';
@@ -90,11 +90,24 @@ export default function ReceiptScreen() {
   } else {
     body = <StartStep onBack={back} onPaste={() => setPasteOpen(true)} />;
   }
+  const consent = r.step.name === 'consent' ? r.step : null;
 
   return (
     <div className="px-[18px] pt-3.5 pb-6 md:px-7 md:pt-6 mx-auto box-border min-h-full flex flex-col" style={{ maxWidth: wide && r.step.name === 'review' ? 1080 : 640 }}>
       {body}
       {paste}
+      <ReaderConsentSheet
+        open={!!consent && settings.features.receipts}
+        kind={consent?.kind ?? 'image'}
+        onClose={() => setReceipt({ step: { name: 'start' } })}
+        onDownload={() => {
+          if (consent) void readFiles(consent.files, consent.source, { consented: true });
+        }}
+        onPaste={() => {
+          setReceipt({ step: { name: 'start' } });
+          setPasteOpen(true);
+        }}
+      />
     </div>
   );
 }
@@ -104,17 +117,16 @@ function StartStep({ onBack, onPaste }: { onBack: () => void; onPaste: () => voi
   const app = useApp();
   const device = useDeviceWord();
   const pickRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-  const [pending, setPending] = useState<{ files: File[]; source: ReceiptSource } | null>(null);
   // A camera tile only where there's likely a camera to point (phones, tablets).
   const touch = useMemo(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches, []);
 
   const onFiles = (source: ReceiptSource) => (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!files.length) return;
-    if (readerDownloaded()) void readFiles(files, source);
-    else setPending({ files, source });
+    // Asks for the reader download first when it's needed (see flow.ts).
+    if (files.length) void readFiles(files, source);
   };
 
   return (
@@ -135,14 +147,17 @@ function StartStep({ onBack, onPaste }: { onBack: () => void; onPaste: () => voi
         }
       />
       <p className="m-0 mt-[18px] mx-0.5 text-[15px] leading-relaxed text-ink-soft">
-        Add a whole shop’s prices in one go — from an order screenshot, a photo of a till receipt, or copied text.
+        Add a whole shop’s prices in one go — from an order screenshot, a PDF invoice, a photo of a till receipt, or copied text.
       </p>
       <div className="flex flex-col gap-2.5 mt-[18px]">
         <SourceTile icon="image" title="Screenshot or image" sub="Order screens from Imtiaz, Chase Up or Pandamart work best" onClick={() => pickRef.current?.click()} />
+        <SourceTile icon="file" title="PDF" sub="An invoice from an email or app" onClick={() => pdfRef.current?.click()} />
         {touch && <SourceTile icon="camera" title="Take a photo" sub="A till receipt, flat and well lit" onClick={() => cameraRef.current?.click()} />}
         <SourceTile icon="clipboard" title="Paste text" sub="From an order email or message" onClick={onPaste} />
       </div>
+      {/* Pictures and PDFs pick apart: image/* keeps Android's photo picker. */}
       <input ref={pickRef} type="file" accept="image/*" multiple className="hidden" tabIndex={-1} aria-hidden onChange={onFiles('image')} />
+      <input ref={pdfRef} type="file" accept="application/pdf,.pdf" className="hidden" tabIndex={-1} aria-hidden onChange={onFiles('pdf')} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" tabIndex={-1} aria-hidden onChange={onFiles('photo')} />
       <div className="mt-4">
         <PrivacyNote>Read on your {device}. The receipt never leaves it — only the prices you confirm are saved. Medicines stay private to you.</PrivacyNote>
@@ -155,18 +170,6 @@ function StartStep({ onBack, onPaste }: { onBack: () => void; onPaste: () => voi
           <li>Several screenshots of one order? Pick them together.</li>
         </ul>
       </div>
-      <ReaderConsentSheet
-        open={!!pending}
-        onClose={() => setPending(null)}
-        onDownload={() => {
-          if (pending) void readFiles(pending.files, pending.source);
-          setPending(null);
-        }}
-        onPaste={() => {
-          setPending(null);
-          onPaste();
-        }}
-      />
     </>
   );
 }
@@ -178,9 +181,11 @@ function ReadingStep({ r, onBack }: { r: ReceiptState; onBack: () => void }) {
   if (r.step.name !== 'reading') return null;
   const { count, progress, adding } = r.step;
   const stage = progress?.stage ?? 'download';
-  const overall = !progress ? 0 : stage === 'download' ? progress.progress * 0.15 : 0.15 + progress.progress * 0.85;
+  const overall = !progress || stage === 'open' ? 0 : stage === 'download' ? progress.progress * 0.15 : 0.15 + progress.progress * 0.85;
   const read = stage === 'read' && (progress?.progress ?? 0) >= 1;
-  const noun = r.source === 'photo' ? 'photo' : 'screenshot';
+  const pdf = r.source === 'pdf';
+  // A PDF read may include pictures shared with it: "pages" covers both.
+  const noun = pdf ? 'page' : r.source === 'photo' ? 'photo' : 'screenshot';
   return (
     <div aria-busy="true" className="flex flex-col flex-1">
       <ScreenHeader title={adding ? 'Reading another…' : 'Reading…'} onBack={onBack} />
@@ -190,10 +195,11 @@ function ReadingStep({ r, onBack }: { r: ReceiptState; onBack: () => void }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-extrabold text-[15.5px]">
-            {count} {noun}
-            {count === 1 ? '' : 's'}
+            {stage === 'open' ? 'PDF' : `${count} ${noun}${count === 1 ? '' : 's'}`}
           </div>
-          <div className="text-[13.5px] text-ink-soft mt-0.5">{stage === 'download' && firstTime ? `Getting the reader (about ${OCR_MB} MB, once)` : `Reading on your ${device}`}</div>
+          <div className="text-[13.5px] text-ink-soft mt-0.5">
+            {stage === 'open' ? `Opening the PDF on your ${device}` : stage === 'download' && firstTime ? `Getting the reader (about ${OCR_MB} MB, once)` : `Reading on your ${device}`}
+          </div>
           <div className="mt-2.5">
             <ProgressBar value={overall} label="Reading progress" />
           </div>
@@ -229,7 +235,38 @@ function FailedStep({ r, onBack, onPaste }: { r: ReceiptState; onBack: () => voi
     onPaste();
   };
   let card: JSX.Element;
-  if (r.step.reason === 'nothing') {
+  if (r.step.reason === 'nothing' && r.source === 'pdf') {
+    card = (
+      <ProblemCard icon="search" title="We couldn’t find any prices" body="This PDF doesn’t look like an order or a receipt. Try another one, or paste the order’s text.">
+        <Btn full onClick={again}>
+          Try another PDF
+        </Btn>
+        <Btn full variant="ghost" onClick={pasteInstead}>
+          Paste text
+        </Btn>
+      </ProblemCard>
+    );
+  } else if (r.step.reason === 'pdf') {
+    const p = r.step.problem;
+    const [title, body] =
+      p === 'password'
+        ? ['This PDF is locked', 'It has a password, so it can’t be read here. Take a screenshot of the order instead, or paste its text.']
+        : p === 'size'
+          ? ['This PDF is too big', 'PDFs over 10 MB can’t be read. Take a screenshot of the order instead, or paste its text.']
+          : p === 'unsupported'
+            ? ['PDFs can’t be read on this browser', 'Update your browser to read PDFs here. A screenshot of the order works now, or paste its text.']
+            : ['We couldn’t open that PDF', 'It may be damaged. Take a screenshot of the order instead, or paste its text.'];
+    card = (
+      <ProblemCard icon="file" tone="warn" title={title} body={body}>
+        <Btn full onClick={again}>
+          Try something else
+        </Btn>
+        <Btn full variant="ghost" onClick={pasteInstead}>
+          Paste text instead
+        </Btn>
+      </ProblemCard>
+    );
+  } else if (r.step.reason === 'nothing') {
     card =
       r.source === 'text' ? (
         <ProblemCard icon="search" title="We couldn’t find any prices" body="Paste the part of the order with the items and their prices.">
@@ -396,7 +433,7 @@ function ReviewStep({ r, wide, onBack }: { r: ReceiptState; wide: boolean; onBac
   const addMore = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (files.length) void readFiles(files, r.source ?? 'image', true);
+    if (files.length) void readFiles(files, r.source ?? 'image', { adding: true });
   };
 
   const intro = (() => {
@@ -429,6 +466,30 @@ function ReviewStep({ r, wide, onBack }: { r: ReceiptState; wide: boolean; onBac
           body="The rest of the receipt is still here."
           action={
             <Btn size="sm" variant="ghost" onClick={() => setReceipt({ addFailed: false })}>
+              OK
+            </Btn>
+          }
+        />
+      )}
+      {r.separate > 0 && (
+        <CompareNotice
+          icon="alert"
+          title={`${r.separate} ${r.separate === 1 ? 'file wasn’t' : 'files weren’t'} added`}
+          body={`${r.separate === 1 ? 'It looks' : 'They look'} like a separate receipt. Add ${r.separate === 1 ? 'it' : 'them'} on ${r.separate === 1 ? 'its' : 'their'} own.`}
+          action={
+            <Btn size="sm" variant="ghost" onClick={() => setReceipt({ separate: 0 })}>
+              OK
+            </Btn>
+          }
+        />
+      )}
+      {r.skipped > 0 && (
+        <CompareNotice
+          icon="alert"
+          title={`Only the first ${MAX_IMAGES} ${r.source === 'pdf' ? 'pages' : 'pictures'} were read`}
+          body={`${r.skipped} more ${r.skipped === 1 ? 'wasn’t' : 'weren’t'}. Add the rest as another receipt.`}
+          action={
+            <Btn size="sm" variant="ghost" onClick={() => setReceipt({ skipped: 0 })}>
               OK
             </Btn>
           }

@@ -9,6 +9,13 @@
 /ocr/*
   Cache-Control: public, max-age=31536000, immutable
 
+# PDF reader files, versioned the same way (/pdf/<pdf.js version>-legacy/). The
+# policy applies to the pdf.js worker (a worker takes it from its own response): it
+# may load its own wasm and data files from here and talk to nothing else.
+/pdf/*
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'
+
 /
   Cache-Control: no-cache
 
@@ -19,4 +26,9 @@
   Cache-Control: no-cache
 
 /site.webmanifest
+  Cache-Control: no-cache
+
+# "Share to SpendLess" handler, pulled in by the service worker: like sw.js, always
+# revalidated so a new deploy's version is used.
+/share-target-sw.js
   Cache-Control: no-cache

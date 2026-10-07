@@ -1,6 +1,7 @@
 // A receipt photo or screenshot → a canvas the reader does well on: upright (EXIF),
 // a sensible size (small screenshots enlarged, big photos shrunk), grey, stretched
-// contrast, dark-mode screenshots turned light. Runs on the device. App-only.
+// contrast, dark-mode screenshots turned light. A scanned PDF page (already drawn on
+// a canvas) only gets the last steps. Runs on the device. App-only.
 
 /** Biggest file we open. */
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;
@@ -15,7 +16,13 @@ export class ImageError extends Error {
   }
 }
 
+/** A receipt picture, ready for the reader. */
 export async function prepareImage(file: Blob): Promise<HTMLCanvasElement> {
+  return enhance(await decodeImage(file));
+}
+
+/** Open a picture, upright and at a size the reader does well on. */
+export async function decodeImage(file: Blob): Promise<HTMLCanvasElement> {
   if (file.size > MAX_FILE_BYTES) throw new ImageError('size');
   if (file.type && !file.type.startsWith('image/')) throw new ImageError('type');
   let bitmap: ImageBitmap;
@@ -39,7 +46,14 @@ export async function prepareImage(file: Blob): Promise<HTMLCanvasElement> {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
+  return canvas;
+}
 
+/** Grey, stretched contrast, dark mode turned light — in place (also for PDF pages). */
+export function enhance(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const { width: w, height: h } = canvas;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new ImageError('decode');
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
   const hist = new Uint32Array(256);

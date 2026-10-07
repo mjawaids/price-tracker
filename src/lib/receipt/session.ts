@@ -6,12 +6,13 @@
 import { useSyncExternalStore } from 'react';
 import type { ReadProgress } from './ocr.ts';
 import type { ParsedReceipt } from './parse.ts';
+import type { PdfProblem } from './pdf.ts';
 import type { StoreGuess } from './stores.ts';
 import type { TextLine } from './text.ts';
 
-export type ReceiptSource = 'image' | 'photo' | 'text';
-/** nothing = no items found · image = couldn't open a picture · reader = the reader failed to load or run */
-export type ReadFailure = 'nothing' | 'image' | 'reader';
+export type ReceiptSource = 'image' | 'photo' | 'pdf' | 'text';
+/** nothing = no items found · image = couldn't open a picture · pdf = couldn't open a PDF · reader = the reader failed to load or run */
+export type ReadFailure = 'nothing' | 'image' | 'pdf' | 'reader';
 
 /** What the user changed on one line (keyed by the item's id). */
 export interface RowEdit {
@@ -44,8 +45,10 @@ export interface SavedReceipt {
 
 export type ReceiptStep =
   | { name: 'start' }
+  /** The reader must be downloaded first (pictures, or a scanned PDF): ask once. */
+  | { name: 'consent'; files: File[]; source: ReceiptSource; kind: 'image' | 'pdf' }
   | { name: 'reading'; count: number; progress: ReadProgress | null; adding: boolean }
-  | { name: 'failed'; reason: ReadFailure }
+  | { name: 'failed'; reason: ReadFailure; problem?: PdfProblem }
   | { name: 'review' }
   | { name: 'saved'; saved: SavedReceipt };
 
@@ -65,6 +68,10 @@ export interface ReceiptState {
   edits: Record<string, RowEdit>;
   /** Adding another picture to this receipt failed (the review is kept). */
   addFailed: boolean;
+  /** Pages or pictures over the limit that weren't read (the review says so). */
+  skipped: number;
+  /** Files read with others that looked like a separate receipt, so weren't added (the review says so). */
+  separate: number;
 }
 
 const blank = (run: number): ReceiptState => ({
@@ -79,6 +86,8 @@ const blank = (run: number): ReceiptState => ({
   date: null,
   edits: {},
   addFailed: false,
+  skipped: 0,
+  separate: 0,
 });
 
 let state = blank(0);
@@ -119,5 +128,5 @@ export function resetReceipt() {
 
 export const useReceipt = () => useSyncExternalStore(subscribe, getReceipt, getReceipt);
 
-/** A receipt is being read or reviewed: don't reload the app under it. */
-export const isReviewOpen = () => state.step.name === 'reading' || state.step.name === 'review';
+/** A receipt is being read or reviewed (or waits for the reader): don't reload the app under it. */
+export const isReviewOpen = () => ['consent', 'reading', 'review'].includes(state.step.name);

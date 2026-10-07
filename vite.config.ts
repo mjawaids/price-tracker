@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
@@ -28,24 +28,53 @@ for (const v of ['', '-simd', '-relaxedsimd']) {
 const OCR_BYTES = ['worker.min.js', 'tesseract-core-simd-lstm.js', 'tesseract-core-simd-lstm.wasm', 'eng.traineddata.gz']
   .reduce((a, f) => a + statSync(OCR_FILES[f]).size, 0);
 
-function ocrAssets(): Plugin {
-  const type = (f: string) => (f.endsWith('.js') ? 'text/javascript' : f.endsWith('.wasm') ? 'application/wasm' : f.endsWith('.gz') ? 'application/gzip' : 'text/plain');
+// PDF receipts (pdf.js), the same way: self-hosted, loaded on first use, kept by a
+// runtime cache. The legacy build: the modern one needs very new browser APIs.
+// Renamed .mjs → .js so every server sends a JavaScript type. Left out: the PDF
+// scripting sandbox (quickjs) and the no-WebAssembly fallbacks (OCR needs wasm anyway).
+const pdfDir = pkgDir('pdfjs-dist');
+const PDF_DIR = `pdf/${require('pdfjs-dist/package.json').version}-legacy`;
+const PDF_FILES: Record<string, string> = {
+  'pdf.min.js': join(pdfDir, 'legacy/build/pdf.min.mjs'),
+  'pdf.worker.min.js': join(pdfDir, 'legacy/build/pdf.worker.min.mjs'),
+  'LICENSE-pdf.js.txt': join(pdfDir, 'LICENSE'),
+};
+for (const f of ['jbig2.wasm', 'openjpeg.wasm', 'qcms_bg.wasm']) PDF_FILES[`wasm/${f}`] = join(pdfDir, 'wasm', f);
+for (const sub of ['cmaps', 'standard_fonts', 'iccs', 'wasm']) {
+  for (const f of readdirSync(join(pdfDir, sub))) {
+    if (sub !== 'wasm' || f.startsWith('LICENSE')) PDF_FILES[`${sub}/${f}`] = join(pdfDir, sub, f);
+  }
+}
+
+const MIME: Record<string, string> = {
+  js: 'text/javascript',
+  wasm: 'application/wasm',
+  gz: 'application/gzip',
+  bcmap: 'application/octet-stream',
+  pfb: 'application/octet-stream',
+  ttf: 'font/ttf',
+  icc: 'application/vnd.iccprofile',
+};
+
+/** Serves a fixed list of files under `/<dir>/` in dev and emits them into the build. */
+function selfHosted(name: string, dir: string, files: Record<string, string>): Plugin {
+  const type = (f: string) => MIME[f.slice(f.lastIndexOf('.') + 1)] ?? 'text/plain';
   return {
-    name: 'spendless-ocr-assets',
+    name: `spendless-${name}-assets`,
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const prefix = `/${OCR_DIR}/`;
+        const prefix = `/${dir}/`;
         if (!req.url?.startsWith(prefix)) return next();
-        // Only the files listed above: nothing else under node_modules is reachable.
-        const file = OCR_FILES[req.url.slice(prefix.length).split('?')[0]];
+        // Only the files listed: nothing else under node_modules is reachable.
+        const file = files[req.url.slice(prefix.length).split('?')[0]];
         if (!file) return next();
         res.setHeader('Content-Type', type(file));
         res.end(readFileSync(file));
       });
     },
     generateBundle() {
-      for (const [name, file] of Object.entries(OCR_FILES)) {
-        this.emitFile({ type: 'asset', fileName: `${OCR_DIR}/${name}`, source: readFileSync(file) });
+      for (const [n, file] of Object.entries(files)) {
+        this.emitFile({ type: 'asset', fileName: `${dir}/${n}`, source: readFileSync(file) });
       }
     },
   };
@@ -60,10 +89,12 @@ export default defineConfig(({ mode }) => {
     define: {
       'import.meta.env.VITE_OCR_PATH': JSON.stringify(`/${OCR_DIR}/`),
       'import.meta.env.VITE_OCR_BYTES': JSON.stringify(String(OCR_BYTES)),
+      'import.meta.env.VITE_PDF_PATH': JSON.stringify(`/${PDF_DIR}/`),
     },
     plugins: [
       react(),
-      ocrAssets(),
+      selfHosted('ocr', OCR_DIR, OCR_FILES),
+      selfHosted('pdf', PDF_DIR, PDF_FILES),
       {
         name: 'html-transform',
         transformIndexHtml(html) {
@@ -84,8 +115,11 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // Precache the built app-shell assets emitted into dist.
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          // The receipt reader is downloaded on first use, not with the app.
-          globIgnores: ['ocr/**'],
+          // The receipt and PDF readers are downloaded on first use, not with the
+          // app; the share handler is pulled in by importScripts below instead.
+          globIgnores: ['ocr/**', 'pdf/**', 'share-target-sw.js'],
+          // "Share to SpendLess" (Android share menu → POST /share-receipt).
+          importScripts: ['share-target-sw.js'],
           // SPA: serve index.html for client-side routes (/privacy, /refund, etc.).
           navigateFallback: '/index.html',
           // The new worker waits for the user (see registerType above), then
@@ -106,6 +140,16 @@ export default defineConfig(({ mode }) => {
                 cacheName: 'spendless-ocr',
                 cacheableResponse: { statuses: [200] },
                 expiration: { maxEntries: 20, purgeOnQuotaError: true },
+              },
+            },
+            {
+              // PDF reader files: versioned too. A PDF may need a few cmaps/fonts.
+              urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/pdf/'),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'spendless-pdf',
+                cacheableResponse: { statuses: [200] },
+                expiration: { maxEntries: 60, purgeOnQuotaError: true },
               },
             },
             {

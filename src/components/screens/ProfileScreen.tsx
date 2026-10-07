@@ -468,7 +468,7 @@ export default function ProfileScreen() {
           <SwitchRow
             icon="receipt"
             label="Receipt import"
-            sub="Add a whole shop’s prices from a screenshot, photo or text — read on your device"
+            sub="Add a whole shop’s prices from a screenshot, PDF, photo or text — read on your device"
             on={settings.features.receipts}
             onChange={(v) => updateSettings({ features: { ...settings.features, receipts: v } })}
           />

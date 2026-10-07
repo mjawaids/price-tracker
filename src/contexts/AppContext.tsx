@@ -4,6 +4,7 @@ import { useSettings } from './SettingsContext';
 import { useLists } from './ListsContext';
 import { useCompare } from './CompareContext';
 import { useFmt } from '../hooks/useFmt';
+import { clearShared } from '../lib/receipt/inbox';
 import { deleteReceiptMemory } from '../lib/receipt/memory';
 import { resetReceipt } from '../lib/receipt/session';
 
@@ -110,6 +111,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       signOut: async () => {
         setStack([{ screen: 'lists', params: {} }]);
         resetReceipt();
+        await clearShared();
         await clearLocalLists();
         await clearLocalCatalog();
         if (authUser?.id) await deleteReceiptMemory(authUser.id);

@@ -110,8 +110,10 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
   cart" once per user (flag `spendless-cart-migrated:<userId>` in localStorage), after
   the user's lists have synced and only if no list with that name exists.
 - Analytics events carry counts only (`plan_applied`, `price_reported`,
-  `cart_converted`, `receipt_read`, `receipt_failed` (with a reason like `nothing`),
-  `receipt_saved`, `receipt_undone`) — never names, prices, ids or receipt text.
+  `cart_converted`, `receipt_read`, `receipt_failed` (with a reason like `nothing` or
+  `pdf` and, for a PDF, a problem like `password`), `receipt_saved`, `receipt_undone`,
+  `receipt_shared` (files, kind, read or dismissed)) — never names, prices, ids or
+  receipt text.
 
 ## Regions
 
@@ -142,8 +144,9 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
    `add-branches`: first as a dry run (it lists new, changed, unchanged, and public
    branches in the city that aren't in the file), then with *apply* ticked. A branch
    has no prices until people add them (receipts match a branch by chain and area).
-4. **People's prices** — while shopping, and from receipts (image or text, read on
-   the device; the file never leaves it). A receipt is saved by one call to
+4. **People's prices** — while shopping, and from receipts (pictures, PDFs or text,
+   read on the device; the file is never uploaded, and one shared to SpendLess from
+   another app waits on the device only until it's read or dismissed). A receipt is saved by one call to
    `spendless.save_receipt` (SECURITY INVOKER: RLS and the report trigger apply as for
    any insert), which runs as one transaction: it makes a private product for each
    medicine that needs one — reusing the user's own active product with the same name,
@@ -159,8 +162,9 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
 - More import sources as feeds or partnerships allow (see `docs/data-sources.md`).
 - Trip capture (confirm the price when you tick an item), disputes, corroboration of
   pending reports, reporter trust, freshness badges, "your contributions".
-- Receipt import: screenshots, photos and pasted text are live (Compare → Contribute →
-  Add a receipt, on-device OCR) and public in-store branches (Karachi); next PDFs and
-  "share to SpendLess", then suggested branches.
+- Receipt import: screenshots, photos, PDFs, pasted text and "Share to SpendLess" are
+  live (Compare → Contribute → Add a receipt, read on the device), with public in-store
+  branches (Karachi); next till-receipt tuning on full-size photos, then suggested
+  branches.
 - More cities: readiness meter, promoting corroborated private stores, merging
   duplicate products, a small moderation queue.

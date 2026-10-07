@@ -1,7 +1,7 @@
 // The on-device receipt reader (tesseract.js, self-hosted under /ocr/<version>/).
 // Loaded only when someone reads a receipt; one worker, terminated after use.
 // Nothing leaves the device: the image is read in a Web Worker and dropped. App-only.
-import { prepareImage } from './image.ts';
+import { enhance, prepareImage } from './image.ts';
 import { linesFromOcr } from './layout.ts';
 import type { OcrLine } from './layout.ts';
 import type { TextLine } from './text.ts';
@@ -27,7 +27,8 @@ export function saveDataOn(): boolean {
 }
 
 export interface ReadProgress {
-  stage: 'download' | 'prepare' | 'read';
+  /** open = opening a PDF (before any reading). */
+  stage: 'open' | 'download' | 'prepare' | 'read';
   /** 0–1 across all images. */
   progress: number;
 }
@@ -38,9 +39,12 @@ export class ReadCancelled extends Error {
   }
 }
 
+/** A picture, or a scanned PDF page drawn when its turn comes (one canvas at a time). */
+export type PageSource = Blob | (() => Promise<HTMLCanvasElement>);
+
 /** Read one or more receipt images into lines (one list per image). */
 export async function readImages(
-  files: Blob[],
+  files: PageSource[],
   opts: { onProgress?: (p: ReadProgress) => void; signal?: AbortSignal } = {},
 ): Promise<TextLine[][]> {
   const { onProgress, signal } = opts;
@@ -82,7 +86,8 @@ export async function readImages(
     for (current = 0; current < files.length; current++) {
       if (signal?.aborted) throw new ReadCancelled();
       report('prepare', current / files.length);
-      const canvas = await prepareImage(files[current]);
+      const src = files[current];
+      const canvas = src instanceof Blob ? await prepareImage(src) : enhance(await src());
       const { data } = await worker.recognize(canvas, {}, { blocks: true, text: false });
       canvas.width = canvas.height = 0; // free the pixels now
       const lines: OcrLine[] = (data.blocks ?? []).flatMap((b) =>
