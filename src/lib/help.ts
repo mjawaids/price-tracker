@@ -68,7 +68,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     summary: 'Choosing what gets compared',
     body: [
       'Pick your city once. Where shared prices are live, its stores are added for you. Anywhere else, Compare uses the stores and prices you add yourself.',
-      'In Compare → Stores, choose the stores you actually shop at — Where to buy then compares only those.',
+      'Where to buy compares your city’s online stores and your own stores. In Compare → Stores, choose the ones you actually shop at — Where to buy then compares only those.',
+      'Shared shop branches (like “Imtiaz · Gulshan”) show their prices everywhere, but Where to buy compares a branch only once you add it to My stores — so a plan never sends you across the city.',
       'Add a store of your own (a local shop or a delivery app) with its delivery fee and minimum order. Stores you add are private to you.',
     ],
   },

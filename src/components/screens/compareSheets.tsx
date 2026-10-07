@@ -12,7 +12,8 @@ import { deliveryLabel, itemTypeName, modeLabel } from '../../lib/compare/descri
 import { Btn, Chip, Icon, Sheet, ToggleTrack } from '../ui';
 import { Field, NumIn, TextIn } from './manageParts';
 import { ProductRow, StoreName } from './compareParts';
-import { sectionLabel, unitPriceText, usePriced } from './compareHelpers';
+import { branchArea, groupByChain, isBranch, sectionLabel, storeMatches, toPicks, unitPriceText, usePriced } from './compareHelpers';
+import { ChainGroup, StorePickerSheet, StoreSearch } from './storePicker';
 
 const MAX_ROWS = 40;
 
@@ -300,19 +301,24 @@ export function StoresSheet({ open, onClose, onAddStore }: { open: boolean; onCl
   const [step, setStep] = useState<'city' | 'stores'>(needsCity ? 'city' : 'stores');
   const all = compare.stores.filter((s) => s.status === 'active');
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [q, setQ] = useState('');
+  const [opened, setOpened] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const startPicks = () => new Set(compare.myStoreIds.length ? compare.consideredStores.map((s) => s.id) : compare.defaultStoreIds);
 
   useEffect(() => {
     if (!open) return;
     setStep(needsCity ? 'city' : 'stores');
-    setPicked(new Set(compare.consideredStores.map((s) => s.id)));
+    setPicked(startPicks());
+    setQ('');
+    setOpened(new Set());
     // Reset when opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Stores arrive after the city is chosen.
   useEffect(() => {
-    if (step === 'stores' && !compare.myStoreIds.length) setPicked(new Set(all.map((s) => s.id)));
+    if (step === 'stores' && !compare.myStoreIds.length) setPicked(new Set(compare.defaultStoreIds));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, all.length]);
 
@@ -326,49 +332,54 @@ export function StoresSheet({ open, onClose, onAddStore }: { open: boolean; onCl
 
   const save = async () => {
     setSaving(true);
-    const ids = [...picked];
-    // All of them = no explicit picks, so new stores in the city are included automatically.
-    await compare.setMyStores(ids.length === all.length ? [] : ids);
+    // The default set = no explicit picks, so new online stores in the city are included automatically.
+    await compare.setMyStores(toPicks([...picked], compare.defaultStoreIds));
     setSaving(false);
     onClose();
+  };
+
+  const checkRow = (s: CatalogStore, i: number, inGroup = false) => {
+    const on = picked.has(s.id);
+    return (
+      <button
+        key={s.id}
+        type="button"
+        role="checkbox"
+        aria-checked={on}
+        onClick={() => toggle(s.id)}
+        className="w-full flex items-center gap-3 text-left"
+        style={{ padding: '12px 14px', minHeight: 60, borderTop: i ? '1px solid var(--line)' : 'none' }}
+      >
+        <span
+          aria-hidden
+          className={`grid place-items-center shrink-0 rounded-[8px] ${on ? 'bg-accent text-accent-on' : ''}`}
+          style={{ width: 24, height: 24, boxShadow: on ? 'none' : 'inset 0 0 0 2px var(--line)' }}
+        >
+          {on && <Icon name="check" size={14} stroke={3} />}
+        </span>
+        <span className="flex-1 min-w-0 flex flex-col">
+          {inGroup ? <span className="font-bold text-[15px] truncate">{branchArea(s)}</span> : <StoreName store={s} className="font-bold text-[15px]" />}
+          <span className="text-[12.5px] text-ink-soft truncate">
+            {s.ownerId ? 'Your store · only you see it' : inGroup ? s.address || 'In store' : deliveryLabel(s.deliveryRule, compare.fmt, s.kind)}
+          </span>
+        </span>
+      </button>
+    );
   };
 
   const group = (title: string, stores: CatalogStore[]) =>
     stores.length > 0 && (
       <div className="flex flex-col gap-2">
         <div className={sectionLabel}>{title}</div>
-        <div className="flex flex-col rounded-[16px] bg-surface shadow-card overflow-hidden">
-          {stores.map((s, i) => {
-            const on = picked.has(s.id);
-            return (
-              <button
-                key={s.id}
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                onClick={() => toggle(s.id)}
-                className="flex items-center gap-3 text-left"
-                style={{ padding: '12px 14px', minHeight: 60, borderTop: i ? '1px solid var(--line)' : 'none' }}
-              >
-                <span
-                  aria-hidden
-                  className={`grid place-items-center shrink-0 rounded-[8px] ${on ? 'bg-accent text-accent-on' : ''}`}
-                  style={{ width: 24, height: 24, boxShadow: on ? 'none' : 'inset 0 0 0 2px var(--line)' }}
-                >
-                  {on && <Icon name="check" size={14} stroke={3} />}
-                </span>
-                <span className="flex-1 min-w-0 flex flex-col">
-                  <StoreName store={s} className="font-bold text-[15px]" />
-                  <span className="text-[12.5px] text-ink-soft">
-                    {s.ownerId ? 'Your store · only you see it' : deliveryLabel(s.deliveryRule, compare.fmt, s.kind)}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <div className="flex flex-col rounded-[16px] bg-surface shadow-card overflow-hidden">{stores.map((s, i) => checkRow(s, i))}</div>
       </div>
     );
+
+  const words = tokens(q);
+  const searching = words.length > 0;
+  const branches = all.filter(isBranch);
+  const branchGroups = groupByChain(branches.filter((s) => storeMatches(s, words)));
+  const isOpen = (chain: string) => searching || opened.has(chain) || branchGroups.length === 1;
 
   return (
     <Sheet
@@ -434,7 +445,37 @@ export function StoresSheet({ open, onClose, onAddStore }: { open: boolean; onCl
           ) : (
             <>
               {group('Deliver to you', all.filter((s) => s.kind === 'online'))}
-              {group('In store', all.filter((s) => s.kind === 'physical'))}
+              {group('Your shops', all.filter((s) => s.kind === 'physical' && s.ownerId))}
+              {branches.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className={sectionLabel}>In a shop near you</div>
+                  <p className="m-0 text-[13px] leading-snug text-ink-soft">Tick the branches you go to — Where to buy compares them too.</p>
+                  <StoreSearch id="stores-branch-search" value={q} onChange={setQ} label="Search branches by name or area" />
+                  {branchGroups.map((g) => {
+                    const n = g.stores.filter((s) => picked.has(s.id)).length;
+                    return (
+                      <ChainGroup
+                        key={g.chain}
+                        chain={g.chain}
+                        count={g.stores.length}
+                        note={n ? `${n} ticked` : null}
+                        open={isOpen(g.chain)}
+                        onToggle={() =>
+                          setOpened((cur) => {
+                            const next = new Set(cur);
+                            if (isOpen(g.chain)) next.delete(g.chain);
+                            else next.add(g.chain);
+                            return next;
+                          })
+                        }
+                      >
+                        {g.stores.map((s, i) => checkRow(s, i, true))}
+                      </ChainGroup>
+                    );
+                  })}
+                  {searching && !branchGroups.length && <p className="m-0 text-[14px] text-ink-soft">No branches match “{q.trim()}”.</p>}
+                </div>
+              )}
             </>
           )}
           <button type="button" onClick={onAddStore} className="flex items-center gap-2 font-extrabold text-[14px] text-accent-ink self-start" style={{ minHeight: 44 }}>
@@ -537,11 +578,60 @@ export function StoreFormSheet({
   };
 
   if (readonly) {
+    const st = store!;
+    const city = compare.region?.name ?? 'your city';
+    if (!isBranch(st)) {
+      return (
+        <Sheet open onClose={onClose} title={st.name}>
+          <p className="m-0 text-[14px] leading-relaxed text-ink-soft">
+            {deliveryLabel(st.deliveryRule, compare.fmt, st.kind)}. This is a shared store in {city}; its details come from the store.
+          </p>
+        </Sheet>
+      );
+    }
+    // A shared in-store branch: where it is, and whether Where to buy compares it.
+    const inMine = compare.myStoreIds.includes(st.id);
+    const base = compare.myStoreIds.length ? compare.myStoreIds : compare.defaultStoreIds;
+    const toggleMine = async () => {
+      setSaving(true);
+      setError('');
+      const ok = await compare.setMyStores(toPicks(inMine ? base.filter((id) => id !== st.id) : [...base, st.id], compare.defaultStoreIds));
+      setSaving(false);
+      if (ok) onClose();
+      else setError('Couldn’t save — check your connection and try again.');
+    };
     return (
-      <Sheet open onClose={onClose} title={store!.name}>
-        <p className="m-0 text-[14px] leading-relaxed text-ink-soft">
-          {deliveryLabel(store!.deliveryRule, compare.fmt, store!.kind)}. This is a shared store in {compare.region?.name ?? 'your city'}; its details come from the store.
-        </p>
+      <Sheet
+        open
+        onClose={onClose}
+        title={st.name}
+        footer={
+          <Btn full size="lg" variant={inMine ? 'ghost' : 'primary'} icon={inMine ? undefined : 'plus'} onClick={() => void toggleMine()} disabled={saving || !compare.online}>
+            {saving ? 'Saving…' : inMine ? 'Remove from My stores' : 'Add to My stores'}
+          </Btn>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3 items-start text-[14.5px] leading-snug">
+            <Icon name="pin" size={18} stroke={2.2} color="var(--accent-ink)" className="shrink-0 mt-0.5" />
+            <span>{st.address || `${st.chain ?? st.name} branch in ${city} (no street address published)`}</span>
+          </div>
+          {st.phone && (
+            <div className="flex gap-3 items-center text-[14.5px]">
+              <Icon name="smartphone" size={18} stroke={2.2} color="var(--accent-ink)" className="shrink-0" />
+              <span className="font-mono">{st.phone}</span>
+            </div>
+          )}
+          <p className="m-0 text-[13.5px] leading-relaxed text-ink-soft">
+            A shared in-store branch in {city}. Its prices come from shoppers’ receipts and prices.{' '}
+            {inMine ? 'Where to buy compares it.' : 'Add it to My stores and Where to buy compares it too.'}
+          </p>
+          {error && (
+            <div role="alert" className="text-[13px]" style={{ color: 'var(--danger)' }}>
+              {error}
+            </div>
+          )}
+        </div>
       </Sheet>
     );
   }
@@ -568,7 +658,7 @@ export function StoreFormSheet({
       <Field label="Store name">
         <TextIn value={name} onChange={(e) => setName(e.target.value.slice(0, 80))} placeholder="e.g. Aslam Gosht" />
       </Field>
-      <Field label="Type">
+      <Field label="Type" group>
         <div className="flex gap-2">
           <Chip active={kind === 'physical'} onClick={() => setKind('physical')} className="flex-1 justify-center">
             In store
@@ -583,7 +673,7 @@ export function StoreFormSheet({
           <TextIn value={address} onChange={(e) => setAddress(e.target.value.slice(0, 200))} placeholder="e.g. Gulshan Block 5" />
         </Field>
       )}
-      <Field label="Delivery">
+      <Field label="Delivery" group>
         <div className="flex flex-col gap-2">
           {RULES.map((o) => {
             const on = rule === o.id;
@@ -663,7 +753,12 @@ export function PriceSheet({
   const [outOfStock, setOutOfStock] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const stores = compare.stores.filter((s) => s.status === 'active');
+  const [choosing, setChoosing] = useState(false);
+  // Chips for the stores you compare (plus the one picked); any other store via the picker.
+  const chipStores = compare.consideredStores.filter((s) => s.status === 'active');
+  const pickedStore = store ? compare.storeById(store) : undefined;
+  const stores = pickedStore && !chipStores.some((s) => s.id === pickedStore.id) ? [...chipStores, pickedStore] : chipStores;
+  const anyStores = compare.stores.some((s) => s.status === 'active');
 
   // Shows the store's current price, so a correction starts from it.
   const pickStore = (s: string | null) => {
@@ -715,54 +810,71 @@ export function PriceSheet({
   };
 
   return (
-    <Sheet
-      open
-      onClose={onClose}
-      title="Add a price"
-      footer={
-        <Btn full size="lg" onClick={() => void save()} disabled={saving || !compare.online}>
-          {saving ? 'Saving…' : 'Save price'}
-        </Btn>
-      }
-    >
-      <div className="font-bold text-[16px] mb-1">{product.name}</div>
-      <p className="m-0 mb-4 text-[13px] leading-relaxed text-ink-soft">
-        {compare.storeById(store ?? '')?.ownerId ? 'This is your store — only you see the price.' : 'Prices at shared stores help everyone in your city. Your name is never shown.'}
-      </p>
-      <Field label="Store">
-        {stores.length ? (
-          <div className="flex flex-wrap gap-2">
-            {stores.map((s) => (
-              <Chip key={s.id} active={store === s.id} onClick={() => pickStore(s.id)}>
-                {s.name}
-              </Chip>
-            ))}
-          </div>
-        ) : (
-          <div className="text-[13.5px] text-ink-soft">Add a store first (Compare → Stores).</div>
-        )}
-      </Field>
-      {!outOfStock && (
-        <Field label="Price for one pack">
-          <NumIn currency={compare.currency} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" />
-        </Field>
-      )}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={outOfStock}
-        onClick={() => setOutOfStock((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 text-left mb-2"
-        style={{ minHeight: 48 }}
+    <>
+      <Sheet
+        open={!choosing}
+        onClose={onClose}
+        title="Add a price"
+        footer={
+          <Btn full size="lg" onClick={() => void save()} disabled={saving || !compare.online}>
+            {saving ? 'Saving…' : 'Save price'}
+          </Btn>
+        }
       >
-        <span className="font-semibold text-[15px]">Out of stock there</span>
-        <ToggleTrack on={outOfStock} />
-      </button>
-      {error && (
-        <div role="alert" className="text-[13px]" style={{ color: 'var(--danger)' }}>
-          {error}
-        </div>
-      )}
-    </Sheet>
+        <div className="font-bold text-[16px] mb-1">{product.name}</div>
+        <p className="m-0 mb-4 text-[13px] leading-relaxed text-ink-soft">
+          {compare.storeById(store ?? '')?.ownerId ? 'This is your store — only you see the price.' : 'Prices at shared stores help everyone in your city. Your name is never shown.'}
+        </p>
+        <Field label="Store" group>
+          {anyStores ? (
+            <div className="flex flex-wrap gap-2">
+              {stores.map((s) => (
+                <Chip key={s.id} active={store === s.id} onClick={() => pickStore(s.id)}>
+                  {s.name}
+                </Chip>
+              ))}
+              <Chip onClick={() => setChoosing(true)} className="text-accent-ink">
+                Another store…
+              </Chip>
+            </div>
+          ) : (
+            <div className="text-[13.5px] text-ink-soft">Add a store first (Compare → Stores).</div>
+          )}
+        </Field>
+        {!outOfStock && (
+          <Field label="Price for one pack">
+            <NumIn currency={compare.currency} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" />
+          </Field>
+        )}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={outOfStock}
+          onClick={() => setOutOfStock((v) => !v)}
+          className="w-full flex items-center justify-between gap-3 text-left mb-2"
+          style={{ minHeight: 48 }}
+        >
+          <span className="font-semibold text-[15px]">Out of stock there</span>
+          <ToggleTrack on={outOfStock} />
+        </button>
+        {error && (
+          <div role="alert" className="text-[13px]" style={{ color: 'var(--danger)' }}>
+            {error}
+          </div>
+        )}
+      </Sheet>
+      <StorePickerSheet
+        open={choosing}
+        title="Which store?"
+        confirmLabel="Use this store"
+        current={pickedStore ?? null}
+        initialKind={pickedStore?.kind ?? 'physical'}
+        onClose={() => setChoosing(false)}
+        onPick={(s) => {
+          pickStore(s.id);
+          setChoosing(false);
+        }}
+      />
+    </>
   );
 }

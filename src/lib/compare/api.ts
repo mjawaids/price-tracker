@@ -148,6 +148,9 @@ export async function fetchStores(userId: string, regionId: string | null): Prom
   return [...(check(a) as StoreRow[]), ...(check(b) as StoreRow[])].map(toStore);
 }
 
+/** Store ids per current-prices request (they go in the URL). */
+const STORE_CHUNK = 40;
+
 /** "storeId:productId" — how the app keys a current price. */
 export const pairKey = (storeId: string, productId: string) => `${storeId}:${productId}`;
 
@@ -165,26 +168,30 @@ export async function fetchPrices(
   const products = new Map<string, CatalogProduct>();
   let cursor = since;
   if (!storeIds.length) return { prices, removed, products: [], cursor };
-  for (let from = 0; ; from += PAGE) {
-    let q = supabase
-      .from('current_prices')
-      .select(`store_id,product_id,price,currency,is_available,observed_at,n_reports,confidence,updated_at,product:catalog_products(${PRODUCT_COLS})`)
-      .in('store_id', storeIds)
-      .order('updated_at', { ascending: true })
-      .order('product_id', { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (since) q = q.gt('updated_at', since);
-    const rows = check(await q) as unknown as PriceRow[];
-    for (const r of rows) {
-      if (!cursor || r.updated_at > cursor) cursor = r.updated_at;
-      if (r.n_reports <= 0) {
-        removed.push(pairKey(r.store_id, r.product_id));
-        continue;
+  // A few dozen stores at a time, so the request URL stays short (a city's branches add up).
+  for (let i = 0; i < storeIds.length; i += STORE_CHUNK) {
+    const chunk = storeIds.slice(i, i + STORE_CHUNK);
+    for (let from = 0; ; from += PAGE) {
+      let q = supabase
+        .from('current_prices')
+        .select(`store_id,product_id,price,currency,is_available,observed_at,n_reports,confidence,updated_at,product:catalog_products(${PRODUCT_COLS})`)
+        .in('store_id', chunk)
+        .order('updated_at', { ascending: true })
+        .order('product_id', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (since) q = q.gt('updated_at', since);
+      const rows = check(await q) as unknown as PriceRow[];
+      for (const r of rows) {
+        if (!cursor || r.updated_at > cursor) cursor = r.updated_at;
+        if (r.n_reports <= 0) {
+          removed.push(pairKey(r.store_id, r.product_id));
+          continue;
+        }
+        prices.push(toPrice(r));
+        if (r.product) products.set(r.product.id, toProduct(r.product));
       }
-      prices.push(toPrice(r));
-      if (r.product) products.set(r.product.id, toProduct(r.product));
+      if (rows.length < PAGE) break;
     }
-    if (rows.length < PAGE) break;
   }
   return { prices, removed, products: [...products.values()], cursor };
 }

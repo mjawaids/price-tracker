@@ -63,9 +63,18 @@ one-off data jobs on the shared Compare catalogue (`docs/compare-data.md`). It i
 manual only (Actions → *Catalog jobs* → *Run workflow*), runs in the `production`
 environment with `SUPABASE_DB_URL`, and is a **dry run unless "apply" is ticked**.
 
-- **promote-store** — makes one private store, and its owner's products priced
-  there, public in a city (`scripts/seed/promote-store.ts`). Only with the owner's
-  consent. Run it after the catalogue migrations are deployed: first as a dry run
+Pick the job with the *job* input:
+
+- **add-branches** (the default) — adds or updates a city's public in-store branches
+  from a reviewed list (`scripts/seed/branches/karachi.json`, set by *branches_file*;
+  `scripts/seed/add-branches.ts`). The dry run lists new, changed and unchanged
+  branches, and public branches in the city that aren't in the list. *apply* writes
+  them in one transaction. It never deletes and never touches a private or online
+  store; re-running an unchanged list writes nothing. Sources and checks:
+  `docs/data-sources.md`.
+- **promote-store** — needs *store_id*, *region* and *chain*. Makes one private
+  store, and its owner's products priced there, public in a city
+  (`scripts/seed/promote-store.ts`). Only with the owner's consent. Run it after the catalogue migrations are deployed: first as a dry run
   (it prints how many names it could parse), then with *apply*. Re-running is a
   no-op once the store is public.
 

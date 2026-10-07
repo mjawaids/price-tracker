@@ -2,7 +2,8 @@
 
 Where SpendLess's shared prices come from, what we checked before reading each
 store, and how the importer behaves. Code: `scripts/import/`. Schedule:
-`.github/workflows/price-import.yml`. Data model: `docs/compare-data.md`.
+`.github/workflows/price-import.yml`. Data model: `docs/compare-data.md`. The shared
+in-store branches and where their list came from: [In-store branches](#in-store-branches-karachi).
 
 ## Rules for every source
 
@@ -88,6 +89,43 @@ skips it).
 | Springs (springs.com.pk) | robots.txt has a group titled "Scrapers and AI trainers — blocked outright" | A feed or partnership |
 | foodpanda shops (PandaMart, Springs, Spar, Bin Hashim, Meri Pharmacy, Rehmat-e-Shireen) | PerimeterX bot protection answers 403. Spar and Bin Hashim are covered by their own websites | A feed or partnership |
 | KraveMart (inDrive.Groceries) and other app-only stores | No website catalogue; reverse-engineering the app breaks its licence | Receipts and manual prices, or a feed |
+
+## In-store branches (Karachi)
+
+The importer reads online shops. In-store branches are a separate, hand-reviewed
+list: `scripts/seed/branches/karachi.json`, added by *Catalog jobs* → `add-branches`
+(see `docs/compare-data.md`). Each branch is a public `catalog_stores` row
+(`kind 'physical'`, no delivery) named `<chain> · <area>`, with the same `chain` as the
+chain's online store. Its prices come from people's receipts and prices, never
+from the importer.
+
+Only branches a chain publishes on its own website are listed, read once by hand with
+the SpendLessBot user agent after checking robots.txt. We stopped wherever a host
+refused. Checked on **2026-10-07**:
+
+| Chain | Source | robots.txt | Branches | Left out |
+|---|---|---|---|---|
+| Imtiaz | imtiaz.com.pk/store-locator/ (Karachi tab) | Allowed (only one plugin file is disallowed) | 14, names only (no street addresses or phones published) | The 20 stores in other cities; the page's Google Maps short links (some are copy-paste errors) |
+| Spar | www.spar.pk/locations/ | Allowed (only `/wp-admin/`) | 6, addresses as published (DHA Phase I has none) | Phones: the contact page has them only inside an HTML comment, so they may be stale |
+| Diamond Super Market | www.dsmonline.pk/`<area>`/ page footers | Allowed for `/<area>/` (cart, customer and `/main/<area>` paths are disallowed) | 6, addresses and phones as published (Scheme 33 has no phone) | Karimabad (its page returns 404) and Nishtar (its link is commented out) |
+
+Not listed, and why:
+
+| Chain | Why |
+|---|---|
+| Chase Up, Bin Hashim | Their sites (the Blink platform) load branch data only from `/api/`, which robots.txt disallows. No other page lists branches |
+| Naheed | `naheed.pk/robots.txt` returns **403**; we stopped there |
+| Metro | metro-online.pk lists no branches; its "Store Location" link goes to `www.metro.pk/stores`, whose robots.txt returns **403**; we stopped there |
+
+These chains can still be added later from users' own shops or a list the chain sends us.
+A branch that closes gets `"status": "closed"` in the file (the job never deletes).
+
+**Note for Diamond Super Market:** every dsmonline.pk page we fetched carries an inline
+script (`id="mgn_cspreport"`, base64-encoded) that loads more code, which opens a
+WebSocket to `wss://cspreported.com:443/ws` and sends the page's hostname and URL. That
+pattern looks like a compromised Magento site; we can't confirm it's malicious. Our
+fetches never run page scripts (the importer reads GraphQL and plain HTML), so it
+doesn't affect SpendLess. Worth telling Diamond if we're in touch.
 
 ## How a run works
 

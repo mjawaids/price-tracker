@@ -41,8 +41,12 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Karachi's shared prices are refreshed daily from five online stores (Diamond,
   Imtiaz, Chase Up, Spar, Bin Hashim; Hydri is paused), read politely by SpendLessBot
   (see `/bot` and [docs/data-sources.md](docs/data-sources.md))
+- Karachi also has 26 shared in-store branches (Imtiaz, Spar, Diamond Super Market) from
+  the chains' own store lists; their prices come from shoppers. Where to buy compares
+  the online stores and your own, plus the branches you add to My stores
 - **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
-  at, add your own) and **Contribute** (add a price, add a product, add a receipt)
+  at, branches grouped by chain, add your own) and **Contribute** (add a price, add a
+  product, add a receipt)
 - **Add a receipt**: a whole shop's prices in one go from order screenshots, a photo of a
   till receipt or pasted text. It's read on the device (a one-time ≈6 MB text reader,
   self-hosted, works offline after that) — the receipt is never uploaded or kept, only
@@ -272,7 +276,7 @@ Pull requests run the checks only. Releases use **CalVer `YYYY.M.N`** (e.g.
 
 A second workflow, `.github/workflows/price-import.yml`, imports store prices once a
 day (and can be run by hand as a dry run); a third, `catalog-jobs.yml`, runs manual
-catalogue jobs.
+catalogue jobs (add a city's in-store branches, promote a store to public).
 
 One-time setup (tokens, GitHub `production` environment, leaving Bolt), rollback and
 how to add new services: **[docs/deployment.md](docs/deployment.md)**.
@@ -282,7 +286,7 @@ how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 ```
 .github/workflows/ci-cd.yml # CI checks + production deploy pipeline
 .github/workflows/price-import.yml # Daily store price import (docs/data-sources.md)
-.github/workflows/catalog-jobs.yml # Manual catalogue jobs (promote a store to public)
+.github/workflows/catalog-jobs.yml # Manual catalogue jobs (add in-store branches, promote a store to public)
 public/                     # Static assets (favicons, PWA icons, manifest, _redirects, _headers)
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
@@ -291,6 +295,7 @@ scripts/
 ├── db-migrate.sh           # Applies migrations (tracked in spendless.schema_migrations)
 ├── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
 ├── seed/promote-store.ts   # Makes a private store + its products public (manual "Catalog jobs" workflow)
+├── seed/add-branches.ts    # Adds/updates a city's public in-store branches from seed/branches/<city>.json ("Catalog jobs")
 └── import/                 # Daily store price import: run.ts, sources.ts, adapters/, polite http + robots.txt, write.sql
 supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless
 supabase/post-deploy/       # Post-deploy (cleanup) migrations
@@ -316,7 +321,8 @@ src/
 │   │   ├── ContributeScreen.tsx # Add a price / a product / a receipt
 │   │   ├── ReceiptScreen.tsx   # Add a receipt (+ receiptParts, receiptSheets, receiptHelpers)
 │   │   ├── ManageScreens.tsx   # Your own products
-│   │   ├── compareSheets.tsx   # Item choice, city, store picker, store form, add a price
+│   │   ├── compareSheets.tsx   # Item choice, city, My stores, store form, add a price
+│   │   ├── storePicker.tsx     # Shared store picker: Online / In a shop, search, branches by chain
 │   │   ├── productSheet.tsx    # Add/edit your product
 │   │   └── ProfileScreen.tsx   # Profile, shopping features, help
 │   ├── onboarding/         # Where to buy walkthrough + "What's new" sheet

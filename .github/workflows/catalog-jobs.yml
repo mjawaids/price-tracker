@@ -1,27 +1,45 @@
 # Manual jobs on the shared Compare catalogue (see docs/compare-data.md).
+# Every job is a dry run by default: it reads and reports; tick "apply" to write.
+# Run them only after the catalogue migrations are deployed.
 #
 # promote-store: make one private store — and its owner's products priced there —
 # public in a city, with the owner's consent (used to seed Karachi with the
-# existing Panda Mart import). Dry run by default: it reads, parses and reports;
-# tick "apply" to write. Run it only after the catalogue migrations are deployed.
+# existing Panda Mart import). Needs store_id, region and chain.
+#
+# add-branches: add or update a city's public in-store branches from a reviewed
+# list in scripts/seed/branches/ (taken from each chain's own website). Needs
+# branches_file. Never deletes; never touches private or online stores.
 
 name: Catalog jobs
 
 on:
   workflow_dispatch:
     inputs:
-      store_id:
-        description: Store id (catalog_stores.id) to make public
+      job:
+        description: Which job to run
         required: true
+        default: add-branches
+        type: choice
+        options:
+          - add-branches
+          - promote-store
+      branches_file:
+        description: "add-branches: the list file"
+        required: false
+        default: scripts/seed/branches/karachi.json
+        type: string
+      store_id:
+        description: "promote-store: store id (catalog_stores.id) to make public"
+        required: false
         type: string
       region:
-        description: City id (regions.id)
-        required: true
+        description: "promote-store: city id (regions.id)"
+        required: false
         default: karachi
         type: string
       chain:
-        description: Chain name shown on the store (e.g. Panda Mart)
-        required: true
+        description: "promote-store: chain name shown on the store (e.g. Panda Mart)"
+        required: false
         type: string
       apply:
         description: Write the changes (unticked = dry run)
@@ -39,6 +57,7 @@ concurrency:
 jobs:
   promote-store:
     name: Promote a store to public
+    if: inputs.job == 'promote-store'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -64,3 +83,29 @@ jobs:
           args=(--store-id "$STORE_ID" --region "$REGION" --chain "$CHAIN")
           if [ "$APPLY" = "true" ]; then args+=(--apply); fi
           node --experimental-strip-types --no-warnings scripts/seed/promote-store.ts "${args[@]}"
+
+  add-branches:
+    name: Add in-store branches
+    if: inputs.job == 'add-branches'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      # The script only reads list files inside scripts/seed/branches/.
+      - name: Add branches
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BRANCHES_FILE: ${{ inputs.branches_file }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args=(--file "$BRANCHES_FILE")
+          if [ "$APPLY" = "true" ]; then args+=(--apply); fi
+          node --experimental-strip-types --no-warnings scripts/seed/add-branches.ts "${args[@]}"

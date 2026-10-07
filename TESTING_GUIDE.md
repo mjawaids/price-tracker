@@ -118,13 +118,16 @@ service worker.
       stores and other stores with unit prices and how old each price is.
 - [ ] Product page → **Add to list** adds it to the active list with that product pinned;
       adding it again bumps the quantity.
-- [ ] Stores: choose your city; *Choose* picks the stores to compare (all = compare every
-      store); add, edit and delete a store of your own (website must be http(s)).
+- [ ] Stores: choose your city; *Choose* picks the stores to compare (left as it is = the
+      online stores and your own); add, edit and delete a store of your own (website must
+      be http(s)).
 - [ ] Contribute: find a product → add a price (or mark out of stock); "Not here? Add …"
       creates your own product (brand, type and size are read from the name), then asks
       for its price. Your products: add, edit, delete, and add/replace/remove a photo
       (stored in `spendless-product-images` under your `<user id>/` folder).
 - [ ] A price more than 40% off the current price at a shared store says it's kept for you.
+- [ ] Add a price: the store chips are the stores you compare; *Another store…* opens the
+      store picker (Online / In a shop, search, branches grouped by chain).
 - [ ] Offline, Compare shows the offline notice and saved prices; adding is disabled.
 - [ ] Profile → Help → **How SpendLess works** opens the help topics; the "?" buttons in
       the plan open the matching topic.
@@ -182,6 +185,27 @@ and re-reads those prices.
 - [ ] `/bot` loads (also signed out) and its contact links carry `utm_content=bot_page`.
 - [ ] After the first real run: Compare → Stores lists the new Karachi stores with their
       delivery fees, and Where to buy can pick them.
+
+## In-store branches (Karachi)
+
+- [ ] Catalog jobs → `add-branches` dry run against a local copy of the schema
+      (`SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/add-branches.ts`)
+      lists 26 new; `--apply` adds them; a second run says "Nothing to write"; a branch set
+      to `"status": "closed"` reports one change. A file outside `scripts/seed/branches/`,
+      a duplicate id, an 81-character name, or a chain with no public online store in the
+      city is refused before anything is written.
+- [ ] Compare → Stores: *Online in Karachi*, then *Branches · 26* with a search and one
+      card per chain ("Imtiaz · 14 branches"); a card opens on tap; searching "gulshan"
+      shows Imtiaz · Gulshan. Each branch says "In My stores" or "Not compared".
+- [ ] A branch's sheet shows its address (or that none is published) and phone, and
+      *Add to My stores* / *Remove from My stores*.
+- [ ] With nothing picked, Where to buy compares the online stores (and your own) only.
+      *Choose* → *In a shop near you* → tick a branch → Save: plans can now use it, and
+      the header says "Comparing N of M". Unticking it again saves no picks.
+- [ ] A product page lists branch prices under *Other stores*: the cheapest 6, then
+      *Show all N*; "Out of stock lately at" lists three names, then "+N more".
+- [ ] A till receipt from Imtiaz that prints "Nazimabad" picks Imtiaz · Nazimabad; one
+      that names only the chain opens *Where was this?* on the Imtiaz branches.
 
 ## Upgrading an existing account
 

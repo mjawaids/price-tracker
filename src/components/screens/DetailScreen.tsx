@@ -11,6 +11,9 @@ import { StoreName } from './compareParts';
 import { productSizeText, sectionLabel, unitPriceText, usePriced } from './compareHelpers';
 import { PriceSheet } from './compareSheets';
 
+const OTHERS_SHOWN = 6;
+const OUT_SHOWN = 3;
+
 export default function DetailScreen() {
   const app = useApp();
   const compare = useCompare();
@@ -21,6 +24,8 @@ export default function DetailScreen() {
   const p = compare.productById(String(app.params.id ?? ''));
   const [priceOpen, setPriceOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [allOthers, setAllOthers] = useState(false);
+  useEffect(() => setAllOthers(false), [p?.id]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4500);
@@ -36,6 +41,9 @@ export default function DetailScreen() {
   const considered = new Set(mine.map((x) => x.store.id));
   const others = priced(p.id, true).filter((x) => !considered.has(x.store.id));
   const outOfStock = compare.pricesFor(p.id).filter((x) => !x.isAvailable && compare.storeById(x.storeId));
+  // A city with many branches can price one product at dozens of stores: show the cheapest few.
+  const othersShown = allOthers ? others : others.slice(0, OTHERS_SHOWN);
+  const outNames = outOfStock.map((x) => compare.storeById(x.storeId)!.name);
   const best = mine[0];
   const cat = resolveCategory(p.category ?? undefined);
   const typeName = p.itemType ? ITEM_TYPE_BY_ID.get(p.itemType)?.name : null;
@@ -129,12 +137,18 @@ export default function DetailScreen() {
         {others.length > 0 && (
           <>
             <div className={`mt-6 ${sectionLabel}`}>Other stores</div>
-            <div className="mt-2.5 flex flex-col gap-2">{others.map((x, i) => row(x, i, false))}</div>
+            <div className="mt-2.5 flex flex-col gap-2">{othersShown.map((x, i) => row(x, i, false))}</div>
+            {others.length > othersShown.length && (
+              <Btn variant="ghost" full className="mt-2" icon="chevD" onClick={() => setAllOthers(true)}>
+                Show all {others.length}
+              </Btn>
+            )}
           </>
         )}
-        {outOfStock.length > 0 && (
+        {outNames.length > 0 && (
           <p className="text-[12.5px] text-ink-soft mt-3">
-            Out of stock lately at {outOfStock.map((x) => compare.storeById(x.storeId)!.name).join(', ')}.
+            Out of stock lately at {outNames.slice(0, OUT_SHOWN).join(', ')}
+            {outNames.length > OUT_SHOWN && ` +${outNames.length - OUT_SHOWN} more`}.
           </p>
         )}
         <p className="text-[12.5px] text-ink-soft mt-4 leading-relaxed">

@@ -56,8 +56,11 @@ interface CompareApi {
   /** Effective prices: the shared price, or the user's own newer report. */
   pricesFor: (productId: string) => CurrentPrice[];
   priceAt: (storeId: string, productId: string) => CurrentPrice | undefined;
-  /** Explicit store picks (empty = all stores in the city + your own). */
+  /** Explicit store picks (empty = the default set, see `defaultStoreIds`). */
   myStoreIds: string[];
+  /** What Where to buy compares when nothing is picked: the city's online stores and your own stores (shared in-store branches only once picked). */
+  defaultStoreIds: string[];
+  /** The stores Where to buy (and "your stores" prices) use: the picks, else the default set. */
   consideredStores: CatalogStore[];
   setMyStores: (ids: string[]) => Promise<boolean>;
   preferences: Map<string, ItemPreference>;
@@ -410,14 +413,20 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return m;
   }, [effective]);
 
+  // Shared in-store branches count only once the user picks them ("the Imtiaz near me"):
+  // a plan shouldn't send anyone across the city. Their prices still show elsewhere.
+  const defaultStores = useMemo(
+    () => snap.stores.filter((s) => s.status === 'active' && !(s.ownerId == null && s.kind === 'physical')),
+    [snap.stores],
+  );
   const consideredStores = useMemo(() => {
-    const active = snap.stores.filter((s) => s.status === 'active');
     if (snap.myStores.length) {
-      const picked = active.filter((s) => snap.myStores.includes(s.id));
+      const picked = snap.stores.filter((s) => s.status === 'active' && snap.myStores.includes(s.id));
       if (picked.length) return picked;
     }
-    return active;
-  }, [snap.stores, snap.myStores]);
+    return defaultStores;
+  }, [snap.stores, snap.myStores, defaultStores]);
+  const defaultStoreIds = useMemo(() => defaultStores.map((s) => s.id), [defaultStores]);
 
   const preferences = useMemo(() => new Map(snap.preferences.map((p) => [p.itemKey, p])), [snap.preferences]);
 
@@ -730,6 +739,7 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     pricesFor: (id) => byProduct.get(id) || [],
     priceAt: (storeId, productId) => effective.get(pairKey(storeId, productId)),
     myStoreIds: snap.myStores,
+    defaultStoreIds,
     consideredStores,
     setMyStores,
     preferences,

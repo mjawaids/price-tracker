@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { getCurrencyByCode } from '../../utils/currency';
 
@@ -6,11 +6,26 @@ export function Field({
   label,
   children,
   hint,
+  group = false,
 }: {
   label: string;
   children: React.ReactNode;
   hint?: string;
+  /** Wraps several buttons (chips, options): a labelled group, so each button keeps its own name. */
+  group?: boolean;
 }) {
+  const id = useId();
+  if (group) {
+    return (
+      <div role="group" aria-labelledby={id} className="block mb-4">
+        <div id={id} className="font-mono text-[12.5px] font-bold text-ink-soft mb-[7px] tracking-[0.04em] uppercase">
+          {label}
+        </div>
+        {children}
+        {hint && <div className="text-[12px] text-ink-faint mt-1.5">{hint}</div>}
+      </div>
+    );
+  }
   return (
     <label className="block mb-4">
       <div className="font-mono text-[12.5px] font-bold text-ink-soft mb-[7px] tracking-[0.04em] uppercase">{label}</div>
