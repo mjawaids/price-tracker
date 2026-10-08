@@ -34,6 +34,10 @@ export function unitPriceText(p: CatalogProduct, price: number, fmt: (n: number)
 /** A shared in-store branch (a public physical store): it counts in plans only once picked. */
 export const isBranch = (s: CatalogStore) => s.ownerId == null && s.kind === 'physical';
 
+/** Can this shop be suggested as a shared one here? (The user's own, in-store, open, in this live city.) */
+export const canShare = (compare: { isLive: boolean; region: { id: string } | null }, s: CatalogStore) =>
+  !!s.ownerId && s.kind === 'physical' && s.status === 'active' && compare.isLive && (!s.regionId || s.regionId === compare.region?.id);
+
 /** Does a store match a search? Every word must start a word of its name, chain or address. */
 export function storeMatches(s: CatalogStore, words: string[]): boolean {
   if (!words.length) return true;

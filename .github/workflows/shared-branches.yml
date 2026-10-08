@@ -1,0 +1,70 @@
+# Shared shops from suggestions (see docs/compare-data.md).
+#
+# People suggest their own in-store shop as a shared one in the app. Each night this
+# makes a shop shared once enough different people suggested it, and moves each
+# person's shop into it (scripts/seed/promote-suggestions.ts). A manual run is a dry
+# run unless "apply" is ticked: it does everything, prints the counts, and rolls back.
+# The log is public: counts and the names of shops that became shared only.
+#
+# Repository variables (Settings → Secrets and variables → Actions → Variables):
+#   SHARED_BRANCHES_MIN_PEOPLE  people needed for a new shared shop (unset = the script's default)
+#   SHARED_BRANCHES_PAUSED      "true" = the nightly run only does a dry run
+#
+# GitHub turns scheduled workflows off after 60 days without repository activity;
+# re-enable it from the Actions tab (docs/deployment.md).
+
+name: Shared shops
+
+on:
+  schedule:
+    # 02:43 Karachi time (21:43 UTC), before the price import; an odd minute avoids the rush.
+    - cron: '43 21 * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Write the changes (unticked = dry run, rolled back)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shared-branches
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Make suggested shops shared
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      # Inputs and variables reach the script through env vars (never inlined into the
+      # shell), and the script validates them again.
+      - name: Promote suggestions
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          EVENT: ${{ github.event_name }}
+          APPLY: ${{ inputs.apply }}
+          PAUSED: ${{ vars.SHARED_BRANCHES_PAUSED }}
+          MIN_PEOPLE: ${{ vars.SHARED_BRANCHES_MIN_PEOPLE }}
+        run: |
+          args=()
+          if [ -n "$MIN_PEOPLE" ]; then args+=(--min-people "$MIN_PEOPLE"); fi
+          if [ "$EVENT" = "schedule" ]; then
+            if [ "$PAUSED" = "true" ]; then echo "Paused (SHARED_BRANCHES_PAUSED) — dry run only."; else args+=(--apply); fi
+          elif [ "$APPLY" = "true" ]; then
+            args+=(--apply)
+          fi
+          node --experimental-strip-types --no-warnings scripts/seed/promote-suggestions.ts "${args[@]}"

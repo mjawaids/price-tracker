@@ -245,7 +245,7 @@ export function StorePickerSheet({
               <Icon name="plus" size={18} stroke={2.4} />
               Add a shop that isn’t listed
             </button>
-            <p className="m-0 text-[12.5px] text-ink-soft leading-relaxed">A shop you add is just yours — only you see its prices.</p>
+            <p className="m-0 text-[12.5px] text-ink-soft leading-relaxed">A shop you add is just yours — only you see its prices, until you share it.</p>
           </>
         )}
       </div>

@@ -2,7 +2,7 @@
 // RLS: public catalogue rows plus the user's own. Writes are always the user's own
 // private rows or their own price reports (see docs/compare-data.md).
 import { supabase } from '../supabase';
-import type { CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, PreferenceMode, Region, StoreDeliveryRule } from './types';
+import type { BranchSuggestion, CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, PreferenceMode, Region, StoreDeliveryRule } from './types';
 
 const PAGE = 1000;
 
@@ -248,6 +248,29 @@ export async function fetchMyStores(): Promise<string[]> {
   return rows.map((r) => r.store_id);
 }
 
+const SUGGESTION_COLS = 'id,store_id,region_id,chain,area,status,promoted_store_id,decided_at,created_at';
+interface SuggestionRow {
+  id: string;
+  store_id: string | null;
+  region_id: string;
+  chain: string;
+  area: string;
+  status: BranchSuggestion['status'];
+  promoted_store_id: string | null;
+  decided_at: string | null;
+  created_at: string;
+}
+const toSuggestion = (r: SuggestionRow): BranchSuggestion => ({
+  id: r.id, storeId: r.store_id, regionId: r.region_id, chain: r.chain, area: r.area, status: r.status,
+  promotedStoreId: r.promoted_store_id, decidedAt: r.decided_at, createdAt: r.created_at,
+});
+
+/** The user's shops suggested as shared ones (open, promoted or declined). */
+export async function fetchSuggestions(): Promise<BranchSuggestion[]> {
+  const rows = check(await supabase.from('branch_suggestions').select(SUGGESTION_COLS).order('created_at', { ascending: false })) as SuggestionRow[];
+  return rows.map(toSuggestion);
+}
+
 /** Plans applied since the start of this month. */
 export async function fetchPlansThisMonth(): Promise<PlanRecord[]> {
   const start = new Date();
@@ -481,6 +504,29 @@ export async function saveMyStores(userId: string, storeIds: string[], previous:
   const add = storeIds.filter((id) => !previous.includes(id));
   if (remove.length) check(await supabase.from('user_stores').delete().in('store_id', remove));
   if (add.length) check(await supabase.from('user_stores').insert(add.map((store_id) => ({ user_id: userId, store_id }))));
+}
+
+/**
+ * Suggest one of your own in-store shops as a shared one. The database sets the city
+ * (from the shop), the keys and the status; it refuses a shop that isn't yours, open
+ * and in-store in a live city (42501), a second suggestion for it (23505), too many
+ * waiting (54000) or a name it doesn't take (23514).
+ */
+export async function insertSuggestion(s: { storeId: string; regionId: string; chain: string; area: string }): Promise<BranchSuggestion> {
+  const row = check(
+    await supabase
+      .from('branch_suggestions')
+      .insert({ store_id: s.storeId, region_id: s.regionId, chain: s.chain, area: s.area })
+      .select(SUGGESTION_COLS)
+      .single(),
+  ) as SuggestionRow;
+  return toSuggestion(row);
+}
+
+/** Withdraw a suggestion still waiting. False when nothing was deleted (it was decided meanwhile). */
+export async function deleteSuggestion(id: string): Promise<boolean> {
+  const rows = check(await supabase.from('branch_suggestions').delete().eq('id', id).select('id')) as { id: string }[];
+  return rows.length > 0;
 }
 
 export async function insertPlan(p: {

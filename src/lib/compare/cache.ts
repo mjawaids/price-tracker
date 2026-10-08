@@ -2,7 +2,7 @@
 // opens instantly and works offline from the last prices. One IndexedDB per user,
 // deleted on sign-out. Values are whole snapshots; the context merges deltas.
 import { openDB, deleteDB, DBSchema, IDBPDatabase } from 'idb';
-import type { CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, Region } from './types';
+import type { BranchSuggestion, CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, Region } from './types';
 import type { PlanRecord } from './api';
 
 export interface CatalogSnapshot {
@@ -14,6 +14,8 @@ export interface CatalogSnapshot {
   preferences: ItemPreference[];
   myStores: string[];
   plans: PlanRecord[];
+  /** Shops the user suggested as shared ones (missing in snapshots saved before). */
+  suggestions: BranchSuggestion[];
   /** Region the prices were loaded for, the delta cursor, and when we last did a full load. */
   regionId: string | null;
   cursor: string | null;

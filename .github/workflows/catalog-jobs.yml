@@ -9,6 +9,10 @@
 # add-branches: add or update a city's public in-store branches from a reviewed
 # list in scripts/seed/branches/ (taken from each chain's own website). Needs
 # branches_file. Never deletes; never touches private or online stores.
+#
+# close-branch: undo a shared in-store shop (e.g. one made from suggestions by the
+# Shared shops workflow): close it and give everyone who moved into it their own shop
+# back. Needs store_id. The nightly job never makes that shop again.
 
 name: Catalog jobs
 
@@ -23,13 +27,14 @@ on:
         options:
           - add-branches
           - promote-store
+          - close-branch
       branches_file:
         description: "add-branches: the list file"
         required: false
         default: scripts/seed/branches/karachi.json
         type: string
       store_id:
-        description: "promote-store: store id (catalog_stores.id) to make public"
+        description: "promote-store / close-branch: store id (catalog_stores.id)"
         required: false
         type: string
       region:
@@ -109,3 +114,28 @@ jobs:
           args=(--file "$BRANCHES_FILE")
           if [ "$APPLY" = "true" ]; then args+=(--apply); fi
           node --experimental-strip-types --no-warnings scripts/seed/add-branches.ts "${args[@]}"
+
+  close-branch:
+    name: Close a shared in-store shop
+    if: inputs.job == 'close-branch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Close shop
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          STORE_ID: ${{ inputs.store_id }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args=(--store-id "$STORE_ID")
+          if [ "$APPLY" = "true" ]; then args+=(--apply); fi
+          node --experimental-strip-types --no-warnings scripts/seed/close-branch.ts "${args[@]}"

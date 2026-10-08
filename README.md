@@ -44,6 +44,10 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Karachi also has 26 shared in-store branches (Imtiaz, Spar, Diamond Super Market) from
   the chains' own store lists; their prices come from shoppers. Where to buy compares
   the online stores and your own, plus the branches you add to My stores
+- **Share a shop**: suggest a shop you added (a local kiryana, a pharmacy, a chain's
+  branch) as a shared one. When enough people who shop there suggest it, it becomes a
+  shared shop overnight and your own copy moves into it, prices included (never with
+  your name)
 - **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
   at, branches grouped by chain, add your own) and **Contribute** (add a price, add a
   product, add a receipt)
@@ -55,7 +59,8 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - **Share to SpendLess** (the installed app on Android): share a screenshot, a PDF or an
   order's text from another app; SpendLess asks "Read this receipt?"
 - Prices at shared stores are shared without your name; prices far from the usual one
-  are kept for you only; your own stores and products stay private
+  are kept for you only; your own stores and products stay private unless you share a
+  shop
 - Use as much as you like: Profile → **Shopping features** turns Where to buy and receipt
   import off, and lists look exactly as before
 - In-app help (Profile → Help), a short walkthrough the first time you open Where to buy,
@@ -278,8 +283,9 @@ Pull requests run the checks only. Releases use **CalVer `YYYY.M.N`** (e.g.
 `2026.10.0`), shown in the app under Profile.
 
 A second workflow, `.github/workflows/price-import.yml`, imports store prices once a
-day (and can be run by hand as a dry run); a third, `catalog-jobs.yml`, runs manual
-catalogue jobs (add a city's in-store branches, promote a store to public).
+day (and can be run by hand as a dry run); `shared-branches.yml` makes suggested shops
+shared each night; and `catalog-jobs.yml` runs manual catalogue jobs (add a city's
+in-store branches, promote a store to public, close a shared shop).
 
 One-time setup (tokens, GitHub `production` environment, leaving Bolt), rollback and
 how to add new services: **[docs/deployment.md](docs/deployment.md)**.
@@ -289,7 +295,8 @@ how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 ```
 .github/workflows/ci-cd.yml # CI checks + production deploy pipeline
 .github/workflows/price-import.yml # Daily store price import (docs/data-sources.md)
-.github/workflows/catalog-jobs.yml # Manual catalogue jobs (add in-store branches, promote a store to public)
+.github/workflows/shared-branches.yml # Nightly: suggested shops become shared (docs/compare-data.md)
+.github/workflows/catalog-jobs.yml # Manual catalogue jobs (add in-store branches, promote a store to public, close a shared shop)
 public/                     # Static assets (favicons, PWA icons, manifest + share target, _redirects, _headers, share-target-sw.js)
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
@@ -299,6 +306,8 @@ scripts/
 ├── supabase-expose-schema.sh # Adds spendless to the Data API's exposed schemas
 ├── seed/promote-store.ts   # Makes a private store + its products public (manual "Catalog jobs" workflow)
 ├── seed/add-branches.ts    # Adds/updates a city's public in-store branches from seed/branches/<city>.json ("Catalog jobs")
+├── seed/promote-suggestions.ts # Nightly: suggested shops become shared, people's shops move in ("Shared shops")
+├── seed/close-branch.ts    # Undo a shared shop: close it, give people their own shop back ("Catalog jobs")
 └── import/                 # Daily store price import: run.ts, sources.ts, adapters/, polite http + robots.txt, write.sql
 supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless
 supabase/post-deploy/       # Post-deploy (cleanup) migrations
@@ -326,6 +335,7 @@ src/
 │   │   ├── ManageScreens.tsx   # Your own products
 │   │   ├── compareSheets.tsx   # Item choice, city, My stores, store form, add a price
 │   │   ├── storePicker.tsx     # Shared store picker: Online / In a shop, search, branches by chain
+│   │   ├── suggestSheet.tsx    # Share this shop (suggest it as a shared one), its row, "Your shop is now shared"
 │   │   ├── productSheet.tsx    # Add/edit your product
 │   │   └── ProfileScreen.tsx   # Profile, shopping features, help
 │   ├── onboarding/         # Where to buy walkthrough + "What's new" sheet
