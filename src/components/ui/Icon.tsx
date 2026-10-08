@@ -3,6 +3,7 @@ import {
   Search,
   ShoppingCart,
   User,
+  Users,
   Plus,
   Minus,
   Store,
@@ -117,6 +118,7 @@ const MAP: Record<string, ComponentType<LucideProps>> = {
   alert: AlertCircle,
   pill: Pill,
   file: FileText,
+  users: Users,
 };
 
 export type IconName = keyof typeof MAP | string;

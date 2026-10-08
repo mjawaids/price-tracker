@@ -14,6 +14,8 @@ import { getReceipt, resetReceipt, setReceipt, useReceipt } from '../../lib/rece
 import type { ReceiptSource, ReceiptState, RowEdit } from '../../lib/receipt/session';
 import { Btn, Icon, Toast } from '../ui';
 import { CompareNotice } from './compareParts';
+import { canShare } from './compareHelpers';
+import { SuggestShopSheet } from './suggestSheet';
 import type { Group, Line } from './receiptHelpers';
 import { guessKey, longDate, receiptDate, saveReceipt, shortDate, storeForGuess, todayISO, tooOld, useDeviceWord, useReview } from './receiptHelpers';
 import {
@@ -313,7 +315,7 @@ function FailedStep({ r, onBack, onPaste }: { r: ReceiptState; onBack: () => voi
 }
 
 // ── 4/5/12 · Review ──────────────────────────────────────────────────────────
-type SheetState = { kind: 'store' } | { kind: 'date' } | { kind: 'choose'; id: string } | { kind: 'edit'; id: string } | null;
+type SheetState = { kind: 'store' } | { kind: 'date' } | { kind: 'share' } | { kind: 'choose'; id: string } | { kind: 'edit'; id: string } | null;
 type SaveError = 'error' | 'rate_limit' | 'denied' | null;
 
 const GROUPS: { id: Group; title: string; icon?: 'pill' }[] = [
@@ -347,7 +349,9 @@ function ReviewStep({ r, wide, onBack }: { r: ReceiptState; wide: boolean; onBac
       const key = guessKey(r.guess);
       if (!s && uid && key) {
         const id = await lastStore(uid, key);
-        const last = id ? compare.storeById(id) : undefined;
+        // A shop that became shared is now the shared one; a closed one is never picked.
+        const at = id ? compare.storeById(compare.movedTo(id) ?? id) : undefined;
+        const last = at?.status === 'active' ? at : undefined;
         if (last && (!r.guess?.kind || last.kind === r.guess.kind)) s = last;
       }
       if (off) return;
@@ -410,6 +414,8 @@ function ReviewStep({ r, wide, onBack }: { r: ReceiptState; wide: boolean; onBac
   const ready = byGroup.get('ready') ?? [];
   const n = toSave.length;
   const privateStore = !!store?.ownerId;
+  const suggested = !!store && compare.suggestionFor(store.id)?.status === 'open';
+  const shareable = !!store && !compare.suggestionFor(store.id) && canShare(compare, store);
   const age = ageInDays(d.date);
   const chainName = store?.chain || store?.name || 'this shop';
   const canAddMore = r.source === 'image' || r.source === 'photo';
@@ -510,7 +516,17 @@ function ReviewStep({ r, wide, onBack }: { r: ReceiptState; wide: boolean; onBac
       {privateStore && (
         <div className="flex gap-2.5 items-start rounded-[16px] bg-warn-wash text-warn-ink text-[13.5px] font-semibold leading-snug" style={{ padding: '12px 14px' }}>
           <Icon name="lock" size={17} stroke={2.2} className="shrink-0 mt-px" />
-          <span>{store?.name} isn’t a shared store, so these prices are just for you.</span>
+          <span className="flex-1 flex flex-col gap-2 items-start">
+            <span>
+              {store?.name} isn’t a shared store, so these prices are just for you
+              {suggested ? ' until it’s shared.' : '.'}
+            </span>
+            {shareable && (
+              <Btn size="sm" variant="ghost" icon="users" onClick={() => setSheet({ kind: 'share' })} disabled={!compare.online}>
+                Share this shop
+              </Btn>
+            )}
+          </span>
         </div>
       )}
       {age > OLDISH_DAYS && (
@@ -637,6 +653,7 @@ function ReviewStep({ r, wide, onBack }: { r: ReceiptState; wide: boolean; onBac
         }}
       />
       {dateSheet}
+      {sheet?.kind === 'share' && store && <SuggestShopSheet store={store} onClose={() => setSheet(null)} />}
       <ChooseProductSheet
         line={choosing}
         store={store}

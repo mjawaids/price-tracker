@@ -197,10 +197,11 @@ export default function ListsScreen() {
   const planned = featureOn && lists.todo.some((i) => i.planStoreId);
   const byStore = planned && view === 'stores';
   const storeSections = useMemo(
-    () => (byStore ? groupByStore(lists.todo, compare.storeById) : []),
-    // storeById reads the latest catalogue.
+    // A shop that became shared shows as the shared one (the server re-points the items too).
+    () => (byStore ? groupByStore(lists.todo, (id) => compare.storeById(compare.movedTo(id) ?? id)) : []),
+    // storeById and movedTo read the latest catalogue.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [byStore, lists.todo, compare.stores],
+    [byStore, lists.todo, compare.stores, compare.suggestions],
   );
   const planTotal = storeSections.reduce(
     (a, sec) => a + sec.subtotal + (sec.store?.kind === 'online' ? deliveryFeeFor(sec.store.deliveryRule, sec.subtotal) : 0),

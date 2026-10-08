@@ -7,6 +7,7 @@ import { Btn, Chip, Icon } from '../ui';
 import { CompareNotice, ProductRow } from './compareParts';
 import { sectionLabel, usePriced } from './compareHelpers';
 import { RegionSheet } from './compareSheets';
+import { SharedShopNotice } from './suggestSheet';
 
 const MAX_AISLE = 60;
 const aisleOf = (category: string | null) => resolveCategory(category ?? undefined).id;
@@ -65,6 +66,7 @@ export default function PricesScreen() {
 
       <div className="flex flex-col gap-4" style={{ padding: pad }}>
         {!compare.online && <CompareNotice icon="wifiOff" title="You’re offline" body="Showing the prices saved on this device." />}
+        <SharedShopNotice onOpen={(storeId) => app.tab('stores', { storeId })} />
         {compare.regionChosen && !compare.isLive && (
           <CompareNotice
             icon="globe"

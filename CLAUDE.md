@@ -28,6 +28,10 @@ Live at https://spendless.ibexoft.com
   — make a private store public (normally run from the manual *Catalog jobs* workflow; dry run without `--apply`)
 - `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/add-branches.ts [--file scripts/seed/branches/karachi.json] [--apply]`
   — add/update a city's public in-store branches from the reviewed list (*Catalog jobs*, job `add-branches`; dry run without `--apply`)
+- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/promote-suggestions.ts [--min-people N] [--apply]`
+  — suggested shops become shared (nightly *Shared shops* workflow; without `--apply` it runs and rolls back)
+- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/close-branch.ts --store-id <id> [--apply]`
+  — undo a shared shop: close it, give people their own shop back (*Catalog jobs*, job `close-branch`)
 - `node --experimental-strip-types scripts/import/run.ts --dry-run [--source <id>|all] [--max-pages N]` — daily store
   price import, fetch + parse only (needs `NODE_USE_ENV_PROXY=1` behind a proxy). Without `--dry-run` it needs
   `SUPABASE_DB_URL` and writes; normally run by the *Price import* workflow
@@ -50,13 +54,18 @@ Context-based (no Redux). Providers in `src/contexts/`:
   current prices with the user's own newer reports overlaid), "my stores", usuals
   (`item_preferences`), plans this month; `consideredStores` (what Where to buy and "your
   stores" prices use: the picks, else `defaultStoreIds` = active stores minus shared
-  in-store branches, i.e. online stores + the user's own; a branch counts once picked);
+  in-store branches, i.e. online stores + the user's own; a branch counts once picked,
+  or once the user's own shop moved into it);
   `planFor(items)` (resolve + optimize), writes
   (own stores/products, price reports), the one-time Compare cart → list conversion.
   Receipt saves: `reportPrices` (one `spendless.save_receipt` call per receipt — new
   private products for its medicines and all its prices in one transaction, all or
   nothing; maps the daily limit / a refused row / offline to a reason), `retractReports`
   (Undo), `pricesAtStore`, `ownReportsAt` ("Already added").
+  Shared shops: `suggestions` (`branch_suggestions`, in the snapshot), `suggestionFor`,
+  `movedTo(storeId)` (a shop that became shared → the shared one), `suggestBranch`
+  (sets the shop's city first when it has none; maps refusals to a reason),
+  `withdrawSuggestion`. A closed store (a moved private copy) shows no prices.
   Cached per user in IndexedDB (`src/lib/compare/cache.ts`) so plans work offline
 - `AppContext` — navigation stack, section, screen enum, app-level sheets
   (`currency`, `region`, `help` + topic), sign-out
@@ -186,6 +195,28 @@ only), so reading carries on when the user leaves the screen and Contribute show
   Analytics are counts only (`receipt_read`, `receipt_failed`, `receipt_saved`,
   `receipt_undone`, `receipt_shared`).
 
+### Shared shops (Compare → Stores → a shop of your own → Share this shop)
+`suggestSheet.tsx`: `SuggestShopSheet` (shop or chain name — quick picks for chains with
+shared shops here and the receipt `CHAINS` minus online-only ones — and its area, from
+`src/lib/compare/areas.ts`: a city's areas with the other ways people write them,
+`placeKey` = the database's `spendless.place_key`, `placeProblem` = its name checks; a
+chain's shared shops are listed first with "That's my shop", which moves the user's shop
+into it), `ShareShopRow` in the shop's sheet (Share this shop / Suggested · Withdraw /
+Not shared), the *Suggested* tag on Stores, *Share this shop* on the receipt's "just for
+you" banner, and `SharedShopNotice` ("Your shop is now shared", once per suggestion,
+`spendless-shared-shop:<uid>`, on Prices and Stores). Copy never names how many people
+are needed ("enough people": the number is the repo variable
+`SHARED_BRANCHES_MIN_PEOPLE`). Nightly, `scripts/seed/promote-suggestions.ts` +
+`promote-suggestions.sql` (one transaction, an advisory lock, rolled back unless
+`--apply`) groups waiting suggestions by city + chain key + area key: an existing shared
+shop → moved into it; a closed one → declined; enough qualifying people (account and shop
+≥7 days old, prices for ≥3 products there in 60 days; a suggestion ≥1 day old to move) →
+a new shared shop `<chain> · <area>` (≤5 a run). Moving copies each person's latest
+accepted prices as new `price_reports` rows (their `user_id`, `created_at` ≥25 h back,
+fixed ids, >40% off → `pending`), swaps My stores where the shop was picked, re-points
+planned list items, closes the private copy. `close-branch.ts` undoes a shop. Rules in
+`docs/compare-data.md`.
+
 ### Offline (Lists)
 - `src/lib/offline/db.ts` — IndexedDB (`idb`) per user: `lists`, `items`, `outbox`, `meta`
 - `src/lib/offline/sync.ts` — every change is a full-row upsert queued in `outbox`;
@@ -307,12 +338,14 @@ are in `public`). SpendLess data must never mix with theirs:
 | `lists` | id (device-generated), user_id, name, sort_order, updated_at (server-set), deleted_at |
 | `list_items` | id, list_id, user_id, name, quantity?, unit?, note?, category?, done, done_at, cleared_at, product_id? (→ `catalog_products`, the pinned product), plan_store_id?, plan_product_id?, plan_price?, updated_at (server-set), deleted_at |
 | `regions` | id (slug, e.g. `karachi`), name, country_code, currency, status (`live` \| `gathering`) |
-| `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, phone, city, lat/lng, delivery_rule (+`minOrder`), website, status. Public `physical` = a shared in-store branch (`<chain> · <area>`, same chain as the online store, from `scripts/seed/branches/`) |
+| `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, phone, city, lat/lng, delivery_rule (+`minOrder`), website, status. Public `physical` = a shared in-store shop (`<chain> · <area>`, no delivery): a chain's branch from `scripts/seed/branches/` (same chain as its online store), or a shop people shared (independent ones too) |
 | `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into, match_key (importer: same product across stores; `''` = not confident) |
 | `price_reports` | **append-only** for users: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`). The importer moves its own latest `import` report's `observed_at` forward while a price is unchanged |
 | `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence — written only by the `refresh_current_prices` trigger; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
 | *function* `save_receipt` | `spendless.save_receipt(store, observed_at, currency, items jsonb)` — a receipt's new private products (reusing same-named ones) + its price reports in one transaction; SECURITY INVOKER, EXECUTE for `authenticated` only |
 | `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
+| `branch_suggestions` | id, user_id, store_id? (their own in-store shop; SET NULL), region_id, chain, area (plain names, `chain + area ≤ 77`), chain_key, area_key (trigger-set), status (`open` \| `promoted` \| `declined`), promoted_store_id?, decided_at, created_at. Users add (own open in-store shop in a live city, ≤10 waiting; the trigger sets user, city, keys, the shared chain spelling) and withdraw while open; no updates; the nightly job decides |
+| *function* `place_key` | `spendless.place_key(text)`: how shop and area names compare ("DHA Phase VIII" = "dha ph 8"); whole keys only. Mirrored by `placeKey` in `src/lib/compare/areas.ts` |
 | `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`; one row per store per run (counts, status) |
 
 **Compare catalogue (v2)**: `catalog_*`, `price_reports` and `current_prices` replace the
@@ -321,7 +354,7 @@ ids). Public rows are read-only for clients; users write only their own private 
 their own price reports (rate-limited, outliers held as `pending`). Full model, price
 consensus and anti-spam rules: `docs/compare-data.md`. Public Karachi prices also come
 from a daily import of five online stores (Hydri paused; `scripts/import/`, `docs/data-sources.md`); its 26
-in-store branches (Imtiaz, Spar, Diamond) come from the chains' own store lists and get prices from people. Item types are a curated vocabulary
+in-store branches (Imtiaz, Spar, Diamond) come from the chains' own store lists and get prices from people; more shared shops come from people suggesting their own (nightly, `scripts/seed/promote-suggestions.ts`). Item types are a curated vocabulary
 in `src/lib/compare/itemTypes.ts` (the column only checks the slug).
 
 `delivery_rule` union: `none | free | flat { fee } | over { threshold, fee }` (catalogue
@@ -347,6 +380,8 @@ post-deploy migration drops them.
 | `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product) |
 | `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Add a receipt entry), your own products |
 | `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, My stores (`StoresSheet`: online, your shops, branches by chain), store form (a branch: address, phone, *Add to My stores*), add a price (*Another store…*); product form |
+| `src/components/screens/suggestSheet.tsx`, `src/lib/compare/areas.ts` | Share this shop (suggest a shop as a shared one), its row in the shop sheet, "Your shop is now shared"; a city's areas, `placeKey`, name checks |
+| `scripts/seed/promote-suggestions.ts` (+ `.sql`), `scripts/seed/close-branch.ts` (+ `.sql`) | Nightly: suggested shops become shared and people's shops move in (`.github/workflows/shared-branches.yml`, variables `SHARED_BRANCHES_MIN_PEOPLE`, `SHARED_BRANCHES_PAUSED`); undo one shared shop (*Catalog jobs* → `close-branch`) |
 | `src/components/screens/storePicker.tsx` | Shared store picker (`StorePickerSheet`: Online / In a shop, search over name, chain and address, branches grouped by chain), `ChainGroup`, `StoreSearch` — used by receipts, Add a price, My stores and the Stores screen |
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
 | `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`) and `WhatsNewSheet` |
@@ -425,7 +460,12 @@ say so and propose a safe alternative.
   `/share-receipt` fallback) → post-deploy migrations → tag + GitHub Release.
 - `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue, picked
   by the `job` input (`add-branches`: a city's in-store branches; `promote-store`: a
-  private store to public); dry run unless "apply" is ticked.
+  private store to public; `close-branch`: undo a shared shop); dry run unless "apply"
+  is ticked.
+- `.github/workflows/shared-branches.yml`: nightly (02:43 Karachi) suggested shops →
+  shared shops (`scripts/seed/promote-suggestions.ts`); manual runs roll back unless
+  *apply*. Repo variables `SHARED_BRANCHES_MIN_PEOPLE` (people needed) and
+  `SHARED_BRANCHES_PAUSED` (`true` = dry run only).
 - `.github/workflows/price-import.yml`: daily store price import (03:17 Karachi), also
   manual with *source* / *dry run* / *max pages*. Scheduled workflows stop after 60 days
   without repo activity — re-enable from the Actions tab.

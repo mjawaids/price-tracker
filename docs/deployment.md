@@ -77,6 +77,34 @@ Pick the job with the *job* input:
   (`scripts/seed/promote-store.ts`). Only with the owner's consent. Run it after the catalogue migrations are deployed: first as a dry run
   (it prints how many names it could parse), then with *apply*. Re-running is a
   no-op once the store is public.
+- **close-branch** — needs *store_id* (a shared in-store shop). The undo for a shop
+  the *Shared shops* job made (or any shared branch): it closes the shop and gives
+  everyone who moved into it their own shop back — their private copy reopens, My
+  stores and planned list items point at it again, and their suggestions are declined,
+  so the nightly job never makes that shop again (`scripts/seed/close-branch.ts`).
+  Prices copied to the closed shop stay with it, unseen. The dry run (rolled back)
+  prints the same counts.
+
+## Shared shops (nightly)
+
+[`.github/workflows/shared-branches.yml`](../.github/workflows/shared-branches.yml)
+runs `scripts/seed/promote-suggestions.ts` every night at 02:43 Karachi time (21:43
+UTC) in the `production` environment with `SUPABASE_DB_URL`. People suggest their own
+in-store shop as a shared one in the app; once enough different people suggested the
+same shop, this makes it a shared shop and moves each person's shop into it (rules in
+`docs/compare-data.md`). One transaction per run; the log (public) prints counts and
+the names of shops that became shared, nothing about who suggested what.
+
+- **Repository variables** (Settings → Secrets and variables → Actions → *Variables*):
+  - `SHARED_BRANCHES_MIN_PEOPLE` — how many different people a new shared shop needs.
+    Unset = the script's default, **3**. Change it here, never in app copy (the app
+    says "enough people").
+  - `SHARED_BRANCHES_PAUSED` — `true` makes the nightly run a dry run only.
+- **Run by hand:** *Actions → Shared shops → Run workflow*. Unticked *apply* (the
+  default) does everything and rolls it back, so the counts show what would happen.
+- **Undo a shop:** *Catalog jobs* → `close-branch` (above).
+- **GitHub disables scheduled workflows after 60 days without repository activity.**
+  If it stops, open *Actions → Shared shops* and click *Enable workflow*.
 
 ## Price import (daily)
 

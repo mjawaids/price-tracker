@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useApp } from '../../contexts/AppContext';
 import { useCompare } from '../../contexts/CompareContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useHint } from '../../hooks/useHint';
@@ -12,10 +13,12 @@ import { CompareNotice } from './compareParts';
 import { branchArea, groupByChain, isBranch, sectionLabel, storeMatches } from './compareHelpers';
 import { RegionSheet, StoreFormSheet, StoresSheet } from './compareSheets';
 import { ChainGroup, StoreSearch } from './storePicker';
+import { SharedShopNotice } from './suggestSheet';
 
 /** Compare → Stores: the stores Where to buy compares, plus your own. */
 export default function StoresScreen() {
   const compare = useCompare();
+  const app = useApp();
   const { compact } = useBreakpoint();
   const [cityOpen, setCityOpen] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
@@ -23,6 +26,17 @@ export default function StoresScreen() {
   const [q, setQ] = useState('');
   const [opened, setOpened] = useState<Set<string>>(new Set());
   const hint = useHint('myStores', compare.ready && compare.stores.length > 1);
+
+  // Opened for one shop (e.g. "See the shop" on Prices): show its sheet once it's loaded.
+  const openId = typeof app.params.storeId === 'string' ? app.params.storeId : null;
+  const [openedFor, setOpenedFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!openId || openedFor === openId) return;
+    const s = compare.storeById(openId);
+    if (!s) return;
+    setOpenedFor(openId);
+    setForm(s);
+  }, [openId, openedFor, compare]);
 
   const considered = new Set(compare.consideredStores.map((s) => s.id));
   const active = compare.stores.filter((s) => s.status === 'active');
@@ -50,6 +64,11 @@ export default function StoresScreen() {
             {!on && ' · not compared'}
           </div>
         </div>
+        {s.ownerId && compare.suggestionFor(s.id)?.status === 'open' && (
+          <span className="shrink-0 text-[12px] font-bold rounded-full bg-accent-wash text-accent-ink" style={{ padding: '3px 9px' }}>
+            Suggested
+          </span>
+        )}
         {link && (
           <a
             href={link}
@@ -130,6 +149,12 @@ export default function StoresScreen() {
 
         {!compare.online && <CompareNotice icon="wifiOff" title="You’re offline" body="You can look around; adding or editing stores needs a connection." />}
         {hint.show && <TipRow text={hint.text} onDismiss={hint.dismiss} />}
+        <SharedShopNotice
+          onOpen={(id) => {
+            const s = compare.storeById(id);
+            if (s) setForm(s);
+          }}
+        />
 
         <div className="flex items-center gap-3 rounded-[18px] bg-accent-wash" style={{ padding: 14 }}>
           <span className="flex-1 text-[14px] leading-relaxed">
@@ -165,7 +190,7 @@ export default function StoresScreen() {
             </span>
             <h2 className="m-0 font-display font-extrabold text-[20px]">No stores yet</h2>
             <p className="m-0 max-w-[300px] text-[14.5px] leading-relaxed text-ink-soft">
-              Add the shops and delivery apps you buy from. They stay private to you.
+              Add the shops and delivery apps you buy from. They stay private to you unless you share one.
             </p>
             <Btn className="mt-3" icon="plus" onClick={() => setForm('new')} disabled={!compare.online}>
               Add your first store

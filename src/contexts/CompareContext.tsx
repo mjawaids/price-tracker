@@ -10,7 +10,8 @@ import * as api from '../lib/compare/api';
 import { CatalogSnapshot, deleteSnapshot, readSnapshot, writeSnapshot } from '../lib/compare/cache';
 import { buildContext, resolveItem, ResolvedItem, ResolveContext } from '../lib/compare/resolve';
 import { buildPlans, PlanSet } from '../lib/compare/optimizer';
-import { CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, PreferenceMode, Region } from '../lib/compare/types';
+import { BranchSuggestion, CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, PreferenceMode, Region } from '../lib/compare/types';
+import { cleanPlace } from '../lib/compare/areas';
 import { ITEM_TYPE_BY_ID } from '../lib/compare/itemTypes';
 import { CATEGORIES, resolveCategory } from '../lib/categories';
 import { trackUserAction } from '../utils/analytics';
@@ -58,7 +59,11 @@ interface CompareApi {
   priceAt: (storeId: string, productId: string) => CurrentPrice | undefined;
   /** Explicit store picks (empty = the default set, see `defaultStoreIds`). */
   myStoreIds: string[];
-  /** What Where to buy compares when nothing is picked: the city's online stores and your own stores (shared in-store branches only once picked). */
+  /**
+   * What Where to buy compares when nothing is picked: the city's online stores and your
+   * own stores (shared in-store branches only once picked, or once your own shop moved
+   * into one).
+   */
   defaultStoreIds: string[];
   /** The stores Where to buy (and "your stores" prices) use: the picks, else the default set. */
   consideredStores: CatalogStore[];
@@ -71,8 +76,21 @@ interface CompareApi {
   recordPlan: (p: { listId: string; total: number; baselineTotal: number | null; savings: number; storeCount: number; itemCount: number }) => void;
   savedThisMonth: number;
   plansThisMonth: number;
-  /** Prices this user added in the last 30 days. */
+  /** Prices this user added in the last 30 days (a shop's moved prices count once). */
   recentReports: number;
+  /** Shops the user suggested as shared ones, newest first. */
+  suggestions: BranchSuggestion[];
+  /** The suggestion for one of the user's shops, if any. */
+  suggestionFor: (storeId: string) => BranchSuggestion | undefined;
+  /** Where a shop that became shared went (the shared shop's id), else null. */
+  movedTo: (storeId: string) => string | null;
+  /**
+   * Suggest one of the user's own in-store shops as a shared one (sets the shop's city
+   * first when it has none). `knownChain`: the name was picked, not typed (analytics).
+   */
+  suggestBranch: (storeId: string, chain: string, area: string, knownChain: boolean) => Promise<SuggestResult>;
+  /** Withdraw a suggestion still waiting ('decided': it was decided meanwhile; refreshed). */
+  withdrawSuggestion: (id: string) => Promise<'ok' | 'decided' | 'error'>;
   addStore: (s: api.StoreInput) => Promise<CatalogStore | null>;
   updateStore: (id: string, s: api.StoreInput) => Promise<CatalogStore | null>;
   deleteStore: (id: string) => Promise<boolean>;
@@ -102,6 +120,9 @@ interface CompareApi {
   clearLocalData: () => Promise<void>;
 }
 
+/** ok · offline · limit (too many waiting) · taken (already suggested) · denied (not a shop that can be shared) · invalid (the name) · error */
+export type SuggestResult = 'ok' | 'offline' | 'limit' | 'taken' | 'denied' | 'invalid' | 'error';
+
 export type ReceiptSaveResult =
   /** `productIds`: the product each row was saved to, in order (given, reused or new). */
   | { ok: true; ids: string[]; productIds: string[]; accepted: number; pending: number }
@@ -127,7 +148,7 @@ export const useCompare = () => {
 };
 
 const emptySnapshot = (): CatalogSnapshot => ({
-  regions: [], stores: [], products: [], prices: [], ownReports: [], preferences: [], myStores: [], plans: [],
+  regions: [], stores: [], products: [], prices: [], ownReports: [], preferences: [], myStores: [], plans: [], suggestions: [],
   regionId: null, cursor: null, fullAt: 0, syncedAt: null,
 });
 
@@ -212,13 +233,18 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
           cur.regionId !== region ||
           Date.now() - cur.fullAt > FULL_REFRESH_MS ||
           storeIds.some((id) => !known.has(id));
-        const [priced, own, ownReports, preferences, myStores, plans] = await Promise.all([
+        const [priced, own, ownReports, preferences, myStores, plans, suggestions] = await Promise.all([
           api.fetchPrices(storeIds, full ? null : cur.cursor),
           api.fetchOwnProducts(userId),
           api.fetchOwnReports(userId),
           api.fetchPreferences(),
           api.fetchMyStores(),
           api.fetchPlansThisMonth(),
+          // Optional: without it the rest still loads (the last known ones are kept).
+          api.fetchSuggestions().catch((error) => {
+            console.error('Loading shop suggestions failed:', error instanceof Error ? error.message : error);
+            return cur.suggestions;
+          }),
         ]);
 
         const productMap = new Map<string, CatalogProduct>();
@@ -261,6 +287,7 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
           preferences,
           myStores,
           plans,
+          suggestions,
           regionId: region,
           cursor: full ? priced.cursor : priced.cursor ?? cur.cursor,
           fullAt: full ? Date.now() : cur.fullAt,
@@ -296,7 +323,8 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const cached = await readSnapshot(userId);
       if (cancelled) return;
       if (cached) {
-        setSnap(cached);
+        // A snapshot saved by an older version may lack newer fields.
+        setSnap({ ...emptySnapshot(), ...cached });
         setReady(true);
       }
       await refreshRef.current();
@@ -380,13 +408,14 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const storeMap = useMemo(() => new Map(snap.stores.map((s) => [s.id, s])), [snap.stores]);
   const productMap = useMemo(() => new Map(snap.products.map((p) => [p.id, p])), [snap.products]);
 
-  /** Shared prices with the user's own newer report on top. */
+  /** Shared prices with the user's own newer report on top. A closed store (e.g. a shop that moved into a shared one) has none. */
   const effective = useMemo(() => {
     const m = new Map<string, CurrentPrice>();
-    for (const p of snap.prices) m.set(pairKey(p.storeId, p.productId), p);
+    const open = (id: string) => storeMap.get(id)?.status !== 'closed';
+    for (const p of snap.prices) if (open(p.storeId)) m.set(pairKey(p.storeId, p.productId), p);
     // Own reports come newest first: the first one per pair wins if it's newer.
     for (const r of snap.ownReports) {
-      if (!storeMap.has(r.storeId)) continue;
+      if (!storeMap.has(r.storeId) || !open(r.storeId)) continue;
       const k = pairKey(r.storeId, r.productId);
       const cur = m.get(k);
       if (cur?.mine) continue;
@@ -413,11 +442,25 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return m;
   }, [effective]);
 
+  // Shops that became shared: the user's own shop → the shared one it moved into.
+  const moved = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of snap.suggestions) {
+      if (s.status === 'promoted' && s.storeId && s.promotedStoreId && storeMap.get(s.promotedStoreId)?.status === 'active') m.set(s.storeId, s.promotedStoreId);
+    }
+    return m;
+  }, [snap.suggestions, storeMap]);
+  const movedInto = useMemo(
+    () => new Set(snap.suggestions.filter((s) => s.status === 'promoted' && s.promotedStoreId).map((s) => s.promotedStoreId as string)),
+    [snap.suggestions],
+  );
+
   // Shared in-store branches count only once the user picks them ("the Imtiaz near me"):
-  // a plan shouldn't send anyone across the city. Their prices still show elsewhere.
+  // a plan shouldn't send anyone across the city. Their prices still show elsewhere. A
+  // shared shop the user's own shop moved into counts, as their own shop did.
   const defaultStores = useMemo(
-    () => snap.stores.filter((s) => s.status === 'active' && !(s.ownerId == null && s.kind === 'physical')),
-    [snap.stores],
+    () => snap.stores.filter((s) => s.status === 'active' && (!(s.ownerId == null && s.kind === 'physical') || movedInto.has(s.id))),
+    [snap.stores, movedInto],
   );
   const consideredStores = useMemo(() => {
     if (snap.myStores.length) {
@@ -546,6 +589,10 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
         prices: cur.prices.filter((p) => p.storeId !== id),
         ownReports: cur.ownReports.filter((p) => p.storeId !== id),
         myStores: cur.myStores.filter((s) => s !== id),
+        // A waiting suggestion goes with its shop; a decided one keeps where it went.
+        suggestions: cur.suggestions
+          .filter((s) => !(s.storeId === id && s.status === 'open'))
+          .map((s) => (s.storeId === id ? { ...s, storeId: null } : s)),
       });
       return true;
     },
@@ -715,6 +762,53 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [commit],
   );
 
+  const suggestBranch = useCallback<CompareApi['suggestBranch']>(
+    async (storeId, chain, area, knownChain) => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return 'offline';
+      const st = snapRef.current.stores.find((s) => s.id === storeId);
+      const city = st?.regionId ?? settingsRef.current.regionId;
+      if (!st || !city) return 'denied';
+      try {
+        if (!st.regionId) {
+          // A shop saved without a city is in the one the user is in.
+          const row = await api.updateStoreRow(st.id, {
+            name: st.name, kind: st.kind, regionId: city, deliveryRule: st.deliveryRule, address: st.address, website: st.website,
+          });
+          commit({ ...snapRef.current, stores: snapRef.current.stores.map((x) => (x.id === row.id ? row : x)) });
+        }
+        const row = await api.insertSuggestion({ storeId, regionId: city, chain: cleanPlace(chain), area: cleanPlace(area) });
+        commit({ ...snapRef.current, suggestions: [row, ...snapRef.current.suggestions.filter((s) => s.id !== row.id)] });
+        track('branch_suggested', { known_chain: knownChain });
+        return 'ok';
+      } catch (error) {
+        const code = error instanceof api.ApiError ? error.code : null;
+        console.error('Suggesting a shop failed:', code ?? (error instanceof Error ? error.message : error));
+        if (code === '54000') return 'limit';
+        if (code === '23505') return 'taken';
+        if (code === '42501') return 'denied';
+        if (code === '23514') return 'invalid';
+        return typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error';
+      }
+    },
+    [commit],
+  );
+
+  const withdrawSuggestion = useCallback<CompareApi['withdrawSuggestion']>(
+    async (id) => {
+      const deleted = await guard('Withdrawing a suggestion', () => api.deleteSuggestion(id));
+      if (deleted === null) return 'error';
+      if (!deleted) {
+        // Decided meanwhile (shared or declined): show what happened.
+        void refreshRef.current();
+        return 'decided';
+      }
+      commit({ ...snapRef.current, suggestions: snapRef.current.suggestions.filter((s) => s.id !== id) });
+      track('branch_suggestion_withdrawn');
+      return 'ok';
+    },
+    [commit],
+  );
+
   const clearLocalData = useCallback(async () => {
     if (userId) await deleteSnapshot(userId);
   }, [userId]);
@@ -750,7 +844,13 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     recordPlan,
     savedThisMonth,
     plansThisMonth: snap.plans.length,
-    recentReports: snap.ownReports.length,
+    // Not at a closed shop: a shop that became shared has its prices there and here.
+    recentReports: snap.ownReports.filter((r) => storeMap.get(r.storeId)?.status !== 'closed').length,
+    suggestions: snap.suggestions,
+    suggestionFor: (id) => snap.suggestions.find((s) => s.storeId === id),
+    movedTo: (id) => moved.get(id) ?? null,
+    suggestBranch,
+    withdrawSuggestion,
     addStore,
     updateStore,
     deleteStore,

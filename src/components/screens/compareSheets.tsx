@@ -14,6 +14,7 @@ import { Field, NumIn, TextIn } from './manageParts';
 import { ProductRow, StoreName } from './compareParts';
 import { branchArea, groupByChain, isBranch, sectionLabel, storeMatches, toPicks, unitPriceText, usePriced } from './compareHelpers';
 import { ChainGroup, StorePickerSheet, StoreSearch } from './storePicker';
+import { ShareShopRow, SuggestShopSheet } from './suggestSheet';
 
 const MAX_ROWS = 40;
 
@@ -500,13 +501,15 @@ export function StoreFormSheet({
   target,
   initialName = '',
   initialKind = 'physical',
+  initialAddress = '',
   onClose,
   onSaved,
 }: {
   target: 'new' | CatalogStore | null;
-  /** Prefill for a new store (e.g. the shop named on a receipt). */
+  /** Prefill for a new store (e.g. the shop named on a receipt, and the area it prints). */
   initialName?: string;
   initialKind?: CatalogStore['kind'];
+  initialAddress?: string;
   onClose: () => void;
   onSaved?: (s: CatalogStore) => void;
 }) {
@@ -522,6 +525,7 @@ export function StoreFormSheet({
   const [website, setWebsite] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     const r = store?.deliveryRule;
@@ -531,14 +535,17 @@ export function StoreFormSheet({
     setFee(r && 'fee' in r ? String(r.fee) : '');
     setThreshold(r && 'threshold' in r ? String(r.threshold) : '');
     setMinOrder(r?.minOrder ? String(r.minOrder) : '');
-    setAddress(store?.address ?? '');
+    setAddress(store?.address ?? initialAddress);
     setWebsite(store?.website ?? '');
     setError('');
     setSaving(false);
+    setSharing(false);
   }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!target) return null;
   const readonly = !!store && !store.ownerId;
+  // Suggesting your shop as a shared one: its own sheet, back to this one after.
+  if (store && sharing) return <SuggestShopSheet store={store} onClose={() => setSharing(false)} />;
 
   const n = (v: string) => Math.max(0, Math.min(1e6, parseFloat(v) || 0));
   const buildRule = (): StoreDeliveryRule => {
@@ -589,9 +596,10 @@ export function StoreFormSheet({
         </Sheet>
       );
     }
-    // A shared in-store branch: where it is, and whether Where to buy compares it.
-    const inMine = compare.myStoreIds.includes(st.id);
+    // A shared in-store branch: where it is, and whether Where to buy compares it (picked,
+    // or in the default set once the user's own shop moved into it).
     const base = compare.myStoreIds.length ? compare.myStoreIds : compare.defaultStoreIds;
+    const inMine = base.includes(st.id);
     const toggleMine = async () => {
       setSaving(true);
       setError('');
@@ -654,7 +662,10 @@ export function StoreFormSheet({
         </div>
       }
     >
-      <p className="m-0 -mt-1 mb-4 text-[13px] leading-relaxed text-ink-soft">Stores you add are private — only you see them and their prices.</p>
+      <p className="m-0 -mt-1 mb-4 text-[13px] leading-relaxed text-ink-soft">
+        Stores you add are private — only you see them and their prices, unless you share a shop.
+      </p>
+      {store && kind === 'physical' && <ShareShopRow store={store} onShare={() => setSharing(true)} onError={setError} />}
       <Field label="Store name">
         <TextIn value={name} onChange={(e) => setName(e.target.value.slice(0, 80))} placeholder="e.g. Aslam Gosht" />
       </Field>

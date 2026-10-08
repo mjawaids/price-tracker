@@ -215,6 +215,7 @@ export function StorePickerSheet({
         target={adding ? 'new' : null}
         initialName={adding?.name ?? ''}
         initialKind={adding?.kind ?? 'physical'}
+        initialAddress={guess?.area ?? ''}
         onClose={() => setAdding(null)}
         onSaved={(s) => {
           setAdding(null);

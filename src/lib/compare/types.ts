@@ -67,6 +67,24 @@ export interface CurrentPrice {
   mine?: boolean;
 }
 
+/**
+ * A person's own in-store shop suggested as a shared one (spendless.branch_suggestions).
+ * open → promoted (moved into `promotedStoreId`, a shared shop) or declined.
+ */
+export interface BranchSuggestion {
+  id: string;
+  /** Their own shop; null once deleted (a promoted row still says where they moved). */
+  storeId: string | null;
+  regionId: string;
+  /** The chain or shop name, and its area: the shared shop is "<chain> · <area>". */
+  chain: string;
+  area: string;
+  status: 'open' | 'promoted' | 'declined';
+  promotedStoreId: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+}
+
 export type PreferenceMode = 'exact' | 'brand_size' | 'any_size';
 
 /** A user's "usual" for a list item name. */

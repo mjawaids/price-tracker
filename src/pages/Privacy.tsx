@@ -100,6 +100,12 @@ const Privacy: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    If you choose to share a shop you added, and enough people who shop there suggest the same shop, it becomes a
+                    shared shop: your prices there are shown with it to other SpendLess users, without your name or account, and your
+                    own copy is closed. Until then you can withdraw the suggestion. Your own products stay private.
+                  </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     Paddle processes all payments, and shares limited order information with us for account management.
                   </li>
                 </ul>

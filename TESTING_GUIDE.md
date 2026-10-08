@@ -236,6 +236,47 @@ when the installed app is opened and its manifest is a day old, or on a fresh in
 - [ ] A till receipt from Imtiaz that prints "Nazimabad" picks Imtiaz · Nazimabad; one
       that names only the chain opens *Where was this?* on the Imtiaz branches.
 
+## Shared shops (suggested by people)
+
+Use generic test accounts and shops only. The job runs as a rehearsal (rolled back)
+unless `--apply` is given.
+
+- [ ] Compare → Stores → edit one of your in-store shops: *Share this shop* (not on an
+      online shop, nor in a city without shared prices). The sheet prefills the shop's
+      name and the area its address starts with; typing "joh" offers Gulistan-e-Jauhar.
+      The preview reads "Shared as <shop> · <area>" with what's shared; the copy says
+      "enough people", never a number.
+- [ ] Picking a chain with shared shops (Imtiaz) lists them under *Already shared*;
+      "That's my shop" (or an area that matches one) turns the button into *Move my
+      shop into it*.
+- [ ] After *Suggest this shop*, the shop's sheet says "Suggested as …" with *Withdraw*
+      and its row on Stores shows *Suggested*; *Withdraw* brings *Share this shop* back.
+      A shop without a city gets the current one first. Offline, the button is disabled.
+- [ ] A receipt saved at your own shop: the "just for you" banner has *Share this shop*.
+- [ ] As a signed-in user (RLS), against a local copy of the schema: suggesting someone
+      else's, a shared, an online or a closed shop, or one in a city that isn't live, is
+      refused (42501); a second suggestion for the same shop is refused (23505); the
+      11th waiting one is refused (54000); names with "·", a web address, a phone number
+      or control characters are refused (23514); a client-sent status, user or city is
+      overridden; updates change nothing; a promoted suggestion can't be withdrawn.
+- [ ] `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/promote-suggestions.ts
+      [--min-people N]`: one person fewer than the minimum → nothing; reaching it → a new
+      shared shop; an account or shop under 7 days old, a suggestion under a day old, or
+      prices for fewer than 3 products don't count. A suggestion matching an existing
+      shared shop moves into it (once it's a day old), whatever the minimum; one matching a closed shared shop is declined.
+- [ ] After `--apply`: each person's latest prices there are copied to the shared shop
+      (`created_at` ≥ 25 h back, an outlier `pending`), their own products' prices stay
+      visible to them only, My stores swaps only where the shop was picked, planned list
+      items point at the shared shop, the private copy is closed, and a second run adds
+      nothing. A planned item set back to the old shop is re-pointed on the next run.
+- [ ] In the app afterwards: "Your shop is now shared" shows once on Prices (and Stores);
+      *See the shop* opens it with *Remove from My stores* (a user without picks has it in
+      the default set); Contribute's count doesn't double; a receipt never picks the
+      closed copy; the product page shows no prices at the closed copy.
+- [ ] `close-branch.ts --store-id <id>` (dry run, then `--apply`): the shop closes,
+      private copies reopen, picks and list items go back, suggestions are declined, and
+      the next nightly run declines new suggestions for that shop.
+
 ## Upgrading an existing account
 
 - [ ] An account with an old Compare cart gets a new list "From Compare cart" (once, with

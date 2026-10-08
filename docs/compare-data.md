@@ -18,18 +18,21 @@ from people's own entries, and from receipts. Shared prices are live in
 | Table | What it holds | Who can write |
 |---|---|---|
 | `regions` | Cities. `status`: `live` (shared prices on) or `gathering` (personal mode) | Migrations only |
-| `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `kind` `online` or `physical`; a public `physical` store is a shared in-store **branch** (`<chain> · <area>`, same `chain` as the chain's online store, no delivery). `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
+| `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `kind` `online` or `physical`; a public `physical` store is a shared in-store shop (`<chain> · <area>`, no delivery): a chain's **branch** from `scripts/seed/branches/` (same `chain` as the chain's online store), or a shop people shared (`branch_suggestions`; any shop, independent ones too). `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
 | `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`); `match_key` (set by the importer: the same product at two stores → one row; `''` = not confident, or held apart because its price is unlike the others with that key; see `docs/data-sources.md`) | Same as stores |
 | `price_reports` | **Append-only** observations: price (one pack), `observed_at`, `source`, `status`. `user_id NULL` = system source | Users add their own (user sources only); read and delete only their own; nobody updates |
 | `current_prices` | The price shown per (store, product), derived from reports; `n_reports = 0` = no price any more (tombstone) | Only the trigger |
-| `user_stores` | "My stores" (empty = the default set: the city's public online stores + your private ones; branches count only once picked) | Owner |
+| `user_stores` | "My stores" (empty = the default set: the city's public online stores + your private ones; shared in-store shops count only once picked, or once your own shop moved into one) | Owner |
+| `branch_suggestions` | A user's own in-store shop suggested as a shared one: `store_id` (theirs; NULL once deleted), `region_id`, `chain` + `area` (the shared name, plain text only), `chain_key` / `area_key` (`spendless.place_key`, set by the insert trigger), `status` `open` → `promoted` (`promoted_store_id`) or `declined`, `decided_at` | Owner adds (their own open in-store shop in a live city; at most 10 waiting) and withdraws while `open`; nobody updates; the decision is the nightly job's |
 | `item_preferences` | A user's "usual" per list item name: `mode` (`exact` / `brand_size` / `any_size`), `product_ids`, `ref_product_id` | Owner |
 | `plans` | Plans applied to a list (totals, savings) — powers "saved this month" | Owner |
 | `store_listings` | The importer's memory: each store's own product id → our product, last price, when checked, `included` (false = an aisle we leave out) | Importer only; clients can't read it |
 | `import_runs` | One row per store per import run: counts and a short status code | Importer only; clients can't read it |
 | `list_items` (+cols) | `plan_store_id`, `plan_product_id`, `plan_price`; `product_id` = product pinned on the item | Owner (synced offline like the rest of the list) |
 
-Everything a user creates is **private** unless it's explicitly promoted to public.
+Everything a user creates is **private** unless it's explicitly promoted to public —
+by an admin job with the owner's consent, or by the user suggesting their shop as a
+shared one (see "Shared shops" below).
 The existing per-user `products` / `stores` rows were copied into `catalog_*` as
 private rows with the **same ids** (their prices became `manual` reports).
 
@@ -99,6 +102,8 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
   except shared in-store branches, i.e. the city's online stores plus the user's own.
   A branch counts once the user adds it to My stores (Compare → Stores → *Choose*, or
   *Add to My stores* on the branch) — a plan shouldn't send anyone across the city.
+  A shared shop the user's own shop moved into is in the default set too (it replaced
+  their own copy), so a user without picks keeps it in plans.
   Picks that equal the default set are saved as none, so new online stores still join.
   Branch prices still show everywhere else: a product page's "Other stores", the
   Add a price and receipt store pickers.
@@ -112,8 +117,9 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
 - Analytics events carry counts only (`plan_applied`, `price_reported`,
   `cart_converted`, `receipt_read`, `receipt_failed` (with a reason like `nothing` or
   `pdf` and, for a PDF, a problem like `password`), `receipt_saved`, `receipt_undone`,
-  `receipt_shared` (files, kind, read or dismissed)) — never names, prices, ids or
-  receipt text.
+  `receipt_shared` (files, kind, read or dismissed), `branch_suggested` (whether the
+  chain was picked or typed), `branch_suggestion_withdrawn`, `shared_shop_seen`
+  (count)) — never names, prices, ids or receipt text.
 
 ## Regions
 
@@ -156,6 +162,36 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
    products behind. Medicines are the user's own private products, so their prices
    are visible to them only. What the user chose for a receipt line is remembered on
    the device only.
+5. **Shared shops** — a user can suggest one of their own in-store shops as a shared
+   one (the shop's sheet → *Share this shop*, or the receipt's "just for you" banner),
+   naming the shop or chain and its area (`src/lib/compare/areas.ts`: the city's areas
+   and the other ways people write them; names compare by `spendless.place_key`, whole
+   keys only, so "DHA Phase VIII" = "dha ph 8" but Nazimabad ≠ North Nazimabad). Every
+   night `scripts/seed/promote-suggestions.ts` (*Actions → Shared shops*) groups waiting
+   suggestions by city + chain key + area key:
+   - a shared in-store shop with the same keys exists → the suggestions **move into**
+     it (no minimum: it's already shared);
+   - a *closed* shared shop has those keys → they're **declined** (it was removed);
+   - else, once enough different people (`SHARED_BRANCHES_MIN_PEOPLE`) count, a new
+     shared shop `<chain> · <area>` is made (fixed id from its keys; at most 5 a run).
+     A person counts when their account is at least 7 days old (email confirmed, not
+     anonymous, banned or deleted — `auth.users` is shared with other apps), their shop
+     was added at least 7 days ago, and they have accepted prices for at least 3
+     products there in the last 60 days.
+   A suggestion moves only after a day (time to withdraw it). Moving copies the
+   person's latest accepted price per product there (last 60 days) to the shared shop as
+   **new** `price_reports` rows — keeping their `user_id`, so they can still retract
+   them, never shown with a name — with `created_at` at least 25 hours back (copies
+   never count toward the daily limit) and fixed ids (re-runs add nothing). A copy more
+   than 40% from the shop's current price, or from the middle of what two or more
+   people paid, is held as `pending`. Their own products' prices stay visible to them
+   only. Then the shared shop replaces the private one in My stores (only where it was
+   picked) and on planned list items, the private copy is closed (kept, with its
+   history), and the suggestion is `promoted`. The app shows "Your shop is now shared"
+   once (Prices and Stores; seen ids in `spendless-shared-shop:<userId>`). Every run
+   also re-points planned list items an offline device wrote back to a moved shop, and
+   removes waiting suggestions whose shop was deleted or changed to online. Undo:
+   *Catalog jobs* → `close-branch` (`docs/deployment.md`).
 
 ## Roadmap
 
@@ -164,7 +200,7 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
   pending reports, reporter trust, freshness badges, "your contributions".
 - Receipt import: screenshots, photos, PDFs, pasted text and "Share to SpendLess" are
   live (Compare → Contribute → Add a receipt, read on the device), with public in-store
-  branches (Karachi); next till-receipt tuning on full-size photos, then suggested
-  branches.
+  branches (Karachi) and shops people share; next till-receipt tuning on full-size
+  photos.
 - More cities: readiness meter, promoting corroborated private stores, merging
   duplicate products, a small moderation queue.
