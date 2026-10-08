@@ -65,6 +65,10 @@ export interface CurrentPrice {
   confidence: number;
   /** True when this is the user's own latest report (it wins for them). */
   mine?: boolean;
+  /** The user's own report that's held for a check (far from the usual price): only they use it until someone else agrees. */
+  held?: boolean;
+  /** At least two people said this shared price is wrong since it was last reported: Where to buy leaves it out. */
+  disputed?: boolean;
 }
 
 /**

@@ -1,0 +1,58 @@
+# Reporter trust (see docs/compare-data.md).
+#
+# Each night: how much each person's prices count (0.5–1.2; 1 until there are enough
+# to compare), from how often they agree with other people's prices at shared stores
+# (scripts/seed/reporter-trust.ts). Weights live in spendless.reporter_trust, which
+# no client can read; the price trigger uses them the next time a price is worked out.
+# A manual run is a dry run unless "apply" is ticked (it computes and rolls back).
+# The log is public: counts only.
+#
+# GitHub turns scheduled workflows off after 60 days without repository activity;
+# re-enable it from the Actions tab (docs/deployment.md).
+
+name: Reporter trust
+
+on:
+  schedule:
+    # 02:53 Karachi time (21:53 UTC), after Shared shops and before the price import.
+    - cron: '53 21 * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Write the changes (unticked = dry run, rolled back)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reporter-trust
+  cancel-in-progress: false
+
+jobs:
+  trust:
+    name: Work out reporter trust
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Reporter trust
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          EVENT: ${{ github.event_name }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args=()
+          if [ "$EVENT" = "schedule" ] || [ "$APPLY" = "true" ]; then args+=(--apply); fi
+          node --experimental-strip-types --no-warnings scripts/seed/reporter-trust.ts "${args[@]}"

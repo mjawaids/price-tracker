@@ -32,6 +32,8 @@ Live at https://spendless.ibexoft.com
   — suggested shops become shared (nightly *Shared shops* workflow; without `--apply` it runs and rolls back)
 - `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/close-branch.ts --store-id <id> [--apply]`
   — undo a shared shop: close it, give people their own shop back (*Catalog jobs*, job `close-branch`)
+- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/reporter-trust.ts [--apply]`
+  — how much each person's prices count (nightly *Reporter trust* workflow; without `--apply` it runs and rolls back)
 - `node --experimental-strip-types scripts/import/run.ts --dry-run [--source <id>|all] [--max-pages N]` — daily store
   price import, fetch + parse only (needs `NODE_USE_ENV_PROXY=1` behind a proxy). Without `--dry-run` it needs
   `SUPABASE_DB_URL` and writes; normally run by the *Price import* workflow
@@ -57,7 +59,9 @@ Context-based (no Redux). Providers in `src/contexts/`:
   in-store branches, i.e. online stores + the user's own; a branch counts once picked,
   or once the user's own shop moved into it);
   `planFor(items)` (resolve + optimize), writes
-  (own stores/products, price reports), the one-time Compare cart → list conversion.
+  (own stores/products, price reports; `reportPrice` returns `pending` for a held price
+  (`held` on the user's own copy) and `flagged` for a "wrong price" report that made the
+  price disputed), the one-time Compare cart → list conversion.
   Receipt saves: `reportPrices` (one `spendless.save_receipt` call per receipt — new
   private products for its medicines and all its prices in one transaction, all or
   nothing; maps the daily limit / a refused row / offline to a reason), `retractReports`
@@ -307,8 +311,8 @@ are in `public`). SpendLess data must never mix with theirs:
   (`createClient(url, key, { db: { schema: DB_SCHEMA } })`, `DB_SCHEMA = 'spendless'`);
   don't create other clients without it.
 - New tables need grants in their migration (`GRANT ALL ON spendless.<t> TO anon,
-  authenticated, service_role`) plus RLS. Exception: system tables only the importer
-  uses (`store_listings`, `import_runs`) have RLS on, **no policies**, and are revoked
+  authenticated, service_role`) plus RLS. Exception: system tables only scripts use
+  (`store_listings`, `import_runs`, `reporter_trust`) have RLS on, **no policies**, and are revoked
   from `anon`/`authenticated` (granted to `service_role` only). `spendless` must stay listed in Dashboard →
   Project Settings → Integrations → **Data API** → *Exposed schemas* (the pipeline
   adds it automatically), or the API can't see it.
@@ -341,12 +345,13 @@ are in `public`). SpendLess data must never mix with theirs:
 | `catalog_stores` | id, **owner_id** (NULL = public, else private), region_id, chain, name, kind (`physical`\|`online`), address, phone, city, lat/lng, delivery_rule (+`minOrder`), website, status. Public `physical` = a shared in-store shop (`<chain> · <area>`, no delivery): a chain's branch from `scripts/seed/branches/` (same chain as its online store), or a shop people shared (independent ones too) |
 | `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into, match_key (importer: same product across stores; `''` = not confident) |
 | `price_reports` | **append-only** for users: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`). The importer moves its own latest `import` report's `observed_at` forward while a price is unchanged |
-| `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence — written only by the `refresh_current_prices` trigger; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
+| `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence, disputed (2+ people sent "wrong price" since its newest counted report: Where to buy leaves it out) — written only by the `refresh_current_prices` trigger, which also accepts a `pending` report once someone else reports within 10% of it (±14 days) and multiplies people's report weights by `reporter_trust`; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
 | *function* `save_receipt` | `spendless.save_receipt(store, observed_at, currency, items jsonb)` — a receipt's new private products (reusing same-named ones) + its price reports in one transaction; SECURITY INVOKER, EXECUTE for `authenticated` only |
 | `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
 | `branch_suggestions` | id, user_id, store_id? (their own in-store shop; SET NULL), region_id, chain, area (plain names, `chain + area ≤ 77`), chain_key, area_key (trigger-set), status (`open` \| `promoted` \| `declined`), promoted_store_id?, decided_at, created_at. Users add (own open in-store shop in a live city, ≤10 waiting; the trigger sets user, city, keys, the shared chain spelling) and withdraw while open; no updates; the nightly job decides |
 | *function* `place_key` | `spendless.place_key(text)`: how shop and area names compare ("DHA Phase VIII" = "dha ph 8"); whole keys only. Mirrored by `placeKey` in `src/lib/compare/areas.ts` |
 | `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`; one row per store per run (counts, status) |
+| `reporter_trust` | nightly job only (clients can't read): user_id, weight (0.5–1.2; no row = 1), compared, agreed — from how often a person's prices at shared stores agree with others' (`scripts/seed/reporter-trust.ts`) |
 
 **Compare catalogue (v2)**: `catalog_*`, `price_reports` and `current_prices` replace the
 per-user `products`/`stores` (their rows were copied in as private rows with the same
@@ -377,10 +382,11 @@ post-deploy migration drops them.
 | `public/share-target-sw.js`, `src/components/shell/SharedReceiptSheet.tsx` | Share to SpendLess: the service-worker handler for the manifest's `share_target` (`POST /share-receipt` → Cache Storage inbox → `/?share=receipt`) and the "Read this receipt?" sheet |
 | `src/components/screens/ReceiptScreen.tsx` | Add a receipt (+ `receiptParts.tsx`, `receiptSheets.tsx` for the reader download, paste, date, store, product and line sheets, `receiptHelpers.ts` for the review rows, store guess and save) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
-| `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product) |
+| `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product; *Wrong price?* on shared stores' prices; disputed prices listed last with a warning; your held price "Only you for now") |
 | `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Add a receipt entry), your own products |
-| `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, My stores (`StoresSheet`: online, your shops, branches by chain), store form (a branch: address, phone, *Add to My stores*), add a price (*Another store…*); product form |
+| `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, My stores (`StoresSheet`: online, your shops, branches by chain), store form (a branch: address, phone, *Add to My stores*), add a price (*Another store…*), `WrongPriceSheet` (the right price / not sold any more / just wrong = a `dispute` report); product form |
 | `src/components/screens/suggestSheet.tsx`, `src/lib/compare/areas.ts` | Share this shop (suggest a shop as a shared one), its row in the shop sheet, "Your shop is now shared"; a city's areas, `placeKey`, name checks |
+| `scripts/seed/reporter-trust.ts` (+ `.sql`) | Nightly reporter trust (`.github/workflows/reporter-trust.yml`): each person's weight from how often their prices agree with others' (≥5 comparable prices, 90 days) |
 | `scripts/seed/promote-suggestions.ts` (+ `.sql`), `scripts/seed/close-branch.ts` (+ `.sql`) | Nightly: suggested shops become shared and people's shops move in (`.github/workflows/shared-branches.yml`, variables `SHARED_BRANCHES_MIN_PEOPLE`, `SHARED_BRANCHES_PAUSED`); undo one shared shop (*Catalog jobs* → `close-branch`) |
 | `src/components/screens/storePicker.tsx` | Shared store picker (`StorePickerSheet`: Online / In a shop, search over name, chain and address, branches grouped by chain), `ChainGroup`, `StoreSearch` — used by receipts, Add a price, My stores and the Stores screen |
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
@@ -468,6 +474,8 @@ say so and propose a safe alternative.
   `SHARED_BRANCHES_PAUSED` (exactly `true` = the nightly run is a dry run only), set in
   GitHub → Settings → Secrets and variables → Actions → *Variables* (details in
   `docs/deployment.md`).
+- `.github/workflows/reporter-trust.yml`: nightly (02:53 Karachi) reporter trust
+  (`scripts/seed/reporter-trust.ts`); manual runs roll back unless *apply*.
 - `.github/workflows/price-import.yml`: daily store price import (03:17 Karachi), also
   manual with *source* / *dry run* / *max pages*. Scheduled workflows stop after 60 days
   without repo activity — re-enable from the Actions tab.
@@ -557,7 +565,8 @@ a Claude Design pass.
 - Don't add a test framework — no tests exist and none are expected
 - Don't introduce CSS Modules or styled-components
 - Don't write prices anywhere but `price_reports` (append-only; only the importer moves
-  its own `import` reports' `observed_at`) — `current_prices` is written only by its trigger
+  its own `import` reports' `observed_at`) — `current_prices` is written only by its trigger,
+  and a report's status moves `pending` → `accepted` only there (when someone else agrees)
 - Don't make the importer ignore robots.txt, hide its user agent, or work around a store's
   block (403/429/captcha/token gates) — record the store as not imported in
   `docs/data-sources.md` instead

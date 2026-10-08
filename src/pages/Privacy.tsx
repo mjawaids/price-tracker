@@ -100,6 +100,13 @@ const Privacy: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    When you say a shared price is wrong, that’s shared without your name too: when another person says so as well,
+                    the price is marked for everyone. To keep shared prices honest, prices from people whose prices often differ from
+                    what others see count for less. This is worked out automatically from the prices themselves, is never shown to
+                    anyone, and doesn’t change what you can do in the app.
+                  </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     If you choose to share a shop you added, and enough people who shop there suggest the same shop, it becomes a
                     shared shop: your prices there are shown with it to other SpendLess users, without your name or account, and your
                     own copy is closed. Until then you can withdraw the suggestion. Your own products stay private.

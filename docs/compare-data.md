@@ -21,13 +21,14 @@ from people's own entries, and from receipts. Shared prices are live in
 | `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `kind` `online` or `physical`; a public `physical` store is a shared in-store shop (`<chain> · <area>`, no delivery): a chain's **branch** from `scripts/seed/branches/` (same `chain` as the chain's online store), or a shop people shared (`branch_suggestions`; any shop, independent ones too). `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
 | `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`); `match_key` (set by the importer: the same product at two stores → one row; `''` = not confident, or held apart because its price is unlike the others with that key; see `docs/data-sources.md`) | Same as stores |
 | `price_reports` | **Append-only** observations: price (one pack), `observed_at`, `source`, `status`. `user_id NULL` = system source | Users add their own (user sources only); read and delete only their own; nobody updates |
-| `current_prices` | The price shown per (store, product), derived from reports; `n_reports = 0` = no price any more (tombstone) | Only the trigger |
+| `current_prices` | The price shown per (store, product), derived from reports; `n_reports = 0` = no price any more (tombstone); `disputed` = people say it's wrong (see below) | Only the trigger |
 | `user_stores` | "My stores" (empty = the default set: the city's public online stores + your private ones; shared in-store shops count only once picked, or once your own shop moved into one) | Owner |
 | `branch_suggestions` | A user's own in-store shop suggested as a shared one: `store_id` (theirs; NULL once deleted), `region_id`, `chain` + `area` (the shared name, plain text only), `chain_key` / `area_key` (`spendless.place_key`, set by the insert trigger), `status` `open` → `promoted` (`promoted_store_id`) or `declined`, `decided_at` | Owner adds (their own open in-store shop in a live city; at most 10 waiting) and withdraws while `open`; nobody updates; the decision is the nightly job's |
 | `item_preferences` | A user's "usual" per list item name: `mode` (`exact` / `brand_size` / `any_size`), `product_ids`, `ref_product_id` | Owner |
 | `plans` | Plans applied to a list (totals, savings) — powers "saved this month" | Owner |
 | `store_listings` | The importer's memory: each store's own product id → our product, last price, when checked, `included` (false = an aisle we leave out) | Importer only; clients can't read it |
 | `import_runs` | One row per store per import run: counts and a short status code | Importer only; clients can't read it |
+| `reporter_trust` | How much each person's prices count: `weight` 0.5–1.2 (no row = 1), `compared`, `agreed` (see "Reporter trust") | The nightly job only; clients can't read it |
 | `list_items` (+cols) | `plan_store_id`, `plan_product_id`, `plan_price`; `product_id` = product pinned on the item | Owner (synced offline like the rest of the list) |
 
 Everything a user creates is **private** unless it's explicitly promoted to public —
@@ -45,14 +46,26 @@ inserts, updates or deletes reports:
 
 - **Weighted median** of accepted, non-dispute reports from the last **30 days**;
   if there are none, the latest report stands (the app labels it as old).
-- Weight = source × recency. Source: `feed`/`receipt` 1.0, `import` 0.9,
-  `trip`/`confirm` 0.8, `manual` 0.6. Recency halves every 10 days.
+- Weight = source × recency × reporter trust. Source: `feed`/`receipt` 1.0, `import`
+  0.9, `trip`/`confirm` 0.8, `manual` 0.6. Recency halves every 10 days. Trust is the
+  person's `reporter_trust.weight` (1 without a row, and for system sources).
 - The newest report decides availability (out of stock).
 - `confidence` = the summed weight (capped at 1); `n_reports` = reports counted.
 - A pair whose last counted report is retracted (or rejected) isn't deleted: it
   becomes a **tombstone** (`n_reports = 0`, no price, `updated_at` bumped), because
   apps sync this table by `updated_at` and can't see a row that's gone. A new
   report revives it. Readers treat `n_reports = 0` as "no current price".
+- **Held prices that others agree with count.** First (at trigger depth 1 only, so its
+  own update just recomputes), a `pending` report at a changed pair becomes `accepted`
+  when someone else — another person, or the store's import (`user_id NULL`) — has an
+  accepted or pending, non-dispute report there within **10%** of it, observed within
+  **14 days** of it. Two held reports that agree accept each other. The check runs from
+  the few pending reports (`price_reports_pending_idx`), so a bulk import stays fast.
+  This is the only way a report's status changes.
+- **Disputed**: `disputed` is true when at least **2 different people** sent a
+  `dispute` report for the pair after its newest counted report (within the last 30
+  days). Any newer counted report clears it (for imported prices, the next daily
+  import, which moves its report's `observed_at` forward); a tombstone resets it.
 
 The app overlays the user's **own** latest report (last 30 days, `pending` ones
 included) when it's at least as new as the shared price, so what you entered is what
@@ -70,8 +83,29 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
 - **Corrections**: a new report for the same store and product within 10 minutes
   replaces the previous one.
 - **Outliers**: at a public store, a report more than 40% away from the current
-  price is stored as `pending` and not counted. (Corroboration and reporter trust
-  come later — see the roadmap.)
+  price is stored as `pending` and not counted until someone else agrees (see "How a
+  price is decided"). The insert returns `pending` before the statement's trigger may
+  accept it, so the app reads the status again by id (`api.settledStatus`).
+- **Disputes** (`source 'dispute'`, "Wrong price?" in the app) carry the price the
+  person was shown, skip the outlier check and never count as a price; they only mark
+  a price as disputed (above). A dispute within 10 minutes of the person's own report
+  for the pair replaces it, like any correction (the app hides "Wrong price?" on the
+  user's own prices).
+
+### Reporter trust
+
+`scripts/seed/reporter-trust.ts` + `reporter-trust.sql` run nightly
+(`.github/workflows/reporter-trust.yml`, 02:53 Karachi; a manual run rolls back unless
+*apply* is ticked; the log shows counts only). For each person, their prices at public
+stores from the last **90 days** (user sources; accepted, or held and unconfirmed for
+14+ days) are compared with **other** people's accepted prices for the same store and
+product within ±14 days (imports included). A price **agrees** when at least half of
+those are within 15% of it — a vote, so one person's wrong prices can't drag the
+reference. With fewer than **5** comparable prices the weight stays 1; otherwise
+`s = (agreed + 3) / (compared + 4)` and `weight = clamp(0.5, 1.2, 1 + 2 × (s − 0.75))`.
+People with nothing left to compare go back to 1 (row deleted). A new weight applies
+the next time a pair's price is worked out (any new report there); the job never
+touches reports. Weights are never shown, and no client can read the table.
 
 ## Matching a list item to products (`src/lib/compare/`)
 
@@ -109,6 +143,15 @@ Enforced in RLS and in `spendless.price_reports_before_insert()`:
   Add a price and receipt store pickers.
 - Prices are fetched for every store in the snapshot, branches included, a few dozen
   store ids per request so the URL stays short (`fetchPrices`, `STORE_CHUNK`).
+- **Disputed and held prices.** Where to buy (`resolve.ts`) and the lists of cheapest
+  prices (`usePriced`: Prices, Search, product rows) leave a `disputed` shared price
+  out; the user's own newer price at that store still counts. A product page still
+  lists it under its store, last, with "Some people say this is wrong" and never as
+  the best. On a shared store's price (not the user's own, not their own shop) a
+  product page offers **Wrong price?** (`WrongPriceSheet`): the right price (a normal
+  `manual` report, which may be held), "They don't sell it any more" (out of stock),
+  or "It's wrong, I don't know the price" (a `dispute` report with the shown price).
+  The user's own held report shows as theirs with "Only you for now".
 - *Use this plan* writes `plan_store_id` / `plan_product_id` / `plan_price` on each
   open item (through the offline Lists outbox) and inserts a `plans` row.
 - The old Compare cart (`shopping_lists`) is turned into a list called "From Compare
@@ -196,8 +239,9 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
 ## Roadmap
 
 - More import sources as feeds or partnerships allow (see `docs/data-sources.md`).
-- Trip capture (confirm the price when you tick an item), disputes, corroboration of
-  pending reports, reporter trust, freshness badges, "your contributions".
+- Trip capture (confirm the price when you tick an item), freshness badges, "your
+  contributions". (Held prices that others agree with, disputes and reporter trust are
+  live.)
 - Receipt import: screenshots, photos, PDFs, pasted text and "Share to SpendLess" are
   live (Compare → Contribute → Add a receipt, read on the device), with public in-store
   branches (Karachi) and shops people share; next till-receipt tuning on full-size

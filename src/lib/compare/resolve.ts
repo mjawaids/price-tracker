@@ -105,9 +105,9 @@ export function buildContext(input: {
   };
 }
 
-/** Stores (being considered) where the product has a usable price. */
+/** Stores (being considered) where the product has a usable price (not one people say is wrong). */
 const pricedAt = (ctx: ResolveContext, productId: string) =>
-  [...(ctx.prices.get(productId)?.values() || [])].filter((p) => p.isAvailable && p.price != null && p.price > 0);
+  [...(ctx.prices.get(productId)?.values() || [])].filter((p) => p.isAvailable && p.price != null && p.price > 0 && !p.disputed);
 
 /** The product most of the user's stores carry (ties: more reports). */
 function mostCarried(ctx: ResolveContext, list: ProductProfile[]): ProductProfile | null {

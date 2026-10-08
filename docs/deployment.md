@@ -115,6 +115,24 @@ the names of shops that became shared, nothing about who suggested what.
 - **GitHub disables scheduled workflows after 60 days without repository activity.**
   If it stops, open *Actions → Shared shops* and click *Enable workflow*.
 
+## Reporter trust (nightly)
+
+[`.github/workflows/reporter-trust.yml`](../.github/workflows/reporter-trust.yml) runs
+`scripts/seed/reporter-trust.ts` every night at 02:53 Karachi time (21:53 UTC) in the
+`production` environment with `SUPABASE_DB_URL`. It works out how much each person's
+prices count (0.5–1.2; 1 until they have 5 prices to compare) from how often they agree
+with other people's prices at shared stores, and writes `spendless.reporter_trust`
+(rules in `docs/compare-data.md`). One transaction; the log (public) prints counts only.
+It never changes a report: a new weight applies the next time a price is worked out.
+
+- **Run by hand:** *Actions → Reporter trust → Run workflow*. Unticked *apply* (the
+  default) computes everything and rolls it back.
+- **Turn it off:** *Actions → Reporter trust → ⋯ → Disable workflow*. Weights already
+  written stay; to make everyone count the same again, delete the table's rows (a
+  migration, through the pipeline).
+- **GitHub disables scheduled workflows after 60 days without repository activity.**
+  If it stops, open *Actions → Reporter trust* and click *Enable workflow*.
+
 ## Price import (daily)
 
 [`.github/workflows/price-import.yml`](../.github/workflows/price-import.yml) runs
