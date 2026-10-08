@@ -8,6 +8,30 @@ import { sizeLabel } from './units';
 const DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+export type AgeTone = 'fresh' | 'recent' | 'old';
+
+/**
+ * The age chip on a price, by calendar day in local time: "Today", "Yesterday",
+ * "2 days" (fresh); "5 days", "3 wks" (recent, up to 30 days); "Old · Aug", or
+ * "Old · 2025" from another year.
+ */
+export function ageChip(observedAt: string | null | undefined, now = Date.now()): { label: string; tone: AgeTone } {
+  const t = observedAt ? Date.parse(observedAt) : NaN;
+  if (Number.isNaN(t)) return { label: 'Unknown', tone: 'old' };
+  const dayOf = (ms: number) => {
+    const d = new Date(ms);
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY;
+  };
+  const days = Math.max(0, Math.round(dayOf(now) - dayOf(t)));
+  if (days === 0) return { label: 'Today', tone: 'fresh' };
+  if (days === 1) return { label: 'Yesterday', tone: 'fresh' };
+  if (days === 2) return { label: '2 days', tone: 'fresh' };
+  if (days < 14) return { label: `${days} days`, tone: 'recent' };
+  if (days <= 30) return { label: `${Math.round(days / 7)} wks`, tone: 'recent' };
+  const d = new Date(t);
+  return { label: d.getFullYear() === new Date(now).getFullYear() ? `Old · ${MONTHS[d.getMonth()]}` : `Old · ${d.getFullYear()}`, tone: 'old' };
+}
+
 /** "today", "3 days ago", "2 weeks ago", "May" — and whether it's over a month old. */
 export function freshness(observedAt: string | null | undefined, now = Date.now()): { label: string; old: boolean } {
   const t = observedAt ? Date.parse(observedAt) : NaN;

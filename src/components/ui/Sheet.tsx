@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 
-// Responsive modal: bottom sheet on mobile, centered dialog on wider screens.
+// Responsive modal: bottom sheet on mobile, centered dialog on wider screens. It grows
+// to fit its content and scrolls inside only when that is taller than the screen.
 export function Sheet({
   open,
   onClose,
@@ -69,7 +70,7 @@ export function Sheet({
           aria-labelledby={title ? titleId : undefined}
           onClick={(e) => e.stopPropagation()}
           className="bg-paper w-full flex flex-col overflow-hidden animate-sl-pop"
-          style={{ maxWidth: 460, maxHeight: '88%', borderRadius: 22, boxShadow: '0 24px 70px rgba(0,0,0,0.32)' }}
+          style={{ maxWidth: 460, maxHeight: '100%', borderRadius: 22, boxShadow: '0 24px 70px rgba(0,0,0,0.32)' }}
         >
           {title && <div className="shrink-0 px-[22px] pt-[18px] pb-3">{header}</div>}
           <div className={`flex-1 min-h-0 overflow-auto px-[22px] pt-1 ${footer ? 'pb-4' : 'pb-6'}`}>{children}</div>
@@ -92,12 +93,12 @@ export function Sheet({
         aria-labelledby={title ? titleId : undefined}
         onClick={(e) => e.stopPropagation()}
         className="bg-paper w-full flex flex-col overflow-hidden animate-sl-up safe-bottom"
-        style={{ maxHeight: '86%', borderRadius: '26px 26px 0 0', boxShadow: '0 -10px 40px rgba(0,0,0,0.18)' }}
+        style={{ maxHeight: 'calc(100% - 16px - env(safe-area-inset-top, 0px))', borderRadius: '26px 26px 0 0', boxShadow: '0 -10px 40px rgba(0,0,0,0.18)' }}
       >
         <div className="shrink-0 pt-3 pb-1 flex justify-center">
           <div style={{ width: 40, height: 5, borderRadius: 3, background: 'var(--line)' }} />
         </div>
-        {title && <div className="shrink-0 px-5 pt-1.5 pb-3">{header}</div>}
+        {title && <div className="shrink-0 px-5 pt-1 pb-2">{header}</div>}
         <div className={`flex-1 min-h-0 overflow-auto px-5 ${footer ? 'pb-4' : 'pb-6'}`}>{children}</div>
         {footer && <div className="shrink-0 border-t border-line px-5 pt-3 pb-4">{footer}</div>}
       </div>

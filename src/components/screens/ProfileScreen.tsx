@@ -5,6 +5,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useCompare } from '../../contexts/CompareContext';
+import { useContributionStats } from './contributionHelpers';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, Btn, IconName, Sheet, Toggle, ToggleTrack } from '../ui';
 import { Field, TextIn } from './manageParts';
@@ -83,42 +84,32 @@ function SwitchRow({
   sub,
   on,
   onChange,
-  soon,
   last,
 }: {
   icon: IconName;
   label: string;
   sub?: string;
   on: boolean;
-  onChange?: (v: boolean) => void;
-  /** Not built yet: shown, but can't be switched. */
-  soon?: boolean;
+  onChange: (v: boolean) => void;
   last?: boolean;
 }) {
   return (
     <button
       type="button"
       role="switch"
-      aria-checked={soon ? false : on}
-      aria-disabled={soon || undefined}
-      onClick={soon ? undefined : () => onChange?.(!on)}
+      aria-checked={on}
+      onClick={() => onChange(!on)}
       className="w-full flex items-center gap-3 text-left"
-      style={{ padding: '13px 16px', borderBottom: last ? 'none' : '1px solid var(--line)', cursor: soon ? 'default' : undefined }}
+      style={{ padding: '13px 16px', borderBottom: last ? 'none' : '1px solid var(--line)' }}
     >
-      <span
-        className="grid place-items-center shrink-0"
-        style={{ width: 38, height: 38, borderRadius: 11, background: soon ? 'var(--paper)' : 'var(--accent-wash)', boxShadow: soon ? 'inset 0 0 0 1px var(--line)' : 'none' }}
-      >
-        <Icon name={icon} size={19} color={soon ? 'var(--ink-soft)' : 'var(--accent-ink)'} stroke={2} />
+      <span className="grid place-items-center shrink-0 bg-accent-wash" style={{ width: 38, height: 38, borderRadius: 11 }}>
+        <Icon name={icon} size={19} color="var(--accent-ink)" stroke={2} />
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block font-semibold text-[15px]">
-          {label}
-          {soon && <span className="ml-1.5 font-mono text-[10.5px] tracking-[0.1em] uppercase text-ink-soft">Coming soon</span>}
-        </span>
+        <span className="block font-semibold text-[15px]">{label}</span>
         {sub && <span className="block text-[12.5px] text-ink-soft leading-snug mt-0.5">{sub}</span>}
       </span>
-      {!soon && <ToggleTrack on={on} />}
+      <ToggleTrack on={on} />
     </button>
   );
 }
@@ -391,6 +382,7 @@ export default function ProfileScreen() {
   const app = useApp();
   const { settings, updateSettings } = useSettings();
   const compare = useCompare();
+  const { stats } = useContributionStats();
   const { compact } = useBreakpoint();
   const onboarding = useOnboarding();
   const big = !compact;
@@ -445,6 +437,17 @@ export default function ProfileScreen() {
           </div>
         </div>
 
+        <Group title="Your prices">
+          <SettingRow
+            icon="heart"
+            label="Your contributions"
+            accent
+            value={stats ? `${stats.month} this month` : compare.recentReports ? `${compare.recentReports} lately` : undefined}
+            onClick={() => app.go('contributions')}
+            last
+          />
+        </Group>
+
         <Group title="Preferences">
           <SettingRow
             icon="pin"
@@ -464,7 +467,13 @@ export default function ProfileScreen() {
             on={settings.features.whereToBuy}
             onChange={(v) => updateSettings({ features: { ...settings.features, whereToBuy: v } })}
           />
-          <SwitchRow icon="history" label="Ask for prices after a trip" sub="Add what you paid in a couple of taps" on={false} soon />
+          <SwitchRow
+            icon="checkCircle"
+            label="Ask for prices while I shop"
+            sub="When you tick an item from a plan: “Was it Rs 210?” — one tap to confirm"
+            on={settings.features.askPrices}
+            onChange={(v) => updateSettings({ features: { ...settings.features, askPrices: v } })}
+          />
           <SwitchRow
             icon="receipt"
             label="Receipt import"

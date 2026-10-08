@@ -4,6 +4,9 @@ import { CatalogProduct, CatalogStore, CurrentPrice } from '../../lib/compare/ty
 import { ITEM_TYPE_BY_ID, tokens } from '../../lib/compare/itemTypes';
 import { productSize, sizeLabel, unitPrice } from '../../lib/compare/units';
 
+/** After a price is held for a check (far from the usual one at a shared store). */
+export const HELD_MESSAGE = 'Saved for you. It’s far from the usual price here, so it counts for everyone once someone else sees the same.';
+
 export const sectionLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-ink-soft';
 
 /** Available prices for a product at the stores being considered, cheapest first. */

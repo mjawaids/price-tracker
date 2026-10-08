@@ -9,7 +9,7 @@ import { Plan } from '../../lib/compare/optimizer';
 import { ResolvedItem } from '../../lib/compare/resolve';
 import { choiceLabel, deliveryLabel, deliveryNote } from '../../lib/compare/describe';
 import { storeLink } from '../../lib/links';
-import { Btn, CoachMark, EmptyState, Icon, Toast } from '../ui';
+import { AgeChip, Btn, CoachMark, EmptyState, Icon, Toast } from '../ui';
 import { ItemChoiceSheet, StoreFormSheet, StoresSheet } from './compareSheets';
 import { CompareNotice, FreshnessNote, StoreName } from './compareParts';
 import { productSizeText, sectionLabel } from './compareHelpers';
@@ -312,6 +312,7 @@ export default function PlanScreen() {
                       const r = byId.get(l.key) as ResolvedItem | undefined;
                       const product = compare.productById(l.option.productId);
                       const size = product ? productSizeText(product) : '';
+                      const seen = compare.priceAt(sp.storeId, l.option.productId)?.observedAt;
                       return (
                         <li key={l.key} className="flex items-start justify-between gap-3" style={{ padding: '8px 0' }}>
                           <button type="button" onClick={() => setChoiceFor(l.key)} className="flex-1 min-w-0 text-left">
@@ -322,7 +323,10 @@ export default function PlanScreen() {
                               {l.option.packs > 1 ? ` · ${l.option.packs} × ${compare.fmt(l.option.unitPrice)}` : ''}
                             </span>
                           </button>
-                          <span className="font-mono text-[14px] font-bold shrink-0">{compare.fmt(l.option.total)}</span>
+                          <span className="shrink-0 flex flex-col items-end gap-[3px]">
+                            <span className="font-mono text-[14px] font-bold">{compare.fmt(l.option.total)}</span>
+                            {seen && <AgeChip observedAt={seen} />}
+                          </span>
                         </li>
                       );
                     })}

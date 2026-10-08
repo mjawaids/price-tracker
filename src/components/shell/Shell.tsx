@@ -26,6 +26,7 @@ const PlanScreen = lazy(() => import('../screens/PlanScreen'));
 const ProfileScreen = lazy(() => import('../screens/ProfileScreen'));
 const ManageProducts = lazy(() => import('../screens/ManageScreens').then((m) => ({ default: m.ManageProducts })));
 const ReceiptScreen = lazy(() => import('../screens/ReceiptScreen'));
+const ContributionsScreen = lazy(() => import('../screens/ContributionsScreen'));
 const HelpSheet = lazy(() => import('./HelpSheet'));
 const RegionSheet = lazy(() => import('../screens/compareSheets').then((m) => ({ default: m.RegionSheet })));
 const SharedReceiptSheet = lazy(() => import('./SharedReceiptSheet'));
@@ -40,6 +41,7 @@ const SCREENS: Record<ScreenName, ComponentType> = {
   contribute: ContributeScreen,
   mproducts: ManageProducts,
   receipt: ReceiptScreen,
+  contributions: ContributionsScreen,
   profile: ProfileScreen,
 };
 
@@ -61,7 +63,7 @@ const NAV_SCREENS: ScreenName[] = ['lists', 'profile', 'search', ...COMPARE_TABB
 
 type CompareTab = 'prices' | 'stores' | 'contribute';
 const compareTabOf = (s: ScreenName): CompareTab =>
-  s === 'stores' ? 'stores' : s === 'contribute' || s === 'mproducts' || s === 'receipt' ? 'contribute' : 'prices';
+  s === 'stores' ? 'stores' : s === 'contribute' || s === 'mproducts' || s === 'receipt' || s === 'contributions' ? 'contribute' : 'prices';
 
 interface NavDef {
   id: ScreenName | Section;

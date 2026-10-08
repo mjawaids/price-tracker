@@ -409,6 +409,112 @@ export async function insertReport(r: {
   return (await settledStatus([row.id])).get(row.id) ?? row.status;
 }
 
+/** A price report to add in a batch (price checks while shopping, and ones sent later). */
+export interface NewReport {
+  storeId: string;
+  productId: string;
+  price: number | null;
+  currency: string | null;
+  isAvailable: boolean;
+  source: ReportSource;
+  /** When it was seen; the server's now when absent. */
+  observedAt?: string;
+}
+
+/**
+ * Several reports in one statement, each with its status once the statement finished
+ * (a held one may be accepted by the same statement). Callers send one row per store
+ * and product: a second within 10 minutes would replace the first.
+ */
+export async function insertReports(rows: NewReport[]): Promise<{ id: string; storeId: string; productId: string; status: 'accepted' | 'pending' }[]> {
+  if (!rows.length) return [];
+  const saved = check(
+    await supabase
+      .from('price_reports')
+      .insert(
+        rows.map((r) => ({
+          store_id: r.storeId,
+          product_id: r.productId,
+          price: r.price == null ? null : Math.round(r.price * 100) / 100,
+          currency: r.currency,
+          is_available: r.isAvailable,
+          source: r.source,
+          ...(r.observedAt ? { observed_at: r.observedAt } : {}),
+        })),
+      )
+      .select('id,store_id,product_id,status'),
+  ) as { id: string; store_id: string; product_id: string; status: 'accepted' | 'pending' }[];
+  const settled = await settledStatus(saved.filter((r) => r.status === 'pending').map((r) => r.id));
+  return saved.map((r) => ({ id: r.id, storeId: r.store_id, productId: r.product_id, status: settled.get(r.id) ?? r.status }));
+}
+
+// ── Your contributions ──────────────────────────────────────────────────────
+/** The user's own reports counted (spendless.my_contributions); the parts add up to `total`. */
+export interface ContributionStats {
+  total: number;
+  /** Added since the start of this month (local). */
+  month: number;
+  /** Different stores. */
+  shops: number;
+  shared: number;
+  /** Only the user for now: far from the usual price, waiting for someone to agree. */
+  held: number;
+  /** At the user's own stores. */
+  private: number;
+  outOfStock: number;
+  disputes: number;
+  other: number;
+}
+
+export async function fetchContributionStats(monthStart: Date): Promise<ContributionStats> {
+  const r = check(await supabase.rpc('my_contributions', { p_month_start: monthStart.toISOString() })) as Record<string, unknown> | null;
+  const n = (k: string) => Math.max(0, Number(r?.[k] ?? 0) || 0);
+  return {
+    total: n('total'), month: n('month'), shops: n('shops'), shared: n('shared'), held: n('held'), private: n('private'),
+    outOfStock: n('out_of_stock'), disputes: n('disputes'), other: n('other'),
+  };
+}
+
+/** One of the user's own price reports, as Your contributions lists it. */
+export interface MyReport {
+  id: string;
+  storeId: string;
+  productId: string;
+  price: number | null;
+  isAvailable: boolean;
+  observedAt: string;
+  /** null when it came from this device's copy (offline), which doesn't keep it. */
+  source: string | null;
+  status: 'accepted' | 'pending' | 'rejected';
+}
+
+/** The user's reports, newest seen first, a page at a time. */
+export async function fetchMyReports(userId: string, offset: number, limit: number): Promise<MyReport[]> {
+  const rows = check(
+    await supabase
+      .from('price_reports')
+      .select('id,store_id,product_id,price,is_available,observed_at,source,status')
+      .eq('user_id', userId)
+      .order('observed_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + limit - 1),
+  ) as { id: string; store_id: string; product_id: string; price: number | string | null; is_available: boolean; observed_at: string; source: string; status: MyReport['status'] }[];
+  return rows.map((r) => ({
+    id: r.id, storeId: r.store_id, productId: r.product_id, price: num(r.price), isAvailable: r.is_available,
+    observedAt: r.observed_at, source: r.source, status: r.status,
+  }));
+}
+
+/** Names of stores or products the snapshot doesn't hold (another city, say), by id. */
+export async function fetchNames(table: 'catalog_stores' | 'catalog_products', ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (let i = 0; i < ids.length; i += 100) {
+    const rows = check(await supabase.from(table).select('id,name').in('id', ids.slice(i, i + 100))) as { id: string; name: string }[];
+    for (const r of rows) out.set(r.id, r.name);
+  }
+  return out;
+}
+
 /** Most prices saved from one receipt (the daily limit is 500). */
 export const MAX_RECEIPT_REPORTS = 150;
 

@@ -1,7 +1,9 @@
 import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useLists } from '../../contexts/ListsContext';
-import { useCompare } from '../../contexts/CompareContext';
+import { PriceCheck, useCompare } from '../../contexts/CompareContext';
+import { CheckState, isAnswered, loadChecks, markAnswered, markDismissed } from '../../lib/compare/checkState';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useHint } from '../../hooks/useHint';
@@ -28,14 +30,20 @@ import {
 } from './listParts';
 import { groupByCategory, groupByStore } from './listHelpers';
 import { ItemSheet, ListSwitcherSheet } from './listSheets';
-import { PlanBanner, StoreSectionHeader, WhereToBuyChip } from './listCompare';
+import { PlanBanner, PriceCheckToast, StoreSectionHeader, WhereToBuyChip } from './listCompare';
+import { checkMessage, doneLately, PriceAsk, planStoreOf, priceAskFor, summaryMessage } from './priceCheckHelpers';
 import { deliveryFeeFor } from '../../lib/compare/optimizer';
 import { InstallPill } from '../shell/Install';
 
 // Compare's item sheet loads on first use (keeps Lists' start-up small).
 const ItemChoiceSheet = lazy(() => import('./compareSheets').then((m) => ({ default: m.ItemChoiceSheet })));
+// Price checks while shopping: also only when used.
+const PriceCheckSheet = lazy(() => import('./priceCheck').then((m) => ({ default: m.PriceCheckSheet })));
+const StoreDoneSheet = lazy(() => import('./priceCheck').then((m) => ({ default: m.StoreDoneSheet })));
 
 const TOAST_MS = 4500;
+/** A tick toast that asks "Was it Rs 210?" stays longer. */
+const CHECK_TOAST_MS = 8000;
 const PLACEHOLDER_MS = 3800;
 const isTouch = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 
@@ -43,6 +51,18 @@ interface ToastState {
   id: number;
   message: string;
   undo?: ListItem[];
+  /** The price question under a tick ("Was it Rs 210?"). */
+  ask?: PriceAsk;
+  busy?: boolean;
+}
+
+/** "Done at <store>": a store's part of the list is all ticked, with prices to check. */
+interface StoreSummary {
+  storeId: string;
+  storeName: string;
+  asks: PriceAsk[];
+  ticked: number;
+  already: string[];
 }
 
 const track = (action: string, details?: Record<string, unknown>) => {
@@ -56,7 +76,12 @@ export default function ListsScreen() {
   const { settings, updateSettings } = useSettings();
   const grouped = settings.groupListsByAisle !== false;
   const compare = useCompare();
+  const uid = useAuth().user?.id ?? null;
   const [choiceFor, setChoiceFor] = useState<string | null>(null);
+  const [checks, setChecks] = useState<CheckState>({});
+  useEffect(() => setChecks(uid ? loadChecks(uid) : {}), [uid]);
+  const [differentFor, setDifferentFor] = useState<PriceAsk | null>(null);
+  const [summary, setSummary] = useState<StoreSummary | null>(null);
   const [view, setView] = useState<'stores' | 'aisles'>('stores');
   const [focusStore, setFocusStore] = useState<string | null>(null);
 
@@ -75,11 +100,15 @@ export default function ListsScreen() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast((cur) => (cur?.id === toast.id ? null : cur)), TOAST_MS);
+    if (toast.busy) return;
+    const t = setTimeout(() => setToast((cur) => (cur?.id === toast.id ? null : cur)), toast.ask ? CHECK_TOAST_MS : TOAST_MS);
     return () => clearTimeout(t);
   }, [toast]);
 
-  const showToast = useCallback((message: string, undo?: ListItem[]) => setToast({ id: Date.now(), message, undo }), []);
+  const showToast = useCallback(
+    (message: string, undo?: ListItem[], ask?: PriceAsk) => setToast({ id: Date.now(), message, undo, ask }),
+    [],
+  );
 
   const add = useCallback(
     (texts: string[]) => {
@@ -105,17 +134,69 @@ export default function ListsScreen() {
     [lists, showToast],
   );
 
-  const toggle = useCallback(
-    (item: ListItem) => {
-      const prev = lists.toggle(item.id);
-      markHintSeen('tick');
-      if (prev && !prev.done) {
-        track('list_item_ticked');
-        showToast(`${item.name} is in your cart`, [prev]);
-      }
-    },
-    [lists, showToast, markHintSeen],
-  );
+  // Price checks while shopping (Profile → Shopping features → Ask for prices while I shop).
+  const listId = lists.activeList?.id ?? null;
+  const asking = settings.features.askPrices !== false && settings.features.whereToBuy !== false && !!uid && !!listId;
+
+  /**
+   * After ticking the last open item planned at a store: the summary of that store's
+   * ticked items still to check, when there are two or more (one is asked in the toast).
+   */
+  const summaryFor = (ticked: ListItem, storeId: string): StoreSummary | null => {
+    if (!listId || lists.todo.some((i) => i.id !== ticked.id && planStoreOf(compare, i) === storeId)) return null;
+    const now = Date.now();
+    const done = [
+      { ...ticked, done: true, doneAt: new Date(now).toISOString() },
+      ...lists.done.filter((i) => i.id !== ticked.id && planStoreOf(compare, i) === storeId && doneLately(i, now)),
+    ];
+    const asks = done.map((i) => priceAskFor(compare, checks, listId, i)).filter((a): a is PriceAsk => !!a);
+    if (asks.length < 2) return null;
+    return {
+      storeId,
+      storeName: asks[0].storeName,
+      asks,
+      ticked: done.length,
+      already: done.filter((i) => isAnswered(checks, listId, i.id)).map((i) => i.name),
+    };
+  };
+
+  const toggle = (item: ListItem) => {
+    const prev = lists.toggle(item.id);
+    markHintSeen('tick');
+    if (!prev || prev.done) return;
+    track('list_item_ticked');
+    const message = `${item.name} is in your cart`;
+    const ask = asking && listId ? priceAskFor(compare, checks, listId, prev) : null;
+    const sum = ask ? summaryFor(prev, ask.storeId) : null;
+    if (sum) setSummary(sum);
+    showToast(message, [prev], sum ? undefined : ask ?? undefined);
+  };
+
+  const answered = (itemIds: string[]) => {
+    if (uid && listId) setChecks(markAnswered(uid, listId, itemIds));
+  };
+
+  const confirmPrice = async (ask: PriceAsk) => {
+    setToast((cur) => (cur?.ask === ask ? { ...cur, busy: true } : cur));
+    const r = await compare.checkPrices([{ storeId: ask.storeId, productId: ask.productId, price: ask.price, isAvailable: true, source: 'confirm' }], 'tick');
+    if (r) answered([ask.itemId]);
+    showToast(checkMessage(r, ask, 'yes', compare.fmt));
+  };
+
+  const saveSummary = async (rows: PriceCheck[]) => {
+    if (!summary) return false;
+    const r = await compare.checkPrices(rows, 'summary');
+    if (!r) return false;
+    answered(summary.asks.map((a) => a.itemId));
+    setSummary(null);
+    showToast(summaryMessage(r));
+    return true;
+  };
+
+  const summaryNotNow = () => {
+    if (summary && uid && listId) setChecks(markDismissed(uid, listId, summary.storeId));
+    setSummary(null);
+  };
 
   const remove = useCallback(
     (item: ListItem) => {
@@ -212,7 +293,9 @@ export default function ListsScreen() {
     const product = item.planProductId ? compare.productById(item.planProductId) : undefined;
     if (!product || item.planPrice == null) return undefined;
     const q = formatQty(item.quantity, item.unit);
-    return { product: q ? `${q} · ${product.name}` : product.name, price: compare.fmt(item.planPrice) };
+    const storeId = item.planStoreId ? compare.movedTo(item.planStoreId) ?? item.planStoreId : null;
+    const seen = storeId ? compare.priceAt(storeId, product.id)?.observedAt : undefined;
+    return { product: q ? `${q} · ${product.name}` : product.name, price: compare.fmt(item.planPrice), seen };
   };
 
   const total = lists.items.length;
@@ -478,9 +561,24 @@ export default function ListsScreen() {
     </>
   );
 
-  const toastEl = toast && (
-    <Toast message={toast.message} actionLabel={toast.undo ? 'Undo' : undefined} onAction={undo} icon={toast.undo ? undefined : 'check'} />
-  );
+  const toastEl =
+    toast &&
+    (toast.ask ? (
+      <PriceCheckToast
+        message={toast.message}
+        ask={toast.ask}
+        busy={toast.busy}
+        fmt={compare.fmt}
+        onUndo={toast.undo ? undo : undefined}
+        onYes={() => void confirmPrice(toast.ask!)}
+        onDifferent={() => {
+          setDifferentFor(toast.ask!);
+          setToast(null);
+        }}
+      />
+    ) : (
+      <Toast message={toast.message} actionLabel={toast.undo ? 'Undo' : undefined} onAction={undo} icon={toast.undo ? undefined : 'check'} />
+    ));
 
   const sheets = (
     <>
@@ -491,6 +589,32 @@ export default function ListsScreen() {
         </Suspense>
       )}
       <ListSwitcherSheet open={switcherOpen} startCreating={!!app.params.newList} onClose={() => setSwitcherOpen(false)} />
+      {differentFor && (
+        <Suspense fallback={null}>
+          <PriceCheckSheet
+            ask={differentFor}
+            onClose={() => setDifferentFor(null)}
+            onDone={(message, ok) => {
+              if (ok) answered([differentFor.itemId]);
+              setDifferentFor(null);
+              showToast(message);
+            }}
+          />
+        </Suspense>
+      )}
+      {summary && (
+        <Suspense fallback={null}>
+          <StoreDoneSheet
+            key={summary.storeId}
+            storeName={summary.storeName}
+            asks={summary.asks}
+            ticked={summary.ticked}
+            already={summary.already}
+            onSave={saveSummary}
+            onNotNow={summaryNotNow}
+          />
+        </Suspense>
+      )}
     </>
   );
 

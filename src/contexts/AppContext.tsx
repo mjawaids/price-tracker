@@ -18,6 +18,7 @@ export type ScreenName =
   | 'contribute'
   | 'mproducts'
   | 'receipt'
+  | 'contributions'
   | 'profile';
 
 /** Top-level app sections: quick Lists (default) and price Compare. */

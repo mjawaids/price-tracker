@@ -6,8 +6,8 @@ import { useLists } from '../../contexts/ListsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { CATEGORIES, resolveCategory, catTint, catInk } from '../../lib/categories';
 import { ITEM_TYPE_BY_ID } from '../../lib/compare/itemTypes';
-import { deliveryLabel, freshness } from '../../lib/compare/describe';
-import { Btn, EmptyState, Icon, Thumb, Toast } from '../ui';
+import { deliveryLabel } from '../../lib/compare/describe';
+import { AgeChip, Btn, EmptyState, Icon, Thumb, Toast } from '../ui';
 import { StoreName } from './compareParts';
 import { productSizeText, sectionLabel, unitPriceText, usePriced } from './compareHelpers';
 import { PriceSheet, WrongPriceSheet } from './compareSheets';
@@ -63,7 +63,6 @@ export default function DetailScreen() {
   };
 
   const row = (x: (typeof mine)[number], i: number, highlight: boolean) => {
-    const f = freshness(x.price.observedAt);
     const per = unitPriceText(p, x.price.price!, compare.fmt);
     const top = highlight && i === 0 && !x.price.disputed;
     // A shared store's shared price can be called wrong; the user's own prices and shops can't.
@@ -88,9 +87,12 @@ export default function DetailScreen() {
                 </span>
               )}
             </div>
-            <div className={`text-[12px] mt-px ${f.old ? 'text-warn-ink' : 'text-ink-soft'}`}>
-              {deliveryLabel(x.store.deliveryRule, compare.fmt, x.store.kind)} · {x.price.mine ? 'your price, ' : ''}
-              {f.label}
+            <div className="flex items-center gap-1.5 min-w-0 text-[12px] mt-0.5 text-ink-soft">
+              <span className="truncate">
+                {deliveryLabel(x.store.deliveryRule, compare.fmt, x.store.kind)}
+                {x.price.mine ? ' · your price' : ''}
+              </span>
+              <AgeChip observedAt={x.price.observedAt} />
             </div>
           </div>
           <div className="text-right shrink-0">

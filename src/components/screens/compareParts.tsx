@@ -3,7 +3,7 @@ import React from 'react';
 import { useCompare } from '../../contexts/CompareContext';
 import { CatalogProduct, CatalogStore } from '../../lib/compare/types';
 import { freshness } from '../../lib/compare/describe';
-import { Icon, StoreDot, Thumb } from '../ui';
+import { AgeChip, Icon, StoreDot, Thumb } from '../ui';
 import { productSizeText, usePriced } from './compareHelpers';
 
 /** A product with its best price at your stores. */
@@ -14,6 +14,7 @@ export function ProductRow({
   dim,
   selected,
   sub,
+  age,
 }: {
   product: CatalogProduct;
   onClick?: () => void;
@@ -22,6 +23,8 @@ export function ProductRow({
   selected?: boolean;
   /** Replaces the default "Rs 210 at Imtiaz · 2 more stores" line. */
   sub?: React.ReactNode;
+  /** When the price named on a custom `sub` line was seen (the default line uses the best price's). */
+  age?: string | null;
 }) {
   const compare = useCompare();
   const priced = usePriced();
@@ -58,7 +61,10 @@ export function ProductRow({
             <span className="font-semibold text-ink-soft"> · {size}</span>
           )}
         </span>
-        <span className="text-[12.5px] text-ink-soft truncate">{line}</span>
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[12.5px] text-ink-soft truncate">{line}</span>
+          {(sub ? age : best?.price.observedAt) && <AgeChip observedAt={sub ? age : best!.price.observedAt} />}
+        </span>
       </span>
       {trailing}
     </button>

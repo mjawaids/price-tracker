@@ -8,11 +8,11 @@ import { CatalogProduct, CatalogStore, PreferenceMode, StoreDeliveryRule } from 
 import { ITEM_TYPE_BY_ID, tokens, typeFamily } from '../../lib/compare/itemTypes';
 import { expand, resolveItem } from '../../lib/compare/resolve';
 import { similarSize } from '../../lib/compare/units';
-import { deliveryLabel, freshness, itemTypeName, modeLabel } from '../../lib/compare/describe';
-import { Btn, Chip, Icon, Sheet, ToggleTrack } from '../ui';
+import { deliveryLabel, itemTypeName, modeLabel } from '../../lib/compare/describe';
+import { AgeChip, Btn, Chip, ConfirmSheet, Icon, Sheet, ToggleTrack } from '../ui';
 import { Field, NumIn, TextIn } from './manageParts';
 import { ProductRow, StoreName } from './compareParts';
-import { branchArea, groupByChain, isBranch, sectionLabel, storeMatches, toPicks, unitPriceText, usePriced } from './compareHelpers';
+import { branchArea, groupByChain, HELD_MESSAGE, isBranch, sectionLabel, storeMatches, toPicks, unitPriceText, usePriced } from './compareHelpers';
 import { ChainGroup, StorePickerSheet, StoreSearch } from './storePicker';
 import { ShareShopRow, SuggestShopSheet } from './suggestSheet';
 
@@ -224,6 +224,7 @@ export function ItemChoiceSheet({
                         .join(' · ')
                     : 'No price at your stores yet'
                 }
+                age={best?.price.observedAt}
                 trailing={
                   <span className="shrink-0 flex flex-col items-end gap-0.5">
                     {per && <span className="font-mono text-[12.5px] font-bold">{per}</span>}
@@ -498,7 +499,7 @@ function OptionRow({ on, label, desc, onClick }: { on: boolean; label: string; d
       aria-pressed={on}
       className="text-left rounded-[14px] flex items-center gap-3"
       style={{
-        padding: '12px 14px',
+        padding: '10px 14px',
         background: on ? 'var(--accent-wash)' : 'var(--surface)',
         boxShadow: on ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1.5px var(--line)',
       }}
@@ -549,6 +550,9 @@ export function StoreFormSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [sharing, setSharing] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [delError, setDelError] = useState('');
 
   useEffect(() => {
     const r = store?.deliveryRule;
@@ -563,12 +567,47 @@ export function StoreFormSheet({
     setError('');
     setSaving(false);
     setSharing(false);
+    setConfirmDel(false);
+    setDeleting(false);
+    setDelError('');
   }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!target) return null;
   const readonly = !!store && !store.ownerId;
   // Suggesting your shop as a shared one: its own sheet, back to this one after.
   if (store && sharing) return <SuggestShopSheet store={store} onClose={() => setSharing(false)} />;
+  // Deleting can't be undone (its prices go with it): asked first, in place of the form.
+  if (store && confirmDel) {
+    const n = compare.pricesAtStore(store.id).filter((p) => p.price != null).length;
+    const del = async () => {
+      setDeleting(true);
+      setDelError('');
+      const ok = await compare.deleteStore(store.id);
+      setDeleting(false);
+      if (ok) onClose();
+      else setDelError('Couldn’t delete — check your connection and try again.');
+    };
+    return (
+      <ConfirmSheet
+        open
+        title={`Delete ${store.name}?`}
+        confirmLabel="Delete store"
+        busyLabel="Deleting…"
+        busy={deleting}
+        error={delError}
+        onConfirm={() => void del()}
+        onClose={() => {
+          setConfirmDel(false);
+          setDelError('');
+        }}
+      >
+        <p className="m-0 text-[14.5px] leading-relaxed text-ink-soft">
+          {n ? `Its ${n === 1 ? 'price is' : `${n} prices are`} deleted too, and` : 'It’s deleted, and'} planned items on your lists lose this store. This
+          can’t be undone.
+        </p>
+      </ConfirmSheet>
+    );
+  }
 
   const n = (v: string) => Math.max(0, Math.min(1e6, parseFloat(v) || 0));
   const buildRule = (): StoreDeliveryRule => {
@@ -600,11 +639,6 @@ export function StoreFormSheet({
     }
     onSaved?.(row);
     onClose();
-  };
-
-  const del = async () => {
-    if (store && (await compare.deleteStore(store.id))) onClose();
-    else setError('Couldn’t delete — check your connection and try again.');
   };
 
   if (readonly) {
@@ -675,7 +709,7 @@ export function StoreFormSheet({
       footer={
         <div className="flex gap-2.5">
           {store && (
-            <Btn variant="ghost" icon="trash" onClick={() => void del()}>
+            <Btn variant="ghost" icon="trash" onClick={() => setConfirmDel(true)} disabled={!compare.online}>
               Delete
             </Btn>
           )}
@@ -750,8 +784,6 @@ export function StoreFormSheet({
 }
 
 // ── Add a price ──────────────────────────────────────────────────────────────
-/** After a price is held for a check (far from the usual one at a shared store). */
-const HELD_MESSAGE = 'Saved for you. It’s far from the usual price here, so it counts for everyone once someone else sees the same.';
 
 export function PriceSheet({
   product,
@@ -900,8 +932,8 @@ export function PriceSheet({
 type WrongKind = 'price' | 'gone' | 'wrong';
 const WRONG: { id: WrongKind; label: string; desc: string }[] = [
   { id: 'price', label: 'It’s a different price', desc: 'Add the price you saw' },
-  { id: 'gone', label: 'They don’t sell it any more', desc: 'Not on the shelf, or not stocked there now' },
-  { id: 'wrong', label: 'It’s wrong, I don’t know the price', desc: 'Once someone else says so too, it’s left out of plans' },
+  { id: 'gone', label: 'They don’t sell it any more', desc: 'Not on the shelf, or not stocked now' },
+  { id: 'wrong', label: 'It’s wrong, I don’t know the price', desc: 'Left out of plans once someone agrees' },
 ];
 
 /**
@@ -992,7 +1024,8 @@ export function WrongPriceSheet({
     >
       <div className="font-bold text-[16px] mb-1">{product.name}</div>
       <p className="m-0 mb-4 text-[13px] leading-relaxed text-ink-soft">
-        {store.name} · <span className="font-mono font-bold text-ink">{compare.fmt(shown.price)}</span> · {freshness(shown.observedAt).label}
+        {store.name} · <span className="font-mono font-bold text-ink">{compare.fmt(shown.price)}</span>
+        <AgeChip observedAt={shown.observedAt} className="ml-1.5 align-middle" />
       </p>
       <Field label="What’s wrong?" group>
         <div className="flex flex-col gap-2">

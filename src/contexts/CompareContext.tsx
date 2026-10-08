@@ -12,6 +12,8 @@ import { buildContext, resolveItem, ResolvedItem, ResolveContext } from '../lib/
 import { buildPlans, PlanSet } from '../lib/compare/optimizer';
 import { BranchSuggestion, CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, PreferenceMode, Region } from '../lib/compare/types';
 import { cleanPlace } from '../lib/compare/areas';
+import { dropFromQueue, pushQueue, readQueue, clearQueue } from '../lib/compare/priceQueue';
+import { clearChecks } from '../lib/compare/checkState';
 import { ITEM_TYPE_BY_ID } from '../lib/compare/itemTypes';
 import { CATEGORIES, resolveCategory } from '../lib/categories';
 import { trackUserAction } from '../utils/analytics';
@@ -114,6 +116,8 @@ interface CompareApi {
   }) => Promise<'accepted' | 'pending' | 'flagged' | null>;
   /** Prices at one store: shared, with the user's own newer reports on top. */
   pricesAtStore: (storeId: string) => CurrentPrice[];
+  /** The user's own reports kept on this device (last 30 days, no "wrong price" ones, newest first). */
+  ownReports: CurrentPrice[];
   /** The user's own reports at one store (last 30 days, newest first). */
   ownReportsAt: (storeId: string) => CurrentPrice[];
   /**
@@ -122,13 +126,34 @@ interface CompareApi {
    * the same name is reused). A refused save leaves no new products behind.
    */
   reportPrices: (storeId: string, rows: api.ReceiptPrice[], observedAt: string | null) => Promise<ReceiptSaveResult>;
-  /** Undo a receipt: delete its reports and re-read those prices. */
-  retractReports: (storeId: string, ids: string[], productIds: string[]) => Promise<boolean>;
+  /** Undo a receipt, or remove one of your prices: delete the reports and re-read those prices. */
+  retractReports: (storeId: string, ids: string[], productIds: string[], reason?: 'receipt' | 'removed') => Promise<boolean>;
+  /**
+   * Price checks while shopping: the price shown was right (`confirm`), different or
+   * not there (`trip`). Sent at once when online, else kept on this device and sent
+   * when the app is back online. null: refused or failed.
+   */
+  checkPrices: (rows: PriceCheck[], from: 'tick' | 'summary') => Promise<CheckResult | null>;
   refresh: (force?: boolean) => Promise<void>;
   /** Set when the old Compare cart was turned into a list on this device. */
   convertedCart: { listId: string; count: number } | null;
   /** Sign-out helper: delete this user's cached catalogue. */
   clearLocalData: () => Promise<void>;
+}
+
+/** One answer to "Was it Rs 210?" for a store and product (`price` null: not there). */
+export interface PriceCheck {
+  storeId: string;
+  productId: string;
+  price: number | null;
+  isAvailable: boolean;
+  source: 'confirm' | 'trip';
+}
+/** `held`: kept just for the user for now (far from the usual price); `queued`: waiting on this device. */
+export interface CheckResult {
+  saved: number;
+  held: number;
+  queued: number;
 }
 
 /** ok · offline · limit (too many waiting) · taken (already suggested) · denied (not a shop that can be shared) · invalid (the name) · error */
@@ -754,13 +779,13 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const retractReports = useCallback<CompareApi['retractReports']>(
-    async (storeId, ids, productIds) => {
+    async (storeId, ids, productIds, reason = 'receipt') => {
       const done = await guard('Taking back prices', async () => {
         await api.deleteReports(ids);
         return true;
       });
       if (!done) return false;
-      track('receipt_undone', { count: ids.length });
+      track(reason === 'removed' ? 'price_removed' : 'receipt_undone', { count: ids.length });
       const uid = userIdRef.current;
       const [fresh, own] = await Promise.all([
         guard('Reading prices after undo', () => api.fetchPricesAt(storeId, productIds)),
@@ -826,8 +851,108 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [commit],
   );
 
+  // ── Price checks while shopping ─────────────────────────────────────────────
+  /** The user's new reports on top (held ones marked), and those prices read again per store. */
+  const settleChecks = useCallback(
+    async (rows: api.NewReport[], held: Set<string>) => {
+      const now = new Date().toISOString();
+      const mine: CurrentPrice[] = rows.map((r) => ({
+        storeId: r.storeId, productId: r.productId, price: r.price, currency: r.currency, isAvailable: r.isAvailable,
+        observedAt: r.observedAt ?? now, nReports: 1, confidence: 1, mine: true,
+        ...(held.has(pairKey(r.storeId, r.productId)) ? { held: true } : {}),
+      }));
+      const byStore = new Map<string, string[]>();
+      for (const r of rows) byStore.set(r.storeId, [...(byStore.get(r.storeId) ?? []), r.productId]);
+      const online = typeof navigator === 'undefined' || navigator.onLine;
+      const fresh = online
+        ? await Promise.all([...byStore].map(async ([storeId, ids]) => ({ storeId, ids: new Set(ids), res: await guard('Reading checked prices', () => api.fetchPricesAt(storeId, ids)) })))
+        : [];
+      // Read the snapshot only now, so a refresh that landed meanwhile isn't undone.
+      const cur = snapRef.current;
+      const touched = new Set(rows.map((r) => pairKey(r.storeId, r.productId)));
+      let prices = cur.prices;
+      for (const f of fresh) {
+        if (f.res) prices = [...prices.filter((p) => !(p.storeId === f.storeId && f.ids.has(p.productId))), ...f.res.prices];
+      }
+      commit({ ...cur, ownReports: [...mine, ...cur.ownReports.filter((r) => !touched.has(pairKey(r.storeId, r.productId)))].sort(newestFirst), prices });
+    },
+    [commit],
+  );
+
+  const checkPrices = useCallback<CompareApi['checkPrices']>(
+    async (rows, from) => {
+      const uid = userIdRef.current;
+      if (!uid || !rows.length) return null;
+      const currency = region?.currency ?? settingsRef.current.currency;
+      // One per store and product (a second within 10 minutes would replace the first).
+      const reports: api.NewReport[] = [...new Map(rows.map((r) => [pairKey(r.storeId, r.productId), { ...r, currency }])).values()];
+      const counts = {
+        yes: reports.filter((r) => r.source === 'confirm').length,
+        changed: reports.filter((r) => r.source === 'trip' && r.price != null).length,
+        gone: reports.filter((r) => r.price == null).length,
+      };
+      const later = async () => {
+        // Seen now; sent when back online (RLS takes up to 90 days back).
+        const at = new Date().toISOString();
+        const queued = reports.map((r) => ({ ...r, observedAt: at }));
+        pushQueue(uid, queued);
+        track('price_check', { from, ...counts, queued: queued.length });
+        await settleChecks(queued, new Set());
+        return { saved: 0, held: 0, queued: queued.length };
+      };
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return later();
+      let saved: Awaited<ReturnType<typeof api.insertReports>>;
+      try {
+        saved = await api.insertReports(reports);
+      } catch (error) {
+        const code = error instanceof api.ApiError ? error.code : null;
+        // No code: it never reached the database (connection dropped), so send it later.
+        if (!code) return later();
+        console.error('Saving price checks failed:', code);
+        return null;
+      }
+      const held = new Set(saved.filter((r) => r.status === 'pending').map((r) => pairKey(r.storeId, r.productId)));
+      track('price_check', { from, ...counts, queued: 0 });
+      await settleChecks(reports, held);
+      return { saved: saved.length, held: held.size, queued: 0 };
+    },
+    [region, settleChecks],
+  );
+
+  // Answers kept on this device go out once the app is online.
+  const flushing = useRef(false);
+  const flushQueue = useCallback(async () => {
+    const uid = userIdRef.current;
+    if (!uid || flushing.current || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    const rows = readQueue(uid);
+    if (!rows.length) return;
+    flushing.current = true;
+    try {
+      const saved = await api.insertReports(rows);
+      dropFromQueue(uid, rows);
+      track('price_check_sent', { count: saved.length });
+      await settleChecks(rows, new Set(saved.filter((r) => r.status === 'pending').map((r) => pairKey(r.storeId, r.productId))));
+    } catch (error) {
+      const code = error instanceof api.ApiError ? error.code : null;
+      // Refused (a policy, the daily limit, a store or product gone): don't retry forever.
+      if (code) {
+        dropFromQueue(uid, rows);
+        console.error('Sending saved price checks failed:', code);
+      }
+    } finally {
+      flushing.current = false;
+    }
+  }, [settleChecks]);
+
+  useEffect(() => {
+    if (ready && online && userId) void flushQueue();
+  }, [ready, online, userId, flushQueue]);
+
   const clearLocalData = useCallback(async () => {
-    if (userId) await deleteSnapshot(userId);
+    if (!userId) return;
+    clearQueue(userId);
+    clearChecks(userId);
+    await deleteSnapshot(userId);
   }, [userId]);
 
   const api_: CompareApi = {
@@ -879,11 +1004,13 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     reportPrice,
     pricesAtStore: (id) => byStore.get(id) || [],
     ownReportsAt: (id) => ownByStore.get(id) || [],
+    ownReports: snap.ownReports,
     reportPrices,
     retractReports,
     refresh,
     convertedCart,
     clearLocalData,
+    checkPrices,
   };
 
   return <CompareContext.Provider value={api_}>{children}</CompareContext.Provider>;

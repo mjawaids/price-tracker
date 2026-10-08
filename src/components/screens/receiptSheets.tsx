@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useCompare } from '../../contexts/CompareContext';
-import { freshness } from '../../lib/compare/describe';
 import { tokens } from '../../lib/compare/itemTypes';
 import { tidyName } from '../../lib/compare/productName';
 import type { CatalogProduct, CatalogStore, CurrentPrice } from '../../lib/compare/types';
@@ -12,7 +11,7 @@ import { OCR_MB, saveDataOn } from '../../lib/receipt/ocr';
 import { MAX_UNIT_PRICE } from '../../lib/receipt/parse';
 import type { StoreGuess } from '../../lib/receipt/stores';
 import { MAX_CHARS } from '../../lib/receipt/text';
-import { Btn, Icon, Sheet, Toggle } from '../ui';
+import { AgeChip, Btn, Icon, Sheet, Toggle } from '../ui';
 import type { IconName } from '../ui';
 import { StoreFormSheet } from './compareSheets';
 import { StorePickerSheet as SharedStorePicker } from './storePicker';
@@ -229,10 +228,15 @@ export function StorePickerSheet({
 // ── Which product is this? ───────────────────────────────────────────────────
 const MAX_RESULTS = 20;
 
-function priceMeta(p: CurrentPrice | undefined, fmt: (n: number) => string): string | null {
-  if (!p || p.price == null) return null;
-  const f = freshness(p.observedAt);
-  return `${fmt(p.price)} here · ${f.old ? `seen in ${f.label}` : f.label}`;
+/** "Rs 210 here" with the price's age chip, or the fallback text. */
+function PriceMeta({ p, fmt, fallback }: { p: CurrentPrice | undefined; fmt: (n: number) => string; fallback: string }) {
+  if (!p || p.price == null) return <span className="block text-[12.5px] text-ink-soft truncate">{fallback}</span>;
+  return (
+    <span className="flex items-center gap-1.5 min-w-0 text-[12.5px] text-ink-soft">
+      <span className="truncate">{fmt(p.price)} here</span>
+      <AgeChip observedAt={p.observedAt} />
+    </span>
+  );
 }
 
 export function ChooseProductSheet({
@@ -289,7 +293,6 @@ export function ChooseProductSheet({
   const raw = line.item.lines.join(' ') || line.item.name;
   const option = (p: CatalogProduct) => {
     const size = productSizeText(p);
-    const meta = priceMeta(prices.get(p.id), compare.fmt) ?? (p.ownerId ? 'Your product' : size || 'Not priced here yet');
     return (
       <label
         key={p.id}
@@ -299,7 +302,7 @@ export function ChooseProductSheet({
         <input type="radio" name="receipt-product" checked={picked === p.id} onChange={() => setPicked(p.id)} className="m-0 shrink-0" style={{ width: 20, height: 20, accentColor: 'var(--accent)' }} />
         <span className="flex-1 min-w-0">
           <span className="block font-bold text-[14.5px] leading-snug line-clamp-2">{p.name}</span>
-          <span className="block text-[12.5px] text-ink-soft truncate">{meta}</span>
+          <PriceMeta p={prices.get(p.id)} fmt={compare.fmt} fallback={p.ownerId ? 'Your product' : size || 'Not priced here yet'} />
         </span>
       </label>
     );
@@ -426,7 +429,6 @@ export function EditRowSheet({
       : line.item.discountPct
         ? `That’s after the ${line.item.discountPct}% off on the receipt.`
         : null;
-  const here = product ? priceMeta(prices.get(product.id), compare.fmt) : null;
 
   return (
     <Sheet
@@ -456,7 +458,11 @@ export function EditRowSheet({
       >
         <span className="flex-1 min-w-0">
           <span className="block font-bold text-[14.5px] leading-snug line-clamp-2">{product?.name ?? (medicine ? tidyName(line.item.name) : 'Choose the product')}</span>
-          <span className="block text-[12.5px] text-ink-soft truncate">{product ? here ?? (product.ownerId ? 'Your product' : 'Not priced here yet') : medicine ? 'Saved as your own product' : 'Not chosen yet'}</span>
+          {product ? (
+            <PriceMeta p={prices.get(product.id)} fmt={compare.fmt} fallback={product.ownerId ? 'Your product' : 'Not priced here yet'} />
+          ) : (
+            <span className="block text-[12.5px] text-ink-soft truncate">{medicine ? 'Saved as your own product' : 'Not chosen yet'}</span>
+          )}
         </span>
         <span className="shrink-0 font-extrabold text-[13.5px] text-accent-ink">Change</span>
       </button>

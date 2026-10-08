@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { ListItem } from '../../types';
 import { formatQty } from '../../utils/quickAdd';
 import { SyncStatus } from '../../lib/offline/sync';
-import { Icon } from '../ui';
+import { AgeChip, Icon } from '../ui';
 import { buzz, categoryMeta } from './listHelpers';
 
 const sectionLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-ink-soft';
@@ -87,7 +87,7 @@ export function ItemRow({
   /** Show the aisle under the name (ungrouped list, where there are no aisle headings). */
   showAisle?: boolean;
   /** Planned product under the name, and its price on the right (store sections). */
-  planned?: { product: string; price: string };
+  planned?: { product: string; price: string; seen?: string };
 }) {
   const [dx, setDx] = useState(0);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -213,7 +213,10 @@ export function ItemRow({
           )}
         </button>
         {planned && (
-          <span className={`shrink-0 font-mono text-[13px] font-bold ml-2 ${item.done ? 'text-ink-soft' : 'text-ink'}`}>{planned.price}</span>
+          <span className="shrink-0 flex flex-col items-end gap-[3px] ml-2">
+            <span className={`font-mono text-[13px] font-bold ${item.done ? 'text-ink-soft' : 'text-ink'}`}>{planned.price}</span>
+            {planned.seen && <AgeChip observedAt={planned.seen} />}
+          </span>
         )}
         {qty &&
           !planned &&
