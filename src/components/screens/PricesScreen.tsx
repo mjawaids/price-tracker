@@ -22,10 +22,10 @@ export default function PricesScreen() {
   const [cityOpen, setCityOpen] = useState(false);
   const pad = compact ? '0 16px' : '0 28px';
 
-  // Products priced at your stores, per canonical category.
+  // Products priced at your stores (not by a price people say is wrong), per canonical category.
   const pricedProducts = useMemo(() => {
     const considered = new Set(compare.consideredStores.map((s) => s.id));
-    return compare.products.filter((p) => compare.pricesFor(p.id).some((x) => considered.has(x.storeId) && x.isAvailable && x.price));
+    return compare.products.filter((p) => compare.pricesFor(p.id).some((x) => considered.has(x.storeId) && x.isAvailable && x.price && !x.disputed));
     // pricesFor reads the latest prices.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compare.products, compare.consideredStores, compare.resolveContext]);

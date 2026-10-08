@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CatalogStore } from '../../lib/compare/types';
 import { useApp } from '../../contexts/AppContext';
 import { useCompare } from '../../contexts/CompareContext';
 import { useLists } from '../../contexts/ListsContext';
@@ -9,7 +10,7 @@ import { deliveryLabel, freshness } from '../../lib/compare/describe';
 import { Btn, EmptyState, Icon, Thumb, Toast } from '../ui';
 import { StoreName } from './compareParts';
 import { productSizeText, sectionLabel, unitPriceText, usePriced } from './compareHelpers';
-import { PriceSheet } from './compareSheets';
+import { PriceSheet, WrongPriceSheet } from './compareSheets';
 
 const OTHERS_SHOWN = 6;
 const OUT_SHOWN = 3;
@@ -23,6 +24,7 @@ export default function DetailScreen() {
   const big = !compact;
   const p = compare.productById(String(app.params.id ?? ''));
   const [priceOpen, setPriceOpen] = useState(false);
+  const [wrongAt, setWrongAt] = useState<CatalogStore | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [allOthers, setAllOthers] = useState(false);
   useEffect(() => setAllOthers(false), [p?.id]);
@@ -37,14 +39,16 @@ export default function DetailScreen() {
     return <EmptyState icon="box" title="Product not found" body="It may have been removed, or it isn’t sold in your city." cta="Back to prices" onCta={back} />;
   }
 
-  const mine = priced(p.id);
+  // Prices people say are wrong stay listed here (last, marked), but never as the best.
+  const mine = priced(p.id, false, true);
   const considered = new Set(mine.map((x) => x.store.id));
-  const others = priced(p.id, true).filter((x) => !considered.has(x.store.id));
+  const others = priced(p.id, true, true).filter((x) => !considered.has(x.store.id));
+  const counted = mine.filter((x) => !x.price.disputed);
   const outOfStock = compare.pricesFor(p.id).filter((x) => !x.isAvailable && compare.storeById(x.storeId));
   // A city with many branches can price one product at dozens of stores: show the cheapest few.
   const othersShown = allOthers ? others : others.slice(0, OTHERS_SHOWN);
   const outNames = outOfStock.map((x) => compare.storeById(x.storeId)!.name);
-  const best = mine[0];
+  const best = counted[0];
   const cat = resolveCategory(p.category ?? undefined);
   const typeName = p.itemType ? ITEM_TYPE_BY_ID.get(p.itemType)?.name : null;
   const size = productSizeText(p);
@@ -61,34 +65,61 @@ export default function DetailScreen() {
   const row = (x: (typeof mine)[number], i: number, highlight: boolean) => {
     const f = freshness(x.price.observedAt);
     const per = unitPriceText(p, x.price.price!, compare.fmt);
+    const top = highlight && i === 0 && !x.price.disputed;
+    // A shared store's shared price can be called wrong; the user's own prices and shops can't.
+    const canDispute = !x.price.mine && !x.store.ownerId;
     return (
       <div
         key={x.store.id}
-        className="flex items-center gap-3 rounded-2xl"
+        className="rounded-2xl"
         style={{
           padding: '12px 14px',
-          background: highlight && i === 0 ? 'var(--accent-wash)' : 'var(--surface)',
-          boxShadow: highlight && i === 0 ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1px var(--line)',
+          background: top ? 'var(--accent-wash)' : 'var(--surface)',
+          boxShadow: top ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1px var(--line)',
         }}
       >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <StoreName store={x.store} className="font-bold text-[15px]" />
-            {highlight && i === 0 && (
-              <span className="bg-accent text-accent-on text-[10.5px] font-extrabold rounded-full shrink-0" style={{ padding: '2px 7px' }}>
-                BEST
-              </span>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <StoreName store={x.store} className="font-bold text-[15px]" />
+              {top && (
+                <span className="bg-accent text-accent-on text-[10.5px] font-extrabold rounded-full shrink-0" style={{ padding: '2px 7px' }}>
+                  BEST
+                </span>
+              )}
+            </div>
+            <div className={`text-[12px] mt-px ${f.old ? 'text-warn-ink' : 'text-ink-soft'}`}>
+              {deliveryLabel(x.store.deliveryRule, compare.fmt, x.store.kind)} · {x.price.mine ? 'your price, ' : ''}
+              {f.label}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className={`font-mono text-[17px] font-bold ${x.price.disputed ? 'text-ink-soft' : ''}`}>{compare.fmt(x.price.price!)}</div>
+            {per && <div className="font-mono text-[11.5px] text-ink-soft">{per}</div>}
+          </div>
+        </div>
+        {(x.price.disputed || x.price.held || canDispute) && (
+          <div className="flex items-center gap-2 mt-2.5">
+            <div className="flex-1 min-w-0">
+              {x.price.disputed ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-warn-wash text-warn-ink text-[12px] font-bold" style={{ padding: '4px 10px' }}>
+                  <Icon name="alert" size={14} stroke={2.4} className="shrink-0" />
+                  Some people say this is wrong
+                </span>
+              ) : x.price.held ? (
+                <span className="flex items-start gap-1.5 text-[12px] leading-snug text-ink-soft">
+                  <Icon name="history" size={14} stroke={2.2} className="shrink-0 mt-px" />
+                  Only you for now — it counts for everyone once someone else sees the same price.
+                </span>
+              ) : null}
+            </div>
+            {canDispute && (
+              <Btn size="sm" variant="ghost" onClick={() => setWrongAt(x.store)} disabled={!compare.online} className="shrink-0 whitespace-nowrap">
+                Wrong price?
+              </Btn>
             )}
           </div>
-          <div className={`text-[12px] mt-px ${f.old ? 'text-warn-ink' : 'text-ink-soft'}`}>
-            {deliveryLabel(x.store.deliveryRule, compare.fmt, x.store.kind)} · {x.price.mine ? 'your price, ' : ''}
-            {f.label}
-          </div>
-        </div>
-        <div className="text-right shrink-0">
-          <div className="font-mono text-[17px] font-bold">{compare.fmt(x.price.price!)}</div>
-          {per && <div className="font-mono text-[11.5px] text-ink-soft">{per}</div>}
-        </div>
+        )}
       </div>
     );
   };
@@ -121,11 +152,13 @@ export default function DetailScreen() {
             <div className="font-mono text-[32px] font-bold tracking-[-0.04em]">{compare.fmt(best.price.price!)}</div>
             <div className="text-[13.5px] text-ink-soft">
               <span className="text-accent-ink font-bold">lowest at your stores</span>
-              {mine.length > 1 && ` · up to ${compare.fmt(mine[mine.length - 1].price.price!)}`}
+              {counted.length > 1 && ` · up to ${compare.fmt(counted[counted.length - 1].price.price!)}`}
             </div>
           </div>
         ) : (
-          <div className="mt-[18px] text-ink-soft text-sm">No price at your stores yet — add one if you’ve seen it.</div>
+          <div className="mt-[18px] text-ink-soft text-sm">
+            {mine.length ? 'Some people say the price at your stores is wrong' : 'No price at your stores yet'} — add one if you’ve seen it.
+          </div>
         )}
 
         {mine.length > 0 && (
@@ -169,6 +202,7 @@ export default function DetailScreen() {
         </Btn>
       </div>
       <PriceSheet product={priceOpen ? p : null} onClose={() => setPriceOpen(false)} onDone={setToast} />
+      <WrongPriceSheet product={p} store={wrongAt} onClose={() => setWrongAt(null)} onDone={setToast} />
       {toast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50" style={{ width: 'min(440px, calc(100vw - 32px))' }}>
           <Toast message={toast} icon="check" />

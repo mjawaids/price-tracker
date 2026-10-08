@@ -59,6 +59,7 @@ interface PriceRow {
   observed_at: string;
   n_reports: number;
   confidence: number;
+  disputed?: boolean;
   updated_at: string;
   product?: ProductRow | null;
 }
@@ -109,7 +110,11 @@ export const toProduct = (r: ProductRow): CatalogProduct => ({
 const toPrice = (r: PriceRow): CurrentPrice => ({
   storeId: r.store_id, productId: r.product_id, price: num(r.price), currency: r.currency, isAvailable: r.is_available,
   observedAt: r.observed_at, nReports: r.n_reports, confidence: r.confidence,
+  ...(r.disputed ? { disputed: true } : {}),
 });
+
+/** current_prices columns the app reads. */
+const PRICE_COLS = 'store_id,product_id,price,currency,is_available,observed_at,n_reports,confidence,disputed,updated_at';
 
 const STORE_COLS = 'id,owner_id,region_id,chain,name,kind,address,city,lat,lng,delivery_rule,website,phone,status,updated_at';
 const PRODUCT_COLS =
@@ -174,7 +179,7 @@ export async function fetchPrices(
     for (let from = 0; ; from += PAGE) {
       let q = supabase
         .from('current_prices')
-        .select(`store_id,product_id,price,currency,is_available,observed_at,n_reports,confidence,updated_at,product:catalog_products(${PRODUCT_COLS})`)
+        .select(`${PRICE_COLS},product:catalog_products(${PRODUCT_COLS})`)
         .in('store_id', chunk)
         .order('updated_at', { ascending: true })
         .order('product_id', { ascending: true })
@@ -235,6 +240,7 @@ export async function fetchOwnReports(userId: string): Promise<CurrentPrice[]> {
   return rows.map((r) => ({
     storeId: r.store_id, productId: r.product_id, price: num(r.price), currency: r.currency, isAvailable: r.is_available,
     observedAt: r.observed_at, nReports: 1, confidence: 1, mine: true,
+    ...(r.status === 'pending' ? { held: true } : {}),
   }));
 }
 
@@ -361,7 +367,21 @@ export async function deleteProductRow(id: string): Promise<void> {
   check(await supabase.from('catalog_products').delete().eq('id', id));
 }
 
-export type ReportSource = 'manual' | 'trip' | 'confirm' | 'receipt';
+/** 'dispute' = "this price is wrong" (the shown price, never counted as a price). */
+export type ReportSource = 'manual' | 'trip' | 'confirm' | 'receipt' | 'dispute';
+
+/**
+ * A report's status after its statement finished. The insert returns `pending` before
+ * the price trigger runs, and the trigger may accept it at once (someone else already
+ * agrees), so a `pending` answer is read again.
+ */
+async function settledStatus(ids: string[]): Promise<Map<string, 'accepted' | 'pending'>> {
+  const out = new Map<string, 'accepted' | 'pending'>();
+  if (!ids.length) return out;
+  const rows = check(await supabase.from('price_reports').select('id,status').in('id', ids)) as { id: string; status: 'accepted' | 'pending' }[];
+  for (const r of rows) out.set(r.id, r.status);
+  return out;
+}
 
 export async function insertReport(r: {
   storeId: string;
@@ -382,10 +402,11 @@ export async function insertReport(r: {
         is_available: r.isAvailable,
         source: r.source,
       })
-      .select('status')
+      .select('id,status')
       .single(),
-  ) as { status: 'accepted' | 'pending' };
-  return row.status;
+  ) as { id: string; status: 'accepted' | 'pending' };
+  if (row.status !== 'pending') return row.status;
+  return (await settledStatus([row.id])).get(row.id) ?? row.status;
 }
 
 /** Most prices saved from one receipt (the daily limit is 500). */
@@ -431,8 +452,10 @@ export async function saveReceipt(storeId: string, observedAt: string | null, cu
     products: { key: string; id: string; created: boolean; row: ProductRow | null }[];
     item_products: string[];
   };
+  const held = (out.reports ?? []).filter((r) => r.status === 'pending').map((r) => r.id);
+  const settled = held.length ? await settledStatus(held).catch(() => new Map<string, 'accepted' | 'pending'>()) : new Map<string, 'accepted' | 'pending'>();
   return {
-    reports: (out.reports ?? []).map((r) => ({ id: r.id, productId: r.product_id, status: r.status })),
+    reports: (out.reports ?? []).map((r) => ({ id: r.id, productId: r.product_id, status: settled.get(r.id) ?? r.status })),
     itemProducts: out.item_products ?? [],
     created: (out.products ?? []).filter((p) => p.created && p.row).map((p) => toProduct(p.row as ProductRow)),
   };
@@ -453,7 +476,7 @@ export async function fetchPricesAt(storeId: string, productIds: string[]): Prom
     const rows = check(
       await supabase
         .from('current_prices')
-        .select('store_id,product_id,price,currency,is_available,observed_at,n_reports,confidence,updated_at')
+        .select(PRICE_COLS)
         .eq('store_id', storeId)
         .in('product_id', productIds.slice(i, i + 150)),
     ) as PriceRow[];
@@ -471,7 +494,7 @@ export async function fetchPrice(storeId: string, productId: string): Promise<{ 
   const rows = check(
     await supabase
       .from('current_prices')
-      .select('store_id,product_id,price,currency,is_available,observed_at,n_reports,confidence,updated_at')
+      .select(PRICE_COLS)
       .eq('store_id', storeId)
       .eq('product_id', productId)
       .limit(1),

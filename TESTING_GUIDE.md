@@ -277,6 +277,34 @@ unless `--apply` is given.
       private copies reopen, picks and list items go back, suggestions are declined, and
       the next nightly run declines new suggestions for that shop.
 
+## Price checks (held prices, Wrong price?, reporter trust)
+
+Use generic test accounts. Against a local copy of the schema unless noted.
+
+- [ ] A price more than 40% from a shared store's current price is saved as held: the
+      toast says "Saved for you … counts for everyone once someone else sees the same",
+      the product page row says "your price" with "Only you for now", and other people
+      still see the old price.
+- [ ] A second account reports within 10% of it (within 14 days): both reports become
+      `accepted` at once and the shared price moves; the first account's row loses
+      "Only you for now" after a refresh. More than 10% apart, more than 14 days apart, or
+      the same account again: still held. An import report at about the same price
+      accepts it too.
+- [ ] Product page → *Wrong price?* (only on a shared store's price, not your own price or
+      shop; disabled offline): *It's a different price* saves a normal price (held when
+      far off); *They don't sell it any more* marks it out of stock; *It's wrong, I don't
+      know the price* says "once someone else says so too…".
+- [ ] A second account says the same price is wrong: the toast says it's now marked, the
+      row is listed last with "Some people say this is wrong" and no BEST badge, and the
+      price is left out of Where to buy, Prices and Search (the user's own newer price
+      there still counts). A newer price (or the next import's) clears it.
+- [ ] `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/reporter-trust.ts`
+      (dry run, then `--apply`): fewer than 5 comparable prices → weight 1; an account
+      whose prices match others' → up to 1.2; one whose prices are far off → down to 0.5;
+      one wrong account can't pull down people who agree with everyone else. The log
+      shows counts only. `reporter_trust` can't be read as `anon` or `authenticated`,
+      nor can they run `refresh_current_prices()`.
+
 ## Upgrading an existing account
 
 - [ ] An account with an old Compare cart gets a new list "From Compare cart" (once, with

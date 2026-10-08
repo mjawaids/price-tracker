@@ -8,7 +8,7 @@ import { CatalogProduct, CatalogStore, PreferenceMode, StoreDeliveryRule } from 
 import { ITEM_TYPE_BY_ID, tokens, typeFamily } from '../../lib/compare/itemTypes';
 import { expand, resolveItem } from '../../lib/compare/resolve';
 import { similarSize } from '../../lib/compare/units';
-import { deliveryLabel, itemTypeName, modeLabel } from '../../lib/compare/describe';
+import { deliveryLabel, freshness, itemTypeName, modeLabel } from '../../lib/compare/describe';
 import { Btn, Chip, Icon, Sheet, ToggleTrack } from '../ui';
 import { Field, NumIn, TextIn } from './manageParts';
 import { ProductRow, StoreName } from './compareParts';
@@ -489,6 +489,29 @@ export function StoresSheet({ open, onClose, onAddStore }: { open: boolean; onCl
   );
 }
 
+/** One choice of several (a radio-style row): the store's delivery, what's wrong with a price. */
+function OptionRow({ on, label, desc, onClick }: { on: boolean; label: string; desc: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className="text-left rounded-[14px] flex items-center gap-3"
+      style={{
+        padding: '12px 14px',
+        background: on ? 'var(--accent-wash)' : 'var(--surface)',
+        boxShadow: on ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1.5px var(--line)',
+      }}
+    >
+      <span aria-hidden className="shrink-0 bg-paper rounded-full" style={{ width: 18, height: 18, boxShadow: on ? '0 0 0 5px var(--accent) inset' : 'inset 0 0 0 2px var(--line)' }} />
+      <span>
+        <span className="block font-bold text-[14.5px]">{label}</span>
+        <span className="block text-[12px] text-ink-soft">{desc}</span>
+      </span>
+    </button>
+  );
+}
+
 // ── A store of your own ──────────────────────────────────────────────────────
 const RULES: { id: StoreDeliveryRule['type']; label: string; desc: string }[] = [
   { id: 'none', label: 'No delivery', desc: 'In store or pickup only' },
@@ -686,29 +709,9 @@ export function StoreFormSheet({
       )}
       <Field label="Delivery" group>
         <div className="flex flex-col gap-2">
-          {RULES.map((o) => {
-            const on = rule === o.id;
-            return (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setRule(o.id)}
-                aria-pressed={on}
-                className="text-left rounded-[14px] flex items-center gap-3"
-                style={{
-                  padding: '12px 14px',
-                  background: on ? 'var(--accent-wash)' : 'var(--surface)',
-                  boxShadow: on ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1.5px var(--line)',
-                }}
-              >
-                <span aria-hidden className="shrink-0 bg-paper rounded-full" style={{ width: 18, height: 18, boxShadow: on ? '0 0 0 5px var(--accent) inset' : 'inset 0 0 0 2px var(--line)' }} />
-                <span>
-                  <span className="block font-bold text-[14.5px]">{o.label}</span>
-                  <span className="block text-[12px] text-ink-soft">{o.desc}</span>
-                </span>
-              </button>
-            );
-          })}
+          {RULES.map((o) => (
+            <OptionRow key={o.id} on={rule === o.id} label={o.label} desc={o.desc} onClick={() => setRule(o.id)} />
+          ))}
         </div>
       </Field>
       {(rule === 'flat' || rule === 'over') && (
@@ -747,6 +750,9 @@ export function StoreFormSheet({
 }
 
 // ── Add a price ──────────────────────────────────────────────────────────────
+/** After a price is held for a check (far from the usual one at a shared store). */
+const HELD_MESSAGE = 'Saved for you. It’s far from the usual price here, so it counts for everyone once someone else sees the same.';
+
 export function PriceSheet({
   product,
   storeId,
@@ -812,7 +818,7 @@ export function PriceSheet({
     const shared = !compare.storeById(store)?.ownerId;
     onDone?.(
       status === 'pending'
-        ? 'Saved for you. It’s far from the usual price here, so it isn’t shared for now.'
+        ? HELD_MESSAGE
         : shared
           ? 'Thanks — price saved and shared'
           : 'Price saved',
@@ -887,5 +893,125 @@ export function PriceSheet({
         }}
       />
     </>
+  );
+}
+
+// ── "Wrong price?" on a shared store's price ─────────────────────────────────
+type WrongKind = 'price' | 'gone' | 'wrong';
+const WRONG: { id: WrongKind; label: string; desc: string }[] = [
+  { id: 'price', label: 'It’s a different price', desc: 'Add the price you saw' },
+  { id: 'gone', label: 'They don’t sell it any more', desc: 'Not on the shelf, or not stocked there now' },
+  { id: 'wrong', label: 'It’s wrong, I don’t know the price', desc: 'Once someone else says so too, it’s left out of plans' },
+];
+
+/**
+ * Says a shared store's price is wrong: with the right price (a normal report, which
+ * may be held), as out of stock, or just "wrong" (a `dispute` report: two people
+ * mark the price as disputed, and Where to buy leaves it out until a newer price).
+ */
+export function WrongPriceSheet({
+  product,
+  store,
+  onClose,
+  onDone,
+}: {
+  product: CatalogProduct;
+  store: CatalogStore | null;
+  onClose: () => void;
+  onDone?: (message: string) => void;
+}) {
+  const compare = useCompare();
+  const [kind, setKind] = useState<WrongKind | null>(null);
+  const [price, setPrice] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    setKind(null);
+    setPrice('');
+    setError('');
+    setSaving(false);
+  }, [store?.id, product.id]);
+
+  const shown = store ? compare.priceAt(store.id, product.id) : undefined;
+  if (!store || shown?.price == null) return null;
+  const at = { storeId: store.id, productId: product.id };
+
+  const pick = (k: WrongKind) => {
+    setKind(k);
+    setError('');
+  };
+
+  const save = async () => {
+    const value = parseFloat(price);
+    if (!kind) {
+      setError('Pick what’s wrong with it.');
+      return;
+    }
+    if (kind === 'price' && !(value > 0 && value < 10_000_000)) {
+      setError('Enter the price you saw.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    const status = await compare.reportPrice(
+      kind === 'price'
+        ? { ...at, price: value }
+        : kind === 'gone'
+          ? { ...at, price: null, isAvailable: false }
+          : { ...at, price: shown.price, source: 'dispute' },
+    );
+    setSaving(false);
+    if (!status) {
+      setError('Couldn’t send — check your connection and try again.');
+      return;
+    }
+    onDone?.(
+      kind === 'price'
+        ? status === 'pending'
+          ? HELD_MESSAGE
+          : 'Thanks — price saved and shared'
+        : kind === 'gone'
+          ? 'Thanks — marked as out of stock there'
+          : status === 'flagged'
+            ? 'Thanks — it’s now marked as wrong and left out of plans'
+            : 'Thanks — once someone else says so too, it’s left out of plans',
+    );
+    onClose();
+  };
+
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      title="Wrong price?"
+      footer={
+        <Btn full size="lg" onClick={() => void save()} disabled={saving || !compare.online}>
+          {saving ? 'Sending…' : kind === 'price' ? 'Save price' : 'Send'}
+        </Btn>
+      }
+    >
+      <div className="font-bold text-[16px] mb-1">{product.name}</div>
+      <p className="m-0 mb-4 text-[13px] leading-relaxed text-ink-soft">
+        {store.name} · <span className="font-mono font-bold text-ink">{compare.fmt(shown.price)}</span> · {freshness(shown.observedAt).label}
+      </p>
+      <Field label="What’s wrong?" group>
+        <div className="flex flex-col gap-2">
+          {WRONG.map((o) => (
+            <OptionRow key={o.id} on={kind === o.id} label={o.label} desc={o.desc} onClick={() => pick(o.id)} />
+          ))}
+        </div>
+      </Field>
+      {kind === 'price' && (
+        <Field label="Price for one pack">
+          <NumIn currency={compare.currency} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" />
+        </Field>
+      )}
+      {error && (
+        <div role="alert" className="text-[13px] mb-2" style={{ color: 'var(--danger)' }}>
+          {error}
+        </div>
+      )}
+      <p className="m-0 text-[12.5px] leading-relaxed text-ink-soft">Your name is never shown.</p>
+    </Sheet>
   );
 }

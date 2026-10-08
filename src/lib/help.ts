@@ -59,6 +59,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       'Some online stores’ prices are read from their own websites every day or every few days.',
       'A price you add is used for you straight away (for 30 days), unless a newer one comes in from someone else.',
       'Each price shows how old it is. Prices change — if you see a different one, add it.',
+      'Price looks wrong? On a product’s page, tap Wrong price? next to a shared store’s price: add the price you saw, say they don’t sell it any more, or just say it’s wrong. When someone else says it’s wrong too, the price is marked and Where to buy leaves it out until someone adds a newer one.',
     ],
   },
   {
@@ -93,7 +94,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     body: [
       'In Compare → Contribute, find the product, pick the store and enter the price for one pack. Can’t find it? Add it as your own product.',
       'A price at a shared store helps everyone in your city. It’s shared without your name or account.',
-      'To keep shared prices honest, a price far from the usual one at a shared store is used for you only, for now. Adding a new price for the same product and store within 10 minutes replaces your last one, and you can add up to 500 prices a day.',
+      'To keep shared prices honest, a price far from the usual one at a shared store is used for you only at first. It counts for everyone once someone else sees about the same price there (another person, or the store’s own website). Adding a new price for the same product and store within 10 minutes replaces your last one, and you can add up to 500 prices a day.',
+      'Prices from people whose prices usually match what others see count a little more; prices that often don’t match count a little less. It’s worked out automatically, never shown, and everyone starts the same.',
       'Your own stores and products — and the prices you add to them — stay private, unless you share a shop (see Sharing a shop).',
       'Have a receipt? Add a whole shop’s prices in one go — see Adding a receipt.',
     ],

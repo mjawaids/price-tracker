@@ -100,7 +100,18 @@ interface CompareApi {
   uploadProductImage: (productId: string, file: File) => Promise<string | null>;
   /** Delete an image this user uploaded (anything outside their folder is left alone). */
   removeProductImage: (url: string | null | undefined) => Promise<void>;
-  reportPrice: (r: { storeId: string; productId: string; price: number | null; isAvailable?: boolean; source?: api.ReportSource }) => Promise<'accepted' | 'pending' | null>;
+  /**
+   * Add a price (or "out of stock", or with source `dispute` "this price is wrong").
+   * `pending`: held for a check, only the user sees it for now; `flagged`: a dispute
+   * that made the shared price disputed; null: not saved.
+   */
+  reportPrice: (r: {
+    storeId: string;
+    productId: string;
+    price: number | null;
+    isAvailable?: boolean;
+    source?: api.ReportSource;
+  }) => Promise<'accepted' | 'pending' | 'flagged' | null>;
   /** Prices at one store: shared, with the user's own newer reports on top. */
   pricesAtStore: (storeId: string) => CurrentPrice[];
   /** The user's own reports at one store (last 30 days, newest first). */
@@ -669,20 +680,25 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
       );
       if (!status) return null;
       track('price_reported', { source, status });
-      const mine: CurrentPrice = {
-        storeId, productId, price, currency, isAvailable, observedAt: new Date().toISOString(), nReports: 1, confidence: 1, mine: true,
-      };
+      // "This price is wrong" isn't a price of the user's own: only the shared one changes.
+      const mine: CurrentPrice | null =
+        source === 'dispute'
+          ? null
+          : {
+              storeId, productId, price, currency, isAvailable, observedAt: new Date().toISOString(), nReports: 1, confidence: 1, mine: true,
+              ...(status === 'pending' ? { held: true } : {}),
+            };
       const fresh = await guard('Reading the new price', () => api.fetchPrice(storeId, productId));
       // Read the snapshot only now, so a refresh that landed meanwhile isn't undone.
       const cur = snapRef.current;
       const others = cur.prices.filter((p) => !(p.storeId === storeId && p.productId === productId));
       commit({
         ...cur,
-        ownReports: [mine, ...cur.ownReports.filter((r) => !(r.storeId === storeId && r.productId === productId))],
+        ownReports: mine ? [mine, ...cur.ownReports.filter((r) => !(r.storeId === storeId && r.productId === productId))] : cur.ownReports,
         // A failed read keeps what we had; "no current price" removes it.
         prices: fresh ? (fresh.price ? [...others, fresh.price] : others) : cur.prices,
       });
-      return status;
+      return source === 'dispute' && fresh?.price?.disputed ? 'flagged' : status;
     },
     [commit, region],
   );
@@ -714,6 +730,7 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const priceOf = new Map(items.map((it, i) => [saved.itemProducts[i], it.price]));
       const mine: CurrentPrice[] = saved.reports.map((r) => ({
         storeId, productId: r.productId, price: priceOf.get(r.productId) ?? null, currency, isAvailable: true, observedAt: at, nReports: 1, confidence: 1, mine: true,
+        ...(r.status === 'pending' ? { held: true } : {}),
       }));
       const touched = new Set(saved.reports.map((r) => r.productId));
       const fresh = await guard('Reading the new prices', () => api.fetchPricesAt(storeId, [...touched]));

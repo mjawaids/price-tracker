@@ -10,13 +10,15 @@ export const sectionLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] u
 export function usePriced() {
   const compare = useCompare();
   const considered = new Set(compare.consideredStores.map((s) => s.id));
-  return (productId: string, all = false): { store: CatalogStore; price: CurrentPrice }[] =>
+  // A price people say is wrong is left out, as Where to buy leaves it out; with
+  // `disputed` (the product page) it's kept, after the others.
+  return (productId: string, all = false, disputed = false): { store: CatalogStore; price: CurrentPrice }[] =>
     compare
       .pricesFor(productId)
-      .filter((p) => p.isAvailable && p.price != null && p.price > 0 && (all || considered.has(p.storeId)))
+      .filter((p) => p.isAvailable && p.price != null && p.price > 0 && (all || considered.has(p.storeId)) && (disputed || !p.disputed))
       .map((price) => ({ store: compare.storeById(price.storeId)!, price }))
       .filter((x) => !!x.store)
-      .sort((a, b) => a.price.price! - b.price.price!);
+      .sort((a, b) => Number(!!a.price.disputed) - Number(!!b.price.disputed) || a.price.price! - b.price.price!);
 }
 
 /** "800 g", or the free-text unit when there's no parsed size. */

@@ -157,7 +157,7 @@ export default function ContributeScreen() {
         </div>
 
         <p className="m-0 text-[12.5px] leading-relaxed text-ink-soft">
-          Prices at shared stores are shared without your name. A price far from the usual one is used for you only, for now. Your own stores and products stay private, unless you share a shop.
+          Prices at shared stores are shared without your name. A price far from the usual one is used for you only until someone else sees the same. Your own stores and products stay private, unless you share a shop.
         </p>
       </div>
 
