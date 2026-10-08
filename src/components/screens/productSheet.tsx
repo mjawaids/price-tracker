@@ -5,7 +5,7 @@ import { CATEGORIES, resolveCategory } from '../../lib/categories';
 import { ITEM_TYPES, ITEM_TYPE_BY_ID, findTypes, tokens } from '../../lib/compare/itemTypes';
 import { parseProductName } from '../../lib/compare/productName';
 import { CatalogProduct } from '../../lib/compare/types';
-import { Btn, Chip, Icon, Sheet } from '../ui';
+import { Btn, Chip, ConfirmSheet, Icon, Sheet } from '../ui';
 import { Field, TextIn } from './manageParts';
 
 type FormUnit = 'g' | 'kg' | 'ml' | 'L' | 'pc';
@@ -61,6 +61,7 @@ export function ProductFormSheet({
   const [removeImage, setRemoveImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmDel, setConfirmDel] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export function ProductFormSheet({
     setRemoveImage(false);
     setSaving(false);
     setError('');
+    setConfirmDel(false);
     if (!product && initialName) readName(initialName, {});
     // Reset when a different product (or a new one) opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,11 +190,36 @@ export function ProductFormSheet({
   const del = async () => {
     if (!product || saving) return;
     setSaving(true);
+    setError('');
     const ok = await compare.deleteProduct(product.id);
     setSaving(false);
     if (ok) onClose();
     else setError('Couldn’t delete — check your connection and try again.');
   };
+
+  // Deleting can't be undone (its prices go with it): asked first, in place of the form.
+  if (product && confirmDel) {
+    const n = compare.pricesFor(product.id).filter((p) => p.price != null).length;
+    return (
+      <ConfirmSheet
+        open
+        title={`Delete ${product.name}?`}
+        confirmLabel="Delete product"
+        busyLabel="Deleting…"
+        busy={saving}
+        error={error}
+        onConfirm={() => void del()}
+        onClose={() => {
+          setConfirmDel(false);
+          setError('');
+        }}
+      >
+        <p className="m-0 text-[14.5px] leading-relaxed text-ink-soft">
+          {n ? `Its ${n === 1 ? 'price is' : `${n} prices are`} deleted too. ` : ''}This can’t be undone.
+        </p>
+      </ConfirmSheet>
+    );
+  }
 
   return (
     <Sheet
@@ -202,7 +229,7 @@ export function ProductFormSheet({
       footer={
         <div className="flex gap-2.5">
           {product && (
-            <Btn variant="ghost" icon="trash" onClick={() => void del()} disabled={saving}>
+            <Btn variant="ghost" icon="trash" onClick={() => setConfirmDel(true)} disabled={saving || !compare.online}>
               Delete
             </Btn>
           )}

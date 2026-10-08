@@ -85,7 +85,7 @@ export function ItemSheet({
         </div>
       }
     >
-      <div className="flex flex-col gap-[18px]">
+      <div className="flex flex-col gap-[14px]">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="item-name" className={fieldLabel}>
             Item
@@ -98,7 +98,7 @@ export function ItemSheet({
             onBlur={saveText}
             maxLength={120}
             className={`${inputCls} font-display font-extrabold text-[20px]`}
-            style={{ height: 52, padding: '0 14px' }}
+            style={{ height: 48, padding: '0 14px' }}
           />
         </div>
 
@@ -126,8 +126,7 @@ export function ItemSheet({
             >
               <Icon name="plus" size={18} stroke={2.8} />
             </button>
-          </div>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Unit">
+            <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto no-scrollbar -mr-5 pr-5" role="group" aria-label="Unit">
             {UNIT_CHOICES.map((u) => {
               const on = (item.unit || '') === u;
               return (
@@ -136,13 +135,14 @@ export function ItemSheet({
                   type="button"
                   aria-pressed={on}
                   onClick={() => lists.updateItem(item.id, { unit: u || null })}
-                  className={`rounded-full text-sm ${on ? 'bg-ink text-paper font-bold' : 'bg-surface text-ink-soft font-semibold shadow-[inset_0_0_0_1px_var(--line)]'}`}
+                  className={`shrink-0 rounded-full text-sm ${on ? 'bg-ink text-paper font-bold' : 'bg-surface text-ink-soft font-semibold shadow-[inset_0_0_0_1px_var(--line)]'}`}
                   style={{ minHeight: 40, padding: '0 14px' }}
                 >
                   {u || 'pcs'}
                 </button>
               );
             })}
+            </div>
           </div>
         </div>
 

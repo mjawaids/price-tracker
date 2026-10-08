@@ -4,6 +4,8 @@ export { Icon, GoogleIcon } from './Icon';
 export type { IconName } from './Icon';
 export { Thumb, Chip, Btn, Stepper, EmptyState, Toggle, ToggleTrack } from './primitives';
 export { Sheet } from './Sheet';
+export { ConfirmSheet } from './ConfirmSheet';
+export { AgeChip } from './AgeChip';
 export { Toast, SegmentedControl, CoachMark, TipRow } from './feedback';
 
 /** Store kind dot: rounded-square for online, circle for physical. */

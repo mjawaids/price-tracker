@@ -107,7 +107,7 @@ service worker.
 - [ ] Renaming a planned item clears its plan and pinned product.
 - [ ] Offline: the plan still opens from saved prices, with an offline note.
 - [ ] Profile → Shopping features → Where to buy **off**: no chip, no store sections,
-      lists look as before. Ask for prices shows "Coming soon".
+      lists look as before, and ticking asks no prices.
 - [ ] The **x** on the chip turns Where to buy off (with a toast saying where to turn it on).
 
 ## Compare
@@ -304,6 +304,40 @@ Use generic test accounts. Against a local copy of the schema unless noted.
       one wrong account can't pull down people who agree with everyone else. The log
       shows counts only. `reporter_trust` can't be read as `anon` or `authenticated`,
       nor can they run `refresh_current_prices()`.
+
+## Price checks while shopping, age chips, Your contributions
+
+Use generic test accounts, on a list with a plan applied (Where to buy → Use this plan).
+
+- [ ] Tick a planned item: the toast says "<item> is in your cart · Undo" and "Was it
+      Rs 210?" with the product and store (" each" for several packs). **Yes** → "Thanks —
+      Rs 210 confirmed at <store>" (a `confirm` report). **Different** → "What did it
+      cost?": a price far from the usual one gets "Saved for you…"; "They didn't have it"
+      marks it out of stock (`trip` reports).
+- [ ] Tick a store's last open item with two or more unanswered: "Done at <store>" lists
+      them with prices and age chips. Change one, mark one "Wasn't there", then *Not now*
+      → "Discard your answers?" (*Keep editing* keeps them) → *Save N answers* → "Thanks —
+      N answers saved." *Not now* without edits: no more questions there on that list today.
+- [ ] Profile → Shopping features → *Ask for prices while I shop* off: ticking asks
+      nothing. Your own price from today isn't asked about.
+- [ ] Offline in the shop (open a price sheet once online first if the service worker
+      isn't installed yet): answering says "Saved on this device…"; back online, the
+      answers are sent (one request) and the queue in localStorage is empty. Signing out
+      deletes the queue and the answered items.
+- [ ] Age chips on product rows (Prices, Search, item choice), product pages, Where to
+      buy, list store sections and the price sheets: green Today / Yesterday / 2 days,
+      grey up to 4 wks, amber Old · <month>.
+- [ ] Compare → Contribute: the dark *Your contributions* card (this month, shared, only
+      you for now). The screen: tiles, *Where they stand* (adds up to all time), recent
+      prices by day and store with chips, *Show older*, the bin → "Remove this price?" →
+      *Remove price* → "Price removed" and the counts update. Profile → Your prices opens
+      it too. Empty account: "No prices yet". Offline: the last 30 days with "—" for all
+      time. A failed read: "Couldn't load your older prices" + *Try again*.
+- [ ] `spendless.my_contributions` as two accounts (local copy of the schema): each sees
+      only their own counts, the parts add up to the total, `anon` can't run it.
+- [ ] Deleting your own store or product asks first ("Delete <name>? … can't be undone").
+- [ ] At 375×667 and 360×640 no sheet scrolls inside: item details, What did it cost,
+      Done at <store> (also while editing), Wrong price, Remove and the confirmations.
 
 ## Upgrading an existing account
 

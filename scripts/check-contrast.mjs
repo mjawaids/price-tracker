@@ -51,6 +51,8 @@ const PAIRS = [
   ['warn-ink', 'warn-wash', 4.5],
   ['ok-ink', 'ok-wash', 4.5],
   ['ok-ink', 'surface', 4.5],
+  ['ink-soft', 'backdrop', 4.5],
+  ['on-accent', 'danger', 4.5],
   ['accent', 'paper', 3],
 ];
 

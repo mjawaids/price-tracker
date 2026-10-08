@@ -157,7 +157,43 @@ touches reports. Weights are never shown, and no client can read the table.
 - The old Compare cart (`shopping_lists`) is turned into a list called "From Compare
   cart" once per user (flag `spendless-cart-migrated:<userId>` in localStorage), after
   the user's lists have synced and only if no list with that name exists.
-- Analytics events carry counts only (`plan_applied`, `price_reported`,
+- **Price checks while shopping** (Profile → Shopping features → *Ask for prices while
+  I shop*, `features.askPrices`, on by default). Ticking an item that has a plan
+  (`plan_store_id` + `plan_product_id`, an open store, a current price) shows "Was it
+  Rs 210?" under the tick toast (`PriceCheckToast`, 8 s): **Yes** sends a `confirm`
+  report at the shown price; **Different** opens "What did it cost?"
+  (`PriceCheckSheet`) for a `trip` report (a price, or "They didn't have it" = no price,
+  unavailable). It doesn't ask about the user's own price from today. When a tick
+  leaves no open items for a store and two or more ticked ones there (last 12 hours)
+  are unanswered, "Done at <store>" (`StoreDoneSheet`) lists them: right (`confirm`),
+  changed or "wasn't there" (`trip`), one statement (`api.insertReports`, one row per
+  store and product). *Not now* (with edits: "Discard your answers?" first) stops the
+  questions for that store on that list for 12 hours. Answered items and *Not now* live
+  in `spendless-price-checks:<uid>` (localStorage, 12 h). Both paths go through
+  `CompareContext.checkPrices`; held answers get the usual "Saved for you" message.
+- **Offline answers** wait in `spendless-price-queue:<uid>` (localStorage; at most 200,
+  one per store and product, each with the time it was answered as `observed_at`; ones
+  older than 7 days are dropped) and are sent on the `online` event or when Compare
+  loads, all in one request. A request that never reached the server stays queued; if
+  the database refuses it (a policy, the daily limit, a deleted store or product), that
+  whole batch is dropped rather than retried. Both keys are
+  deleted at sign-out (`CompareContext.clearLocalData`).
+- **Age chips** (`AgeChip`, wording `ageChip()` in `describe.ts`, by local calendar day):
+  fresh "Today" / "Yesterday" / "2 days", recent "5 days" … "4 wks" (up to 30 days), old
+  "Old · Aug" / "Old · 2025". On product rows (Prices, Search, item choice), product
+  pages, Where to buy store cards, a planned list's store sections, the Wrong price and
+  price-check sheets and the receipt product picker.
+- **Your contributions** (screen `contributions`, from the Contribute card and Profile →
+  Your prices): totals from `spendless.my_contributions(p_month_start)` (SECURITY
+  INVOKER, so RLS limits it to the user's reports: total, this month (by `created_at`),
+  shops, and shared / held / private / out of stock / disputes / other, which add up),
+  recent reports from `price_reports` 30 at a time (newest seen first, grouped by day and
+  store, with a status chip), and **Remove** (asks first, then deletes the report and
+  re-reads that price). Offline or when the read fails it shows the last 30 days kept on
+  the device; removing needs a connection.
+- Analytics events carry counts only (`plan_applied`, `price_reported`, `price_check`
+  (from tick or summary: yes / changed / gone / queued counts), `price_check_sent`,
+  `price_removed`,
   `cart_converted`, `receipt_read`, `receipt_failed` (with a reason like `nothing` or
   `pdf` and, for a PDF, a problem like `password`), `receipt_saved`, `receipt_undone`,
   `receipt_shared` (files, kind, read or dismissed), `branch_suggested` (whether the
@@ -239,9 +275,9 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
 ## Roadmap
 
 - More import sources as feeds or partnerships allow (see `docs/data-sources.md`).
-- Trip capture (confirm the price when you tick an item), freshness badges, "your
-  contributions". (Held prices that others agree with, disputes and reporter trust are
-  live.)
+- Data quality is live: held prices that others agree with, disputes, reporter trust,
+  price checks while shopping, age chips and Your contributions. Next: a readiness
+  meter per city (below).
 - Receipt import: screenshots, photos, PDFs, pasted text and "Share to SpendLess" are
   live (Compare → Contribute → Add a receipt, read on the device), with public in-store
   branches (Karachi) and shops people share; next till-receipt tuning on full-size

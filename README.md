@@ -34,6 +34,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - **Use this plan** splits the same list into one section per store; *Shop here*
   shows just that store's part
 - Works offline from the prices saved on the device
+- **While you shop**: tick an item and SpendLess asks "Was it Rs 210?" — tap Yes, or
+  Different to add what you paid; when a store's part is done, the rest come up in one
+  go. Answers given offline are sent later. Off in Profile → Shopping features
 
 ### 🏷️ Prices, stores and contributing
 - Shared prices for your city where they're live (Karachi first); anywhere else,
@@ -61,6 +64,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Prices at shared stores are shared without your name; a price far from the usual one
   is kept for you only until someone else sees the same; your own stores and products
   stay private unless you share a shop
+- Every price shows how old it is (Today, 2 wks, Old · Aug)
+- **Your contributions** (Compare → Contribute): the prices you've added, where each
+  stands (shared, only you for now, private), and Remove for a mistake
 - **Wrong price?** on a product page: add the right price, say it isn't sold any more,
   or just say it's wrong — once two people say so, Where to buy leaves it out until a
   newer price comes in. Prices from people whose prices often disagree with others'
@@ -165,6 +171,7 @@ can share a Supabase project with other apps without mixing data. Tables:
   observations and the price derived from them (weighted median; held prices count once
   someone else agrees; `disputed` when two people say it's wrong)
 - **spendless.reporter_trust**: how much each person's prices count (nightly job only)
+- **spendless.my_contributions()**: a user's own price counts for Your contributions
 - **spendless.user_stores / item_preferences / plans**: a user's stores, usual
   products and applied plans
 - **spendless.products / spendless.stores / spendless.shopping_lists**: the original

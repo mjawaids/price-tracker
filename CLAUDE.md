@@ -65,7 +65,12 @@ Context-based (no Redux). Providers in `src/contexts/`:
   Receipt saves: `reportPrices` (one `spendless.save_receipt` call per receipt — new
   private products for its medicines and all its prices in one transaction, all or
   nothing; maps the daily limit / a refused row / offline to a reason), `retractReports`
-  (Undo), `pricesAtStore`, `ownReportsAt` ("Already added").
+  (receipt Undo, or removing a price from Your contributions), `pricesAtStore`,
+  `ownReportsAt` ("Already added"), `ownReports` (this device's last 30 days).
+  Price checks: `checkPrices(rows, from)` (`confirm` / `trip` reports in one statement via
+  `api.insertReports`; offline, or when the request never reached the server, kept in
+  `spendless-price-queue:<uid>` (`src/lib/compare/priceQueue.ts`) and sent on `online` /
+  load; returns saved, held and queued counts).
   Shared shops: `suggestions` (`branch_suggestions`, in the snapshot), `suggestionFor`,
   `movedTo(storeId)` (a shop that became shared → the shared one), `suggestBranch`
   (sets the shop's city first when it has none; maps refusals to a reason),
@@ -97,7 +102,14 @@ Context-based (no Redux). Providers in `src/contexts/`:
   `recordPlan` stores the savings.
 - With a plan applied the list gets a Stores/Aisles switch, store sections
   (`listCompare.tsx`, `groupByStore`), *Shop here* focus and an *Open* link for online
-  stores (`storeLink()`, http(s) only).
+  stores (`storeLink()`, http(s) only). Each planned price has an age chip.
+- Price checks while shopping (`features.askPrices`, Profile → *Ask for prices while I
+  shop*): ticking a planned item shows "Was it Rs 210?" under the tick toast
+  (`PriceCheckToast` in `listCompare.tsx`; Yes = `confirm`, Different → `PriceCheckSheet`
+  = `trip`); the last tick at a store with 2+ unanswered items opens "Done at <store>"
+  (`StoreDoneSheet`) instead. Both in `priceCheck.tsx` (lazy); which item to ask about
+  and the messages in `priceCheckHelpers.ts`; answered items and *Not now* per list in
+  `spendless-price-checks:<uid>` (`src/lib/compare/checkState.ts`, 12 hours).
 - An item's product: pinned (`list_items.product_id`, "Just this time") → usual
   (`item_preferences`) → named in the text → assumed (last bought, else most carried).
   `ItemChoiceSheet` (`compareSheets.tsx`) changes it.
@@ -276,7 +288,8 @@ planned list items, closes the private copy. `close-branch.ts` undoes a shop. Ru
 ### Navigation
 Stack-based within `AppContext`. Screen enum values: `lists`, `plan` (Where to buy,
 `{ listId }`), `prices`, `search`, `detail`, `stores`, `contribute`, `mproducts`,
-`receipt` (Add a receipt, highlighted as Contribute), `profile`.
+`receipt` (Add a receipt, highlighted as Contribute), `contributions` (Your
+contributions, highlighted as Contribute), `profile`.
 Sections (`app.section` / `app.openSection`): `lists` (default; includes `plan`),
 `compare` (opens `prices`), `profile`.
 - Mobile (<768px): bottom tab bar **Lists · Compare · Profile**; Compare has a
@@ -346,6 +359,7 @@ are in `public`). SpendLess data must never mix with theirs:
 | `catalog_products` | id, **owner_id**, name, brand, variant, item_type, category, size_value + size_unit (`g`\|`ml`\|`pc`, one unit), pack_count, unit_label, gtin, image_url, status, merged_into, match_key (importer: same product across stores; `''` = not confident) |
 | `price_reports` | **append-only** for users: user_id (NULL = system import/feed), store_id, product_id, price (one pack), is_available, observed_at, source, status (`accepted`\|`pending`\|`rejected`). The importer moves its own latest `import` report's `observed_at` forward while a price is unchanged |
 | `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence, disputed (2+ people sent "wrong price" since its newest counted report: Where to buy leaves it out) — written only by the `refresh_current_prices` trigger, which also accepts a `pending` report once someone else reports within 10% of it (±14 days) and multiplies people's report weights by `reporter_trust`; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
+| *function* `my_contributions` | `spendless.my_contributions(p_month_start)` → jsonb: the user's report counts (total, month, shops; shared / held / private / out_of_stock / disputes / other add up to total); SECURITY INVOKER (RLS keeps it to their own), EXECUTE for `authenticated` only |
 | *function* `save_receipt` | `spendless.save_receipt(store, observed_at, currency, items jsonb)` — a receipt's new private products (reusing same-named ones) + its price reports in one transaction; SECURITY INVOKER, EXECUTE for `authenticated` only |
 | `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
 | `branch_suggestions` | id, user_id, store_id? (their own in-store shop; SET NULL), region_id, chain, area (plain names, `chain + area ≤ 77`), chain_key, area_key (trigger-set), status (`open` \| `promoted` \| `declined`), promoted_store_id?, decided_at, created_at. Users add (own open in-store shop in a live city, ≤10 waiting; the trigger sets user, city, keys, the shared chain spelling) and withdraw while open; no updates; the nightly job decides |
@@ -383,7 +397,9 @@ post-deploy migration drops them.
 | `src/components/screens/ReceiptScreen.tsx` | Add a receipt (+ `receiptParts.tsx`, `receiptSheets.tsx` for the reader download, paste, date, store, product and line sheets, `receiptHelpers.ts` for the review rows, store guess and save) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
 | `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product; *Wrong price?* on shared stores' prices; disputed prices listed last with a warning; your held price "Only you for now") |
-| `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Add a receipt entry), your own products |
+| `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Your contributions card and the Add a receipt entry), your own products |
+| `src/components/screens/ContributionsScreen.tsx` (+ `contributionHelpers.ts`) | Your contributions: totals (`my_contributions`, `useContributionStats` also used by Contribute and Profile), recent prices by day and store with status chips, Show older, Remove (asks first); offline / failed: this device's last 30 days |
+| `src/components/screens/priceCheck.tsx`, `priceCheckHelpers.ts`, `src/lib/compare/priceQueue.ts`, `checkState.ts` | Price checks while shopping: "What did it cost?" and "Done at <store>" sheets; which item to ask about and the messages; answers kept offline; answered / *Not now* state |
 | `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, My stores (`StoresSheet`: online, your shops, branches by chain), store form (a branch: address, phone, *Add to My stores*), add a price (*Another store…*), `WrongPriceSheet` (the right price / not sold any more / just wrong = a `dispute` report); product form |
 | `src/components/screens/suggestSheet.tsx`, `src/lib/compare/areas.ts` | Share this shop (suggest a shop as a shared one), its row in the shop sheet, "Your shop is now shared"; a city's areas, `placeKey`, name checks |
 | `scripts/seed/reporter-trust.ts` (+ `.sql`) | Nightly reporter trust (`.github/workflows/reporter-trust.yml`): each person's weight from how often their prices agree with others' (≥5 comparable prices, 90 days) |
@@ -448,8 +464,9 @@ say so and propose a safe alternative.
   tokens in URLs. Keep sign-out clearing the cached identity, the user's offline
   lists (`AppContext.signOut` → `ListsContext.clearLocalData`, after a final sync), the
   cached catalogue (`CompareContext.clearLocalData`), recent searches, the receipt in
-  progress (`resetReceipt`), anything shared and not yet read (`clearShared`) and the
-  remembered receipt lines (`deleteReceiptMemory`).
+  progress (`resetReceipt`), anything shared and not yet read (`clearShared`), the
+  remembered receipt lines (`deleteReceiptMemory`) and the price checks kept on the
+  device (queued answers and answered items, also in `CompareContext.clearLocalData`).
 - **Privacy**: no PII or user content in analytics events, logs or error messages.
 - **Dependencies**: add packages sparingly from reputable sources; keep the lockfile
   committed; check `npm audit` when adding or upgrading; no scripts from untrusted CDNs.
@@ -518,6 +535,12 @@ and feel like it came from a strong product design team, not a default template.
 - **Every state is designed**: loading (skeletons over spinners), empty (helpful copy
   + next action), error (plain-language message + recovery), and success feedback for
   every async action.
+- **Ask before what can't be undone**: deleting a store, a product or a price, or
+  throwing away typed answers, goes through `ConfirmSheet` first (list items keep their
+  Undo toast instead).
+- **Sheets show all their content**: `Sheet` grows to fit (up to the screen) and only
+  scrolls inside when the content is taller than the screen; check new sheets at
+  375×667 and 360×640.
 - **Motion with purpose**: short, subtle transitions (150–300ms) that explain change;
   respect `prefers-reduced-motion`.
 - **Accessibility is non-negotiable**: WCAG 2.2 AA contrast, visible focus states,
@@ -536,7 +559,7 @@ and feel like it came from a strong product design team, not a default template.
   `rounded-btn`, `shadow-card`, `font-display`, `animate-slide-up`, …)
 - **Typography**: `font-display` (Bricolage Grotesque) for headings, `font-sans`
   (Hanken Grotesk) for body, `font-mono` (Space Mono) for figures where it helps
-- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx` (a labelled `role="dialog"`; optional pinned `footer` for actions), `Icon.tsx`)
+- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx` (a labelled `role="dialog"`; optional pinned `footer` for actions), `ConfirmSheet.tsx` (danger confirm), `AgeChip.tsx` (how old a price is: fresh / recent / old, wording from `describe.ageChip`), `Icon.tsx`)
   before creating new components; put new shared pieces there
 
 ### Using Claude Design

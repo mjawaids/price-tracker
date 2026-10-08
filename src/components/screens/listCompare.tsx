@@ -4,6 +4,7 @@ import { CatalogStore } from '../../lib/compare/types';
 import { deliveryFeeFor } from '../../lib/compare/optimizer';
 import { storeLink } from '../../lib/links';
 import { Icon, StoreDot } from '../ui';
+import type { PriceAsk } from './priceCheckHelpers';
 
 /** The one Compare entry point on a list. */
 export function WhereToBuyChip({
@@ -129,6 +130,81 @@ export function StoreSectionHeader({
           {focused ? 'Show all' : 'Shop here'}
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * The tick toast with a price question under it: "Bread is in your cart · Undo", then
+ * "Was it Rs 210?" with Different and Yes (Profile → Shopping features → Ask for prices
+ * while I shop).
+ */
+export function PriceCheckToast({
+  message,
+  ask,
+  busy,
+  fmt,
+  onUndo,
+  onYes,
+  onDifferent,
+}: {
+  message: string;
+  ask: PriceAsk;
+  busy?: boolean;
+  fmt: (n: number) => string;
+  onUndo?: () => void;
+  onYes: () => void;
+  onDifferent: () => void;
+}) {
+  return (
+    <div role="status" aria-live="polite" className="bg-ink text-paper rounded-[18px] overflow-hidden animate-sl-pop shadow-[0_10px_30px_rgba(41,33,24,0.25)]">
+      <div className="flex items-center gap-2.5" style={{ padding: '6px 6px 6px 16px', minHeight: 48 }}>
+        <Icon name="check" size={18} stroke={2.4} className="shrink-0" />
+        <span className="flex-1 min-w-0 text-[14.5px] font-semibold leading-snug">{message}</span>
+        {onUndo && (
+          <button
+            type="button"
+            onClick={onUndo}
+            disabled={busy}
+            className="shrink-0 font-extrabold text-[14.5px] rounded-[12px] bg-transparent disabled:opacity-60"
+            style={{ minHeight: 44, padding: '0 14px', color: 'var(--coach-chip-ink)' }}
+          >
+            Undo
+          </button>
+        )}
+      </div>
+      <div aria-hidden className="h-px" style={{ background: 'var(--coach-chip)' }} />
+      <div className="flex flex-col gap-2.5" style={{ padding: '10px 10px 10px 16px' }}>
+        <span className="min-w-0">
+          <span className="block text-[15.5px] font-extrabold">
+            Was it <span className="font-mono">{fmt(ask.price)}</span>
+            {ask.each ? ' each' : ''}?
+          </span>
+          <span className="block truncate text-[12.5px]" style={{ color: 'var(--coach-muted)' }}>
+            {ask.storeName} · {ask.productName}
+          </span>
+        </span>
+        <span className="flex gap-2">
+          <button
+            type="button"
+            onClick={onDifferent}
+            disabled={busy}
+            className="flex-1 rounded-[12px] font-extrabold text-[14px] disabled:opacity-60"
+            style={{ minHeight: 44, boxShadow: 'inset 0 0 0 1.5px var(--coach-chip)' }}
+          >
+            Different
+          </button>
+          <button
+            type="button"
+            onClick={onYes}
+            disabled={busy}
+            className="flex-1 rounded-[12px] bg-accent text-accent-on font-extrabold text-[14px] disabled:opacity-60"
+            style={{ minHeight: 44 }}
+          >
+            {busy ? 'Saving…' : 'Yes'}
+          </button>
+        </span>
+      </div>
     </div>
   );
 }

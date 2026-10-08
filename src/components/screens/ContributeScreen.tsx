@@ -8,6 +8,7 @@ import { CatalogProduct } from '../../lib/compare/types';
 import { useReceipt } from '../../lib/receipt/session';
 import { Icon, Toast } from '../ui';
 import { ManageHeader } from './manageParts';
+import { useContributionStats } from './contributionHelpers';
 import { CompareNotice, ProductRow } from './compareParts';
 import { sectionLabel } from './compareHelpers';
 import { PriceSheet } from './compareSheets';
@@ -47,12 +48,46 @@ export default function ContributeScreen() {
   const own = compare.products.filter((p) => p.ownerId).length;
   const receiptsOn = settings.features.receipts;
   const receiptWaiting = receiptsOn && (receipt.step.name === 'reading' || receipt.step.name === 'review');
-  const n = compare.recentReports;
+  // Your contributions: totals from the database when online, else this device's last 30 days.
+  const { stats } = useContributionStats();
+  const count = stats ? stats.month : compare.recentReports;
+  const cardSub = stats
+    ? stats.total
+      ? [`${stats.shared} shared`, stats.held ? `${stats.held} only you for now` : '', stats.private ? `${stats.private} private` : ''].filter(Boolean).join(' · ')
+      : 'None yet — add your first price below'
+    : compare.recentReports
+      ? 'Thank you — see where they stand'
+      : 'None yet — add your first price below';
 
   return (
     <div className="pb-8" style={{ maxWidth: compact ? '100%' : 860, margin: '0 auto' }}>
-      <ManageHeader title="Contribute" sub={n ? `${n} ${n === 1 ? 'price' : 'prices'} added in the last 30 days — thank you` : undefined} />
+      <ManageHeader title="Contribute" />
       <div className="flex flex-col gap-4 px-[18px] md:px-7">
+        <button
+          type="button"
+          onClick={() => app.go('contributions')}
+          className="flex items-center gap-3.5 text-left rounded-[20px] bg-ink text-paper transition-transform active:scale-[0.99]"
+          style={{ padding: '14px 16px', minHeight: 76 }}
+        >
+          {count > 0 && (
+            <>
+              <span className="flex flex-col items-start shrink-0">
+                <span className="font-mono text-[28px] font-bold tracking-[-0.04em] leading-none">{count}</span>
+                <span className="text-[11.5px] mt-1" style={{ color: 'var(--coach-muted)' }}>
+                  {stats ? 'this month' : 'lately'}
+                </span>
+              </span>
+              <span aria-hidden className="self-stretch" style={{ width: 1, background: 'var(--coach-chip)' }} />
+            </>
+          )}
+          <span className="flex-1 min-w-0">
+            <span className="block font-extrabold text-[15.5px]">Your contributions</span>
+            <span className="block text-[12.5px] leading-snug" style={{ color: 'var(--coach-muted)' }}>
+              {cardSub}
+            </span>
+          </span>
+          <Icon name="chevR" size={18} stroke={2.4} />
+        </button>
         {!compare.online && <CompareNotice icon="wifiOff" title="You’re offline" body="Adding prices and products needs a connection." />}
 
         <section className="flex flex-col gap-2.5 bg-surface rounded-[22px] shadow-card" style={{ padding: 16 }} aria-labelledby="add-price">

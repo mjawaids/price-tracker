@@ -5,9 +5,9 @@ import { useTheme } from './ThemeContext';
 export interface ShoppingFeatures {
   /** "Where to buy" on lists. */
   whereToBuy: boolean;
-  /** Price check when ticking an item in a store section (Phase 3). */
+  /** "Was it Rs 210?" when ticking an item from a plan, and the store summary (Profile → Shopping features). */
   askPrices: boolean;
-  /** Receipt import (Phase 3). */
+  /** Receipt import. */
   receipts: boolean;
 }
 

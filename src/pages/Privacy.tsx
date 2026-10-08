@@ -62,7 +62,8 @@ const Privacy: React.FC = () => {
                     Receipts (pictures, PDFs or text) are read on your device and never uploaded — only the prices you choose to
                     save are. A receipt you share to SpendLess from another app stays on your device until you read it or tap Not
                     now (and is deleted when you sign out). The products you pick for a shop’s receipt lines are remembered on your
-                    device only, and deleted when you sign out.
+                    device only, and deleted when you sign out. Prices you confirm while shopping offline wait on your device until
+                    they’re sent (and are deleted if you sign out first).
                   </li>
                 </ul>
               </section>
