@@ -464,8 +464,10 @@ say so and propose a safe alternative.
   is ticked.
 - `.github/workflows/shared-branches.yml`: nightly (02:43 Karachi) suggested shops →
   shared shops (`scripts/seed/promote-suggestions.ts`); manual runs roll back unless
-  *apply*. Repo variables `SHARED_BRANCHES_MIN_PEOPLE` (people needed) and
-  `SHARED_BRANCHES_PAUSED` (`true` = dry run only).
+  *apply*. Repo variables `SHARED_BRANCHES_MIN_PEOPLE` (people needed, 2–50) and
+  `SHARED_BRANCHES_PAUSED` (exactly `true` = the nightly run is a dry run only), set in
+  GitHub → Settings → Secrets and variables → Actions → *Variables* (details in
+  `docs/deployment.md`).
 - `.github/workflows/price-import.yml`: daily store price import (03:17 Karachi), also
   manual with *source* / *dry run* / *max pages*. Scheduled workflows stop after 60 days
   without repo activity — re-enable from the Actions tab.

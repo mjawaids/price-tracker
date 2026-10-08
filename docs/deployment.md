@@ -95,11 +95,20 @@ same shop, this makes it a shared shop and moves each person's shop into it (rul
 `docs/compare-data.md`). One transaction per run; the log (public) prints counts and
 the names of shops that became shared, nothing about who suggested what.
 
-- **Repository variables** (Settings → Secrets and variables → Actions → *Variables*):
-  - `SHARED_BRANCHES_MIN_PEOPLE` — how many different people a new shared shop needs.
-    Unset = the script's default, **3**. Change it here, never in app copy (the app
-    says "enough people").
-  - `SHARED_BRANCHES_PAUSED` — `true` makes the nightly run a dry run only.
+- **Repository variables** — set them on GitHub: the repository's *Settings → Secrets
+  and variables → Actions*, the **Variables** tab (not Secrets), *New repository
+  variable* ([direct link](https://github.com/mjawaids/price-tracker/settings/variables/actions)).
+  - `SHARED_BRANCHES_MIN_PEOPLE` — how many different people a new shared shop needs:
+    a whole number from 2 to 50. Unset = the script's default, **3**. Any other value
+    makes the run stop with an error and change nothing. Change it here, never in app
+    copy (the app says "enough people").
+  - `SHARED_BRANCHES_PAUSED` — exactly `true` (lowercase) makes the nightly run a dry
+    run only; `True` or anything else doesn't pause it. Delete it (or change it) to
+    resume. It pauses only the nightly run: a manual run with *apply* ticked still
+    writes.
+  - They can also be set on the `production` environment (*Settings → Environments →
+    production → Environment variables*), since the job runs in it. If both are set,
+    the environment's value wins, so keep each in one place.
 - **Run by hand:** *Actions → Shared shops → Run workflow*. Unticked *apply* (the
   default) does everything and rolls it back, so the counts show what would happen.
 - **Undo a shop:** *Catalog jobs* → `close-branch` (above).
