@@ -69,8 +69,12 @@ interface NavDef {
   id: ScreenName | Section;
   icon: IconName;
   label: string;
+  /** Items still to buy (lists only). */
   badge?: number;
 }
+
+/** What a screen reader says for a nav item: its name, then the count ("Weekly shop, 5 to buy"). */
+const navName = (it: NavDef) => (it.badge && it.badge > 0 ? `${it.label}, ${it.badge} to buy` : it.label);
 
 function BottomNav({ items, active, onPick }: { items: NavDef[]; active: NavDef['id']; onPick: (id: NavDef['id']) => void }) {
   return (
@@ -83,13 +87,14 @@ function BottomNav({ items, active, onPick }: { items: NavDef[]; active: NavDef[
             type="button"
             onClick={() => onPick(it.id)}
             aria-current={on ? 'page' : undefined}
+            aria-label={navName(it)}
             className="flex-1 flex flex-col items-center justify-center gap-[3px] bg-transparent"
             style={{ minHeight: 52, padding: '6px 0 5px', color: on ? 'var(--accent-ink)' : 'var(--ink-soft)' }}
           >
             <div className="relative">
               <Icon name={it.icon} size={24} stroke={on ? 2.5 : 2} />
               {!!it.badge && it.badge > 0 && (
-                <span className="absolute -top-1.5 -right-2.5 bg-accent text-accent-on font-mono font-extrabold grid place-items-center rounded-full" style={{ fontSize: 10, minWidth: 16, height: 16, padding: '0 3px' }}>
+                <span aria-hidden="true" className="absolute -top-1.5 -right-2.5 bg-accent text-accent-on font-mono font-extrabold grid place-items-center rounded-full" style={{ fontSize: 10, minWidth: 16, height: 16, padding: '0 3px' }}>
                   {it.badge}
                 </span>
               )}
@@ -108,6 +113,8 @@ function NavItem({ it, on, mini, onClick }: { it: NavDef; on: boolean; mini: boo
       type="button"
       onClick={onClick}
       title={it.label}
+      aria-label={navName(it)}
+      aria-current={on ? 'page' : undefined}
       className="w-full flex items-center gap-3 rounded-[13px] relative transition-colors"
       style={{
         justifyContent: mini ? 'center' : 'flex-start',
@@ -119,7 +126,7 @@ function NavItem({ it, on, mini, onClick }: { it: NavDef; on: boolean; mini: boo
       <div className="relative">
         <Icon name={it.icon} size={22} stroke={on ? 2.5 : 2} />
         {!!it.badge && it.badge > 0 && (
-          <span className="absolute -top-1.5 -right-2 bg-accent text-accent-on font-mono font-extrabold grid place-items-center rounded-full" style={{ fontSize: 9.5, minWidth: 15, height: 15, padding: '0 3px' }}>
+          <span aria-hidden="true" className="absolute -top-1.5 -right-2 bg-accent text-accent-on font-mono font-extrabold grid place-items-center rounded-full" style={{ fontSize: 9.5, minWidth: 15, height: 15, padding: '0 3px' }}>
             {it.badge}
           </span>
         )}

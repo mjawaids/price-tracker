@@ -83,7 +83,8 @@ export function ItemChoiceSheet({
     return best;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [acceptable]);
-  const usualId = resolved ? compare.preferences.get(resolved.key)?.refProductId ?? null : null;
+  const usualRef = resolved ? compare.preferences.get(resolved.key)?.refProductId ?? null : null;
+  const usualId = usualRef ? compare.canonicalId(usualRef) : null;
 
   if (!item || !resolved) return null;
   const title = `Which ${itemTypeName(resolved).toLowerCase()}?`;

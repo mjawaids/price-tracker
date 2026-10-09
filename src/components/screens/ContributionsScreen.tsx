@@ -96,9 +96,10 @@ export default function ContributionsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, compare.online, attempt]);
 
-  // Offline, or when the read failed: the last 30 days this device keeps.
+  // Offline, or when the read failed: the last 30 days this device keeps (not a merged
+  // product's: its prices were copied onto the product it became).
   const cached: api.MyReport[] = compare.ownReports
-    .filter((r) => compare.storeById(r.storeId))
+    .filter((r) => compare.storeById(r.storeId) && compare.canonicalId(r.productId) === r.productId)
     .map((r) => ({
       id: `${r.storeId}:${r.productId}:${r.observedAt}`,
       storeId: r.storeId,
@@ -187,7 +188,10 @@ export default function ContributionsScreen() {
       ];
 
   const standRows: { icon: IconName; label: string; n: number; tone: string; note?: string }[] = [
-    { icon: 'users', label: city ? 'Shared with everyone' : 'Saved', n: counts.shared, tone: 'bg-accent-wash text-accent-ink' },
+    // Shared prices exist where a city is live (or from a shared store elsewhere).
+    ...(compare.isLive || counts.shared > 0
+      ? [{ icon: 'users' as IconName, label: 'Shared with everyone', n: counts.shared, tone: 'bg-accent-wash text-accent-ink' }]
+      : []),
     { icon: 'history', label: 'Only you for now', n: counts.held, tone: 'bg-warn-wash text-warn-ink', note: 'Far from the usual price. They count once someone else sees the same.' },
     { icon: 'lock', label: 'At your own shops, private', n: counts.private, tone: 'bg-[var(--backdrop)] text-ink-soft' },
     { icon: 'x', label: 'Out of stock', n: counts.outOfStock, tone: 'bg-[var(--backdrop)] text-ink-soft' },

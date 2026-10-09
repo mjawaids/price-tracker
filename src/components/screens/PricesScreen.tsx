@@ -25,7 +25,9 @@ export default function PricesScreen() {
   // Products priced at your stores (not by a price people say is wrong), per canonical category.
   const pricedProducts = useMemo(() => {
     const considered = new Set(compare.consideredStores.map((s) => s.id));
-    return compare.products.filter((p) => compare.pricesFor(p.id).some((x) => considered.has(x.storeId) && x.isAvailable && x.price && !x.disputed));
+    return compare.products.filter(
+      (p) => p.status === 'active' && compare.pricesFor(p.id).some((x) => considered.has(x.storeId) && x.isAvailable && x.price && !x.disputed),
+    );
     // pricesFor reads the latest prices.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compare.products, compare.consideredStores, compare.resolveContext]);
@@ -42,7 +44,8 @@ export default function PricesScreen() {
     () =>
       [...compare.preferences.values()]
         .map((pref) => (pref.refProductId ? compare.productById(pref.refProductId) : undefined))
-        .filter((p): p is NonNullable<typeof p> => !!p)
+        .filter((p): p is NonNullable<typeof p> => p?.status === 'active')
+        .filter((p, i, all) => all.findIndex((o) => o.id === p.id) === i)
         .slice(0, 8),
     // productById reads the latest catalogue.
     // eslint-disable-next-line react-hooks/exhaustive-deps

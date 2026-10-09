@@ -172,7 +172,14 @@ doesn't affect SpendLess. Worth telling Diamond if we're in touch.
    - Sizes: "50g+50g" is a pack of two, "195g+100g" is 295 g, and parts in different
      units ("20ml+20g" hair colour) give no key.
    - It's only set when brand, type and size were all read with confidence.
-   - A key shared by two listings of one store is not trusted.
+   - A key shared by two differently named listings of one store is not trusted.
+   - **One item listed twice:** two listings of one store with the exact same name
+     (case and spaces aside) are one product. They keep their key, may share a product
+     (the "never two listings of one store on one product" rule skips them), and the
+     in-stock one prices it, the cheaper if both are. A listing not read this run
+     counts with what we saw last, so a partial read doesn't flip the price.
+   - **Placeholder names** a store's system fills in ("#N/A", "N/A", "null", "-", no
+     letters at all) are left out (`placeholderName` in `normalize.ts`).
 4. **Prices** are `price_reports` with `user_id NULL` and `source 'import'`.
    - An unchanged price moves its latest import report's `observed_at` forward
      instead of adding a row.
@@ -182,6 +189,16 @@ doesn't affect SpendLess. Worth telling Diamond if we're in touch.
 5. **Each store's run** is recorded in `import_runs`: counts and a short status code,
    never page content. `store_listings` remembers each listing (store id, our product,
    last price, when checked), which drives the rolling refresh.
+6. **Duplicate products** (after every store, a separate workflow step:
+   `scripts/seed/merge-products.ts --auto`, skipped on dry runs). Matching by key can't
+   catch everything: a name without a size has no key, and old runs left the same item
+   split. Public products with the **exact same name** (case and spaces aside) **and
+   size**, real words in the name, both priced, and median prices **within 25%** of
+   each other are merged: the one with the most store listings (then the oldest) stays,
+   the others become it (listings, lists, usuals and prices follow; see
+   `docs/compare-data.md`). Junk-named products are retired. Anything less certain
+   (same name but prices further apart, the same key at different stores) goes to the
+   review list: *Catalog jobs* → `merge-products` (`docs/deployment.md`).
 
 A dry run fetches and parses but never touches the database, and prints counts plus a
 short sample. The GitHub Actions log is public: it shows counts and a few store

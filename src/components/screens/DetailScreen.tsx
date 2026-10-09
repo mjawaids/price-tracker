@@ -38,6 +38,9 @@ export default function DetailScreen() {
   if (!p) {
     return <EmptyState icon="box" title="Product not found" body="It may have been removed, or it isn’t sold in your city." cta="Back to prices" onCta={back} />;
   }
+  if (p.status === 'retired') {
+    return <EmptyState icon="box" title="This product isn’t sold any more" body="We’ve taken it out of the catalogue. Search for what you need instead." cta="Back to prices" onCta={back} />;
+  }
 
   // Prices people say are wrong stay listed here (last, marked), but never as the best.
   const mine = priced(p.id, false, true);

@@ -19,8 +19,8 @@ from people's own entries, and from receipts. Shared prices are live in
 |---|---|---|
 | `regions` | Cities. `status`: `live` (shared prices on) or `gathering` (personal mode) | Migrations only |
 | `catalog_stores` | Stores. `owner_id NULL` = public; otherwise private to that user. Public stores belong to a region. `kind` `online` or `physical`; a public `physical` store is a shared in-store shop (`<chain> · <area>`, no delivery): a chain's **branch** from `scripts/seed/branches/` (same `chain` as the chain's online store), or a shop people shared (`branch_suggestions`; any shop, independent ones too). `delivery_rule` jsonb (+ optional `minOrder`) | Users: their own private rows. Public rows: scripts only |
-| `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`); `match_key` (set by the importer: the same product at two stores → one row; `''` = not confident, or held apart because its price is unlike the others with that key; see `docs/data-sources.md`) | Same as stores |
-| `price_reports` | **Append-only** observations: price (one pack), `observed_at`, `source`, `status`. `user_id NULL` = system source | Users add their own (user sources only); read and delete only their own; nobody updates |
+| `catalog_products` | Products with structured `brand`, `item_type`, `variant`, size (`size_value` + `size_unit` of one unit, `pack_count`); `match_key` (set by the importer: the same product at two stores → one row; `''` = not confident, or held apart because its price is unlike the others with that key; see `docs/data-sources.md`); `status` `active`, `merged` (a duplicate: `merged_into` = the product it became) or `retired` (not a real product, e.g. an imported "#N/A"); see "Duplicate products" | Same as stores |
+| `price_reports` | **Append-only** observations: price (one pack), `observed_at`, `source`, `status`. `user_id NULL` = system source; `copy_of` = the report a product merge copied this one from | Users add their own (user sources only); read and delete only their own; nobody updates |
 | `current_prices` | The price shown per (store, product), derived from reports; `n_reports = 0` = no price any more (tombstone); `disputed` = people say it's wrong (see below) | Only the trigger |
 | `user_stores` | "My stores" (empty = the default set: the city's public online stores + your private ones; shared in-store shops count only once picked, or once your own shop moved into one) | Owner |
 | `branch_suggestions` | A user's own in-store shop suggested as a shared one: `store_id` (theirs; NULL once deleted), `region_id`, `chain` + `area` (the shared name, plain text only), `chain_key` / `area_key` (`spendless.place_key`, set by the insert trigger), `status` `open` → `promoted` (`promoted_store_id`) or `declined`, `decided_at` | Owner adds (their own open in-store shop in a live city; at most 10 waiting) and withdraws while `open`; nobody updates; the decision is the nightly job's |
@@ -29,6 +29,7 @@ from people's own entries, and from receipts. Shared prices are live in
 | `store_listings` | The importer's memory: each store's own product id → our product, last price, when checked, `included` (false = an aisle we leave out) | Importer only; clients can't read it |
 | `import_runs` | One row per store per import run: counts and a short status code | Importer only; clients can't read it |
 | `reporter_trust` | How much each person's prices count: `weight` 0.5–1.2 (no row = 1), `compared`, `agreed` (see "Reporter trust") | The nightly job only; clients can't read it |
+| `product_merges` | One row per product merge: `from_id` → `into_id`, `rule` (`same-name` nightly, `approved` by the owner), `moved` (what moved, for undo), `undone_at` (an undone merge keeps that pair apart) | The merge script only; clients can't read it |
 | `list_items` (+cols) | `plan_store_id`, `plan_product_id`, `plan_price`; `product_id` = product pinned on the item | Owner (synced offline like the rest of the list) |
 
 Everything a user creates is **private** unless it's explicitly promoted to public —
@@ -106,6 +107,45 @@ reference. With fewer than **5** comparable prices the weight stays 1; otherwise
 People with nothing left to compare go back to 1 (row deleted). A new weight applies
 the next time a pair's price is worked out (any new report there); the job never
 touches reports. Weights are never shown, and no client can read the table.
+
+## Duplicate products
+
+The importer joins the same product from two stores by `match_key`
+(`docs/data-sources.md`), but some duplicates slip through: a name without a size has no
+key, a store lists one item twice, older runs left items split. They're merged by
+`scripts/seed/merge-products.ts` (+ `merge-*.sql`, `unmerge.sql`), as the database
+owner, in one transaction with the importer's lock:
+
+- **Nightly, on its own** (a step after the price import): public products with the
+  exact same name (case and spaces aside) and size, real words in the name, both priced,
+  median prices within 25%. The one with the most store listings (then the oldest)
+  stays. Junk names ("#N/A", "null", no letters) are retired. The repository variable
+  `PRODUCT_MERGES_PAUSED` = `true` makes this step a dry run.
+- **Approved by the owner** (*Catalog jobs* → `merge-products`): without pairs it lists
+  likely duplicates the nightly rule leaves alone (same name but prices further apart,
+  or the same key at different stores, a different pack flagged), with `from>into` ids
+  to paste back to merge them.
+- **Undo** (*Catalog jobs* → `unmerge-product`): the product comes back with what moved,
+  the merge's copied prices go, and the pair is kept apart from then on.
+
+What a merge of `from` into `into` does:
+- its store listings move to `into` (the importer prices them there; listings of one
+  store on one product are priced by the in-stock one, the cheaper if both are);
+- per store and person, `from`'s latest accepted report is copied onto `into` (a new
+  row with `copy_of`, never a moved one: reports stay append-only; a person's copy more
+  than 40% from `into`'s price there is held, as theirs would be; `created_at` at least
+  25 hours back, so it never counts toward their daily limit). Retracting the original
+  deletes the copy, and Your contributions counts it once;
+- one out-of-stock import report on `from` where it was in stock, so apps drop it at
+  their next sync;
+- everyone's list items (pinned and planned) and usuals move to `into`;
+- `from` is marked `merged` with `merged_into`, and `product_merges` records it.
+
+Anything still carrying a merged id lands on the product it became: the triggers on
+`list_items`, `item_preferences` and people's `price_reports` call
+`spendless.canonical_product()` (an offline list, a queued price check, an old app). The
+app hides merged and retired products, reads a merged id as its product (pins, usuals,
+plans, remembered receipt lines, product pages) and loads the products merges lead to.
 
 ## Matching a list item to products (`src/lib/compare/`)
 
@@ -282,5 +322,6 @@ Hyderabad, Peshawar, Quetta (`gathering`). A city goes live by changing its
   live (Compare → Contribute → Add a receipt, read on the device), with public in-store
   branches (Karachi) and shops people share; next till-receipt tuning on full-size
   photos.
-- More cities: readiness meter, promoting corroborated private stores, merging
-  duplicate products, a small moderation queue.
+- More cities: duplicate products are merged (nightly, or approved by the owner; see
+  "Duplicate products"), and shops people share become shared ones. Next: a readiness
+  meter per city; a small moderation queue once there's something to moderate.

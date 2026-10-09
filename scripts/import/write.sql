@@ -59,7 +59,8 @@ GROUP BY product_id;
 --    For each listing: the product it mapped to before (and whether that product is
 --    this listing's alone: no other listing, no other store's price), and the
 --    oldest other public product with its match key (and whether we may join it:
---    never two live listings of one store on one product).
+--    never two live listings of one store on one product, unless they have the exact
+--    same name: the store listing one item twice, which is one product).
 --    A pack clash (one name says pouch or refill, the other jar, bottle or tin: a
 --    pickle pouch isn't the jar) keeps a listing off a product; a name that doesn't
 --    say is no clash.
@@ -68,10 +69,13 @@ SELECT i.external_id, i.match_key,
   l.product_id AS prev_id,
   coalesce(p.match_key, '') AS prev_key,
   p.created_at AS prev_created,
+  -- A product merged into another, or retired (a junk "#N/A" a store has since named), isn't kept.
+  coalesce(p.status = 'active', false) AS prev_active,
   coalesce(((i.source_name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M' AND p.name ~* '\m(jar|bottle|btl|tin|can|glass)\M') OR (i.source_name ~* '\m(jar|bottle|btl|tin|can|glass)\M' AND p.name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M')), false) AS prev_clash,
   l.product_id IS NOT NULL
     AND NOT EXISTS (SELECT 1 FROM spendless.store_listings x
-                    WHERE x.product_id = l.product_id AND NOT (x.store_id = :'store_id' AND x.external_id = i.external_id))
+                    WHERE x.product_id = l.product_id
+                      AND NOT (x.store_id = :'store_id' AND (x.external_id = i.external_id OR coalesce(lower(x.source_name) = lower(i.source_name), false))))
     AND op.product_id IS NULL AS prev_sole,
   op.median IS NULL OR i.price BETWEEN op.median / 3 AND op.median * 3 AS prev_sane,
   q.id AS key_id,
@@ -80,6 +84,7 @@ SELECT i.external_id, i.match_key,
   q.id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM spendless.store_listings x
     WHERE x.store_id = :'store_id' AND x.product_id = q.id AND x.active AND x.external_id <> i.external_id
+      AND lower(x.source_name) IS DISTINCT FROM lower(i.source_name)
   ) AS key_free,
   oq.median IS NULL OR i.price BETWEEN oq.median / 3 AND oq.median * 3 AS key_sane,
   NULL::uuid AS target,
@@ -107,7 +112,7 @@ WHERE i.included AND NOT coalesce(i.gone, false);
 --       two products that came to share a key end up as one. A product that is this
 --       listing's alone still follows its name: a blank key clears its old one.
 UPDATE cand SET target = prev_id, rekey = (match_key = '' AND prev_sole)
-WHERE prev_id IS NOT NULL AND prev_sane AND NOT prev_clash AND (
+WHERE prev_id IS NOT NULL AND prev_active AND prev_sane AND NOT prev_clash AND (
   match_key = ''
   OR (match_key = prev_key AND NOT (key_id IS NOT NULL AND key_free AND key_sane AND NOT key_clash AND key_created < prev_created))
 );
@@ -117,7 +122,7 @@ WHERE target IS NULL AND key_id IS NOT NULL AND key_free AND key_sane AND NOT ke
 --    c. Else a product that is this listing's alone stays, and takes the new key
 --       (none when another product of the same pack already has it).
 UPDATE cand SET target = prev_id, rekey = true
-WHERE target IS NULL AND prev_id IS NOT NULL AND prev_sole;
+WHERE target IS NULL AND prev_id IS NOT NULL AND prev_active AND prev_sole;
 --    d. Else a new product; held apart (no key) when it's priced unlike the others with its key.
 UPDATE cand SET apart = true
 WHERE target IS NULL AND (
@@ -162,11 +167,23 @@ WHERE c.rekey AND p.id = c.prev_id AND p.owner_id IS NULL
 
 -- 4. Prices. Compare with this store's latest import report for each product:
 --    changed (or new) → a new report; unchanged → move its observed_at to now.
---    If two listings map to one product, the cheapest in-stock one speaks for it.
+--    If two listings map to one product (the store lists it twice), the in-stock one
+--    speaks for it, the cheaper if both are; one not read this run counts with what
+--    we saw last, so a partial read doesn't flip the price between them.
 CREATE TEMP TABLE pick ON COMMIT DROP AS
 SELECT DISTINCT ON (product_id) product_id, price, available
-FROM incoming
-WHERE included AND product_id IS NOT NULL AND NOT coalesce(gone, false)
+FROM (
+  SELECT product_id, price, available
+  FROM incoming
+  WHERE included AND product_id IS NOT NULL AND NOT coalesce(gone, false)
+  UNION ALL
+  SELECT x.product_id, x.last_price, coalesce(x.last_available, false)
+  FROM spendless.store_listings x
+  WHERE x.store_id = :'store_id' AND x.active AND x.included AND x.last_price IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM incoming o WHERE o.external_id = x.external_id)
+    AND x.product_id IN (SELECT product_id FROM incoming
+                         WHERE included AND product_id IS NOT NULL AND NOT coalesce(gone, false))
+) seen
 ORDER BY product_id, available DESC, price ASC;
 
 CREATE TEMP TABLE latest ON COMMIT DROP AS

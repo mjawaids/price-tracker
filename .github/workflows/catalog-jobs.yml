@@ -13,6 +13,13 @@
 # close-branch: undo a shared in-store shop (e.g. one made from suggestions by the
 # Shared shops workflow): close it and give everyone who moved into it their own shop
 # back. Needs store_id. The nightly job never makes that shop again.
+#
+# merge-products: without "merges", lists likely duplicate products the nightly merge
+# leaves alone (in the run's summary; read only). With "merges" (from>into id pairs
+# from that list), merges them. Lists, usuals and prices follow.
+#
+# unmerge-product: undo one merge (product_id = the merged product). The two are kept
+# apart from then on.
 
 name: Catalog jobs
 
@@ -28,6 +35,8 @@ on:
           - add-branches
           - promote-store
           - close-branch
+          - merge-products
+          - unmerge-product
       branches_file:
         description: "add-branches: the list file"
         required: false
@@ -44,6 +53,14 @@ on:
         type: string
       chain:
         description: "promote-store: chain name shown on the store (e.g. Panda Mart)"
+        required: false
+        type: string
+      merges:
+        description: "merge-products: from>into product id pairs from the list, separated by spaces (empty = show the list)"
+        required: false
+        type: string
+      product_id:
+        description: "unmerge-product: the merged product's id"
         required: false
         type: string
       apply:
@@ -139,3 +156,57 @@ jobs:
           args=(--store-id "$STORE_ID")
           if [ "$APPLY" = "true" ]; then args+=(--apply); fi
           node --experimental-strip-types --no-warnings scripts/seed/close-branch.ts "${args[@]}"
+
+  merge-products:
+    name: Merge duplicate products
+    if: inputs.job == 'merge-products'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Merge products
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          MERGES: ${{ inputs.merges }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          if [ -z "${MERGES// /}" ]; then
+            node --experimental-strip-types --no-warnings scripts/seed/merge-products.ts --list
+          else
+            args=(--pairs "$MERGES")
+            if [ "$APPLY" = "true" ]; then args+=(--apply); fi
+            node --experimental-strip-types --no-warnings scripts/seed/merge-products.ts "${args[@]}"
+          fi
+
+  unmerge-product:
+    name: Undo a product merge
+    if: inputs.job == 'unmerge-product'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Undo merge
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PRODUCT_ID: ${{ inputs.product_id }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args=(--undo "$PRODUCT_ID")
+          if [ "$APPLY" = "true" ]; then args+=(--apply); fi
+          node --experimental-strip-types --no-warnings scripts/seed/merge-products.ts "${args[@]}"

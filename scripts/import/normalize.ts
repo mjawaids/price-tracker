@@ -82,6 +82,14 @@ export function sizeFields(size: ParsedSize | null): Pick<ProductFields, 'size_v
 
 const httpsOnly = (u: string | null | undefined) => (u && /^https:\/\/[^\s]+$/i.test(u) && u.length <= 500 ? u : null);
 
+/**
+ * A name a store's system fills in when it has none ("#N/A", "null", "-"): never a
+ * product. Mirrored in scripts/seed/merge-products.sql, which retires the ones already in.
+ */
+export function placeholderName(name: string): boolean {
+  return !/\p{L}.*\p{L}/u.test(name) || /^\s*#?\s*(n\s*\/\s*a|na|nil|null|none|undefined|unknown)\s*$/i.test(name);
+}
+
 export function normalize(raw: RawListing, brands: string[]): Normalized | null {
   const name = raw.name.replace(/\s+/g, ' ').trim();
   const priced = raw.price > 0 && raw.price < 10_000_000;
@@ -99,7 +107,7 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   // filed under "Personal Care"): leaving one out by mistake is the safe direction.
   const pharmacy = parsed.itemType?.category === 'pharmacy' && !lookalike;
   const typeAisle = pharmacy ? 'pharmacy' : (itemType?.category ?? null);
-  const decision = raw.exclude ? { aisle: null, include: false } : decideAisle(raw.aisles, typeAisle, name);
+  const decision = raw.exclude || placeholderName(name) ? { aisle: null, include: false } : decideAisle(raw.aisles, typeAisle, name);
   const base = {
     external_id: raw.externalId.slice(0, 120),
     url: httpsOnly(raw.url),

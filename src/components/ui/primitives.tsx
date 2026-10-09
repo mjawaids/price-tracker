@@ -91,6 +91,8 @@ export function Chip({
     <button
       type="button"
       onClick={onClick}
+      // A chip that can be on or off says which: screen readers announce "selected".
+      aria-pressed={active}
       className={`shrink-0 font-sans font-semibold text-sm whitespace-nowrap rounded-full px-[15px] py-[9px] transition-all active:scale-[0.97] ${
         active ? 'bg-ink text-paper' : 'bg-surface text-ink-soft shadow-[inset_0_0_0_1px_var(--line)]'
       } ${className}`}
