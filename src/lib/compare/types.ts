@@ -48,7 +48,8 @@ export interface CatalogProduct {
   unitLabel: string | null;
   gtin: string | null;
   imageUrl: string | null;
-  status: 'active' | 'merged';
+  /** merged: it became `mergedInto` (a duplicate) · retired: not a real product (e.g. an imported "#N/A"). */
+  status: 'active' | 'merged' | 'retired';
   mergedInto: string | null;
   updatedAt: string;
 }

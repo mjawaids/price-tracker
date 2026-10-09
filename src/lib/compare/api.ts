@@ -495,6 +495,8 @@ export async function fetchMyReports(userId: string, offset: number, limit: numb
       .from('price_reports')
       .select('id,store_id,product_id,price,is_available,observed_at,source,status')
       .eq('user_id', userId)
+      // A merge's copy of a report isn't another contribution (the original is listed).
+      .is('copy_of', null)
       .order('observed_at', { ascending: false })
       .order('id', { ascending: false })
       .range(offset, offset + limit - 1),

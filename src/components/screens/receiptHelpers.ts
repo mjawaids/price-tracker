@@ -136,7 +136,9 @@ export function useReview(r: ReceiptState) {
   const storePrices = store ? compare.pricesAtStore(store.id) : EMPTY;
   const ownHere = store ? compare.ownReportsAt(store.id) : EMPTY;
   const profiles = compare.resolveContext.profiles;
-  const productIds = useMemo(() => new Set(compare.products.map((p) => p.id)), [compare.products]);
+  // Products a remembered line may still name: active ones (a merged one's id is read
+  // as the product it became, below; a retired one is gone).
+  const productIds = useMemo(() => new Set(compare.products.filter((p) => p.status === 'active').map((p) => p.id)), [compare.products]);
   // The user's own products by name: a medicine they saved before is shown as theirs
   // (saving reuses it on the server either way).
   const ownByKey = useMemo(() => {
@@ -187,12 +189,15 @@ export function useReview(r: ReceiptState) {
   // A line the user said is a product after all ignores a remembered "not a product".
   const restored = (r.parsed?.items ?? []).filter((i) => r.edits[i.id]?.notProduct === false).map((i) => i.id).join(',');
   const memory = useMemo(() => {
-    if (!mem || !restored || !r.parsed) return mem ?? undefined;
+    if (!mem) return undefined;
+    const m = new Map([...mem].map(([k, v]) => [k, v === NOT_A_PRODUCT ? v : compare.canonicalId(v)]));
+    if (!restored || !r.parsed) return m;
     const ids = new Set(restored.split(','));
-    const m = new Map(mem);
     for (const i of r.parsed.items) if (ids.has(i.id)) m.delete(lineKey(i.name));
     return m;
-  }, [mem, restored, r.parsed]);
+    // canonicalId reads the latest catalogue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mem, restored, r.parsed, compare.products]);
 
   const base = useMemo(
     () =>

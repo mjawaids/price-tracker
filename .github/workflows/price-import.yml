@@ -6,6 +6,11 @@
 # transaction per store. Run it by hand with "dry run" ticked to fetch and parse
 # without touching the database.
 #
+# Then the safe duplicate merges (scripts/seed/merge-products.ts --auto): public
+# products with the exact same name and size and prices within 25% become one, and
+# junk names ("#N/A") are retired. Skipped on dry runs. Repository variable
+# PRODUCT_MERGES_PAUSED = "true" makes that step a dry run (it reports, writes nothing).
+#
 # GitHub turns scheduled workflows off after 60 days without repository activity;
 # re-enable it from the Actions tab (docs/deployment.md).
 
@@ -69,3 +74,14 @@ jobs:
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           if [ -n "$MAX_PAGES" ]; then args+=(--max-pages "$MAX_PAGES"); fi
           node --experimental-strip-types --no-warnings scripts/import/run.ts "${args[@]}"
+
+      # After every store is written, so the merges see today's prices.
+      - name: Merge duplicate products
+        if: ${{ inputs.dry_run != true }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PAUSED: ${{ vars.PRODUCT_MERGES_PAUSED }}
+        run: |
+          args=(--auto)
+          if [ "$PAUSED" = "true" ]; then echo "Paused (PRODUCT_MERGES_PAUSED) — dry run only."; else args+=(--apply); fi
+          node --experimental-strip-types --no-warnings scripts/seed/merge-products.ts "${args[@]}"

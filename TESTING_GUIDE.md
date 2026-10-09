@@ -277,6 +277,32 @@ unless `--apply` is given.
       private copies reopen, picks and list items go back, suggestions are declined, and
       the next nightly run declines new suggestions for that shop.
 
+## Duplicate products (merges)
+
+Against a local copy of the schema (all migrations), with generic test data.
+
+- [ ] Import a store with two listings of the exact same name (one out of stock): one
+      product, priced by the in-stock one; a later run reading only one of them keeps the
+      cheaper in-stock price. Two differently named listings sharing a key still match on
+      their own. A listing named "#N/A" is left out.
+- [ ] `merge-products.ts --auto` (dry run, then `--apply`): the same name and size at two
+      stores, prices within 25%, become one (the one with more listings, then the older,
+      stays); 1.4× apart they don't, and show in `--list` instead, with the same key at
+      different stores ("pack differs" flagged). "#N/A" is retired. A second run merges
+      nothing.
+- [ ] After a merge: the old product's listings, everyone's pinned and planned list items
+      and usuals point at the one it became; each store's latest price is copied
+      (`copy_of`); the old one is out of stock where it was imported; Your contributions
+      counts a person's price once.
+- [ ] As a signed-in user, a price report, a list item upsert or a usual naming the merged
+      product lands on the one it became; `product_merges` can't be read.
+- [ ] `--pairs "<from>><into>"` merges an approved pair (a pair of the same id is
+      refused); `--undo <id>` brings the product, its listings, list items and usuals back,
+      deletes the copies, and the next `--auto` keeps the pair apart.
+- [ ] In the app: merged and retired products are gone from Prices and Search; opening an
+      old link to a merged product shows the one it became; a retired one says "This
+      product isn't sold any more"; a list item pinned to a merged product still plans.
+
 ## Price checks (held prices, Wrong price?, reporter trust)
 
 Use generic test accounts. Against a local copy of the schema unless noted.

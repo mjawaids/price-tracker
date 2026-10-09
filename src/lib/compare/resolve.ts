@@ -31,6 +31,8 @@ export interface ResolveContext {
   preferences: Map<string, ItemPreference>;
   /** item type → the product the user last bought (from their own reports). */
   lastBought: Map<string, string>;
+  /** A merged product's id → the product it became (pins and usuals may still name it). */
+  aliases: Map<string, string>;
 }
 
 export type MatchStatus = 'pinned' | 'usual' | 'named' | 'assumed' | 'unpriced' | 'unknown';
@@ -81,7 +83,10 @@ export function buildContext(input: {
   const profiles = new Map<string, ProductProfile>();
   const byType = new Map<string, ProductProfile[]>();
   const brandKeys = new Set(KNOWN_BRANDS.map(brandKeyOf));
+  const byId = new Map(input.products.map((p) => [p.id, p]));
+  const aliases = new Map<string, string>();
   for (const p of input.products) {
+    if (p.status === 'merged' && p.mergedInto) aliases.set(p.id, canonicalOf(byId, p.id));
     if (p.status !== 'active') continue;
     const prof = profileProduct(p);
     profiles.set(p.id, prof);
@@ -102,8 +107,23 @@ export function buildContext(input: {
     prices,
     preferences: new Map((input.preferences || []).map((p) => [p.itemKey, p])),
     lastBought: input.lastBought || new Map(),
+    aliases,
   };
 }
+
+/** The product an id stands for now: itself, or where its merges lead (as spendless.canonical_product). */
+export function canonicalOf(products: Map<string, CatalogProduct>, id: string): string {
+  let cur = id;
+  for (let i = 0; i < 10; i++) {
+    const next = products.get(cur)?.mergedInto;
+    if (!next || products.get(cur)?.status !== 'merged') break;
+    cur = next;
+  }
+  return cur;
+}
+
+/** A product the item or usual names, following merges. */
+const profileFor = (ctx: ResolveContext, id: string | null | undefined) => (id ? ctx.profiles.get(ctx.aliases.get(id) ?? id) : undefined);
 
 /** Stores (being considered) where the product has a usable price (not one people say is wrong). */
 const pricedAt = (ctx: ResolveContext, productId: string) =>
@@ -180,7 +200,7 @@ export function resolveItem(ctx: ResolveContext, item: ItemInput): ResolvedItem 
   const typeOf = (p: ProductProfile | null) => (p?.itemType ? ITEM_TYPE_BY_ID.get(p.itemType) ?? null : null);
 
   // 1. A product pinned on the item.
-  const pinned = item.productId ? ctx.profiles.get(item.productId) : undefined;
+  const pinned = profileFor(ctx, item.productId);
   const pref = ctx.preferences.get(key);
   if (pinned) {
     const mode = pref?.mode ?? 'exact';
@@ -189,11 +209,11 @@ export function resolveItem(ctx: ResolveContext, item: ItemInput): ResolvedItem 
 
   // 2. The user's usual for this name.
   if (pref) {
-    const ref = (pref.refProductId && ctx.profiles.get(pref.refProductId)) || ctx.profiles.get(pref.productIds[0] ?? '');
+    const ref = profileFor(ctx, pref.refProductId) || profileFor(ctx, pref.productIds[0]);
     if (ref) {
       const acceptable =
         pref.mode === 'exact'
-          ? pref.productIds.map((id) => ctx.profiles.get(id)).filter((p): p is ProductProfile => !!p)
+          ? [...new Set(pref.productIds.map((id) => profileFor(ctx, id)).filter((p): p is ProductProfile => !!p))]
           : expand(ctx, ref, pref.mode);
       return finish('usual', typeOf(ref), pref.mode, ref, acceptable.length ? acceptable : [ref]);
     }
@@ -232,7 +252,8 @@ export function resolveItem(ctx: ResolveContext, item: ItemInput): ResolvedItem 
     }
     if (!pool.length) return finish('unknown', type, 'any_size', null, []);
 
-    const last = ctx.lastBought.get(type.id);
+    const lastId = ctx.lastBought.get(type.id);
+    const last = lastId ? (ctx.aliases.get(lastId) ?? lastId) : undefined;
     const lastProfile = last ? pool.find((p) => p.product.id === last) : undefined;
     const ref = lastProfile ?? mostCarried(ctx, pool);
     if (!ref) return finish('unknown', type, 'any_size', null, []);

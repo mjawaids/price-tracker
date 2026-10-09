@@ -84,6 +84,18 @@ Pick the job with the *job* input:
   so the nightly job never makes that shop again (`scripts/seed/close-branch.ts`).
   Prices copied to the closed shop stay with it, unseen. The dry run (rolled back)
   prints the same counts.
+- **merge-products** — duplicate products the nightly merge leaves alone (rules in
+  `docs/compare-data.md`, "Duplicate products"; `scripts/seed/merge-products.ts`).
+  - With *merges* empty: lists the likely duplicates in the run's summary (read only,
+    *apply* ignored): why (same name, or same key; "pack differs" flagged), both names,
+    their stores and prices, and a `from>into` pair of ids.
+  - With *merges* set to pairs from that list (separated by spaces, at most 50): the
+    dry run prints what would move; *apply* merges them. A pair is skipped when either
+    product isn't a public, active one any more.
+- **unmerge-product** — needs *product_id* (the merged product). Undoes its merge: it is
+  its own product again, and its listings, list items and usuals come back where nothing
+  changed them since; the prices the merge copied are deleted. The two are kept apart
+  from then on, so the nightly merge never joins them again.
 
 ## Shared shops (nightly)
 
@@ -157,6 +169,13 @@ Sources, rules and exclusions are in `docs/data-sources.md`.
   If the import stops, open *Actions → Price import* and click *Enable workflow*.
 - **Stop one store:** remove it from `scripts/import/sources.ts` and merge. Its last
   prices fade by recency; to retire them at once, ask for a one-off job.
+- **Duplicate products:** after the stores, a second step merges the safe duplicates
+  and retires junk names (`scripts/seed/merge-products.ts --auto`; skipped on dry
+  runs). Its summary prints the counts. The repository variable
+  `PRODUCT_MERGES_PAUSED` set to exactly `true` (lowercase; same place as the Shared
+  shops variables above) makes it a dry run only. A wrong merge: *Catalog jobs* →
+  `unmerge-product`; the rest of the likely duplicates: *Catalog jobs* →
+  `merge-products`.
 
 ## One-time setup
 

@@ -105,13 +105,18 @@ async function runSource(src: Source): Promise<Outcome> {
   // Parse names into products.
   const brands = [...dbBrands, ...learnBrands(result.listings.map((l) => l.name))];
   const rows = result.listings.map((l) => normalize(l, brands)).filter((n): n is Normalized => n != null);
-  // One store never lists the same product twice, so a key shared by two of its
-  // listings isn't specific enough to trust: those listings don't match on it.
-  const byKey = new Map<string, number>();
-  for (const r of rows) if (r.product?.match_key) byKey.set(r.product.match_key, (byKey.get(r.product.match_key) ?? 0) + 1);
+  // A key shared by two differently named listings of one store isn't specific enough
+  // to trust: those listings don't match on it. Two listings with the exact same name
+  // (case and spaces aside) are the store listing one item twice: they keep the key
+  // and share a product (write.sql).
+  const byKey = new Map<string, Set<string>>();
+  for (const r of rows) {
+    const k = r.product?.match_key;
+    if (k) byKey.set(k, (byKey.get(k) ?? new Set()).add(r.source_name.toLowerCase()));
+  }
   let collisions = 0;
   for (const r of rows) {
-    if (r.product?.match_key && byKey.get(r.product.match_key)! > 1) {
+    if (r.product?.match_key && byKey.get(r.product.match_key)!.size > 1) {
       r.product.match_key = '';
       collisions++;
     }

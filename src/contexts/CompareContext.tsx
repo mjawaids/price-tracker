@@ -8,7 +8,7 @@ import { PRODUCT_IMAGES_BUCKET, storagePathFromUrl } from '../lib/storage';
 import { normalizeName } from '../lib/groceryDictionary';
 import * as api from '../lib/compare/api';
 import { CatalogSnapshot, deleteSnapshot, readSnapshot, writeSnapshot } from '../lib/compare/cache';
-import { buildContext, resolveItem, ResolvedItem, ResolveContext } from '../lib/compare/resolve';
+import { buildContext, canonicalOf, resolveItem, ResolvedItem, ResolveContext } from '../lib/compare/resolve';
 import { buildPlans, PlanSet } from '../lib/compare/optimizer';
 import { BranchSuggestion, CatalogProduct, CatalogStore, CurrentPrice, ItemPreference, PreferenceMode, Region } from '../lib/compare/types';
 import { cleanPlace } from '../lib/compare/areas';
@@ -55,7 +55,10 @@ interface CompareApi {
   stores: CatalogStore[];
   products: CatalogProduct[];
   storeById: (id: string) => CatalogStore | undefined;
+  /** A product by id; a merged (duplicate) product's id gives the product it became. */
   productById: (id: string) => CatalogProduct | undefined;
+  /** The id a product id stands for now (itself, or where its merges lead). */
+  canonicalId: (id: string) => string;
   /** Effective prices: the shared price, or the user's own newer report. */
   pricesFor: (productId: string) => CurrentPrice[];
   priceAt: (storeId: string, productId: string) => CurrentPrice | undefined;
@@ -289,15 +292,25 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const ownIds = new Set(own.map((p) => p.id));
         if (!full) for (const p of cur.products) if (!(p.ownerId === userId && !ownIds.has(p.id))) productMap.set(p.id, p);
         for (const p of [...priced.products, ...own]) productMap.set(p.id, p);
-        // Products referenced by usuals or pinned on list items, if not loaded yet.
+        // Products referenced by usuals or list items (pinned or planned), if not loaded
+        // yet, and the products merged ones became.
         const wanted = new Set<string>();
         for (const pref of preferences) {
           if (pref.refProductId) wanted.add(pref.refProductId);
           pref.productIds.forEach((id) => wanted.add(id));
         }
-        for (const l of lists.lists) for (const i of lists.itemsForList(l.id)) if (i.productId) wanted.add(i.productId);
-        const missing = [...wanted].filter((id) => !productMap.has(id));
-        if (missing.length) for (const p of await api.fetchProductsById(missing)) productMap.set(p.id, p);
+        for (const l of lists.lists)
+          for (const i of lists.itemsForList(l.id)) {
+            if (i.productId) wanted.add(i.productId);
+            if (i.planProductId) wanted.add(i.planProductId);
+          }
+        let missing = [...wanted].filter((id) => !productMap.has(id));
+        for (let hop = 0; missing.length && hop < 4; hop++) {
+          for (const p of await api.fetchProductsById(missing)) productMap.set(p.id, p);
+          missing = [...new Set([...productMap.values()].map((p) => (p.status === 'merged' ? p.mergedInto : null)))].filter(
+            (id): id is string => !!id && !productMap.has(id),
+          );
+        }
 
         // Delta: changed rows replace old ones and tombstones remove theirs.
         const keep = new Set(storeIds);
@@ -589,7 +602,8 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     (p) => {
       track('plan_applied', { store_count: p.storeCount, item_count: p.itemCount });
       void guard('Saving the plan', async () => {
-        const rec = await api.insertPlan({ ...p, regionId: settingsRef.current.regionId, currency: region?.currency ?? settingsRef.current.currency });
+        // Only a known city: "Another city" has no row in regions.
+        const rec = await api.insertPlan({ ...p, regionId: region?.id ?? null, currency: region?.currency ?? settingsRef.current.currency });
         commit({ ...snapRef.current, plans: [rec, ...snapRef.current.plans] });
       });
     },
@@ -971,7 +985,8 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     stores: snap.stores,
     products: snap.products,
     storeById: (id) => storeMap.get(id),
-    productById: (id) => productMap.get(id),
+    productById: (id) => productMap.get(canonicalOf(productMap, id)),
+    canonicalId: (id) => canonicalOf(productMap, id),
     pricesFor: (id) => byProduct.get(id) || [],
     priceAt: (storeId, productId) => effective.get(pairKey(storeId, productId)),
     myStoreIds: snap.myStores,
@@ -986,8 +1001,9 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     recordPlan,
     savedThisMonth,
     plansThisMonth: snap.plans.length,
-    // Not at a closed shop: a shop that became shared has its prices there and here.
-    recentReports: snap.ownReports.filter((r) => storeMap.get(r.storeId)?.status !== 'closed').length,
+    // Not at a closed shop (a shop that became shared has its prices there and here),
+    // nor on a merged product (its prices were copied onto the one it became).
+    recentReports: snap.ownReports.filter((r) => storeMap.get(r.storeId)?.status !== 'closed' && productMap.get(r.productId)?.status !== 'merged').length,
     suggestions: snap.suggestions,
     suggestionFor: (id) => snap.suggestions.find((s) => s.storeId === id),
     movedTo: (id) => moved.get(id) ?? null,
