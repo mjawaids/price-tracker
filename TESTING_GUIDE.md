@@ -101,6 +101,12 @@ service worker.
 - [ ] "We picked these" lists assumed items; tapping one opens the item choice sheet
       (Exactly this one / *Brand*, similar size / Any brand, similar size). *Just this
       time* changes only this item; *Save as my usual* applies to every list.
+- [ ] The item choice sheet ("Which eggs?") shows each product once, with no prices or
+      store names (CHEAPEST / USUAL tags only; "Not at your stores yet" when no store you
+      compare has it). The same product at two stores under slightly different names
+      ("Haleeb Asli Milk 1000ml" / "1 Ltr") is one row; saving it as *Exactly this one*
+      finds it at both stores. "eggs" lists eggs only: no egg noodles, egg pudding,
+      dog food or chocolate surprise eggs, and Omega-3 eggs show as 6 or 12, not 3.
 - [ ] **Use this plan** returns to the list split by store, with a plan banner
       (Change / Clear), a Stores/Aisles switch and *Shop here* on each store.
       *Open* on an online store opens its website in a new tab.

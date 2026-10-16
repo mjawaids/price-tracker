@@ -134,6 +134,8 @@ export function parseSize(rawName: string): ParsedSize | null {
     .replace(/\(\s*0{3,}\d*\s*\)/g, ' ')
     .replace(/\brs\.?\s*-?\s*\d+/g, ' ') // "Rs. 30" is a price point, not a size ("Wafers 8s" isn't one)
     .replace(/\d+(?:\.\d+)?\s*mg\b/g, ' ') // medicine strength, not a size
+    .replace(/\bomega\s*-?\s*3\b/g, 'omega') // "Omega 3 Eggs 12 Pieces" is 12 eggs, not 3
+    .replace(/\b(vitamin\s+[a-z])-?\d+\b/g, '$1') // "Vitamin D3" (but "Vitamin D 12 Eggs" keeps its 12)
     .replace(/\d+(?:\.\d+)?\s*%/g, ' ');
 
   const metric = (n: string, u: string) => {
@@ -208,6 +210,17 @@ export function parseSize(rawName: string): ParsedSize | null {
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
+/**
+ * Whether a size fits what a type is sold as: a type with `minUnits` (eggs: 6)
+ * needs at least that many units, so "Egg Pudding 78g" or "Surprise Egg 1 Unit"
+ * isn't eggs. Unknown sizes fit.
+ */
+export function sizeFitsType(type: ItemType, size: ParsedSize | null): boolean {
+  if (!type.minUnits || !size) return true;
+  const units = size.unit === 'pc' ? size.value * size.pack : size.pack;
+  return units >= type.minUnits;
+}
+
 // ── Names ────────────────────────────────────────────────────────────────────
 const SMALL_WORDS = new Set(['and', 'of', 'with', 'in', 'for', 'the', 'a', 'or', 'x']);
 
@@ -267,7 +280,12 @@ export function parseProductName(
   // Match on the whole name so a phrase that starts inside the brand still counts
   // ("Cadbury Dairy Milk" → chocolate), but not one that's only the brand ("Lemon Max").
   // Skip the name's own brand words: "OLPERS" is one token where "Olper's" is two.
-  const typeMatch = matchItemType(name, opts.categoryHint, brand ? tokens(name.split(' ').slice(0, brandWords).join(' ')).length : 0);
+  const typeMatch = matchItemType(
+    name,
+    opts.categoryHint,
+    brand ? tokens(name.split(' ').slice(0, brandWords).join(' ')).length : 0,
+    (t) => sizeFitsType(t, size),
+  );
   const itemType = typeMatch?.type ?? null;
 
   // Variant: what's left once brand, item words, sizes, prices and packaging are gone.

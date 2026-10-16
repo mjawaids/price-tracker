@@ -26,6 +26,11 @@ export interface ItemType {
    * baby, pharmacy) — there we assume their usual product only.
    */
   swapBrands: boolean;
+  /**
+   * The fewest units a real product of this type comes in (eggs: 6). A product
+   * whose size says less ("Egg Pudding 78g", "Surprise Egg 20g") isn't this type.
+   */
+  minUnits?: number;
 }
 
 const LOYAL = new Set(['personal-care', 'baby', 'pharmacy']);
@@ -37,7 +42,7 @@ function t(
   category: string,
   basis: Basis,
   keywords: string[],
-  extra: { display?: PriceDisplay; parent?: string; swapBrands?: boolean } = {},
+  extra: { display?: PriceDisplay; parent?: string; swapBrands?: boolean; minUnits?: number } = {},
 ): ItemType {
   return {
     id,
@@ -48,6 +53,7 @@ function t(
     keywords,
     parent: extra.parent,
     swapBrands: extra.swapBrands ?? !LOYAL.has(category),
+    minUnits: extra.minUnits,
   };
 }
 
@@ -104,7 +110,7 @@ export const ITEM_TYPES: ItemType[] = [
   t('butter', 'Butter', 'dairy', 'g', ['butter', 'makhan', 'makkhan', 'maska']),
   t('cheese', 'Cheese', 'dairy', 'g', ['cheese', 'cheddar', 'mozzarella', 'cheese slices', 'slice cheese', 'cream cheese']),
   t('cream', 'Cream', 'dairy', 'ml', ['cream', 'dairy cream', 'cooking cream', 'malai', 'whipping cream']),
-  t('eggs', 'Eggs', 'dairy', 'pc', ['egg', 'eggs', 'anda', 'anday', 'andey', 'desi eggs'], { display: 'dozen' }),
+  t('eggs', 'Eggs', 'dairy', 'pc', ['egg', 'eggs', 'anda', 'anday', 'andey', 'desi eggs'], { display: 'dozen', minUnits: 6 }),
   t('paneer', 'Paneer', 'dairy', 'g', ['paneer', 'cottage cheese']),
   t('lassi', 'Lassi', 'dairy', 'ml', ['lassi', 'raita']),
   t('condensed-milk', 'Condensed milk', 'dairy', 'g', ['condensed milk', 'evaporated milk', 'milkmaid']),
@@ -172,7 +178,7 @@ export const ITEM_TYPES: ItemType[] = [
   t('chocolate-spread', 'Chocolate spread', 'pantry', 'g', ['chocolate spread', 'hazelnut spread', 'nutella']),
   t('baking', 'Baking supplies', 'pantry', 'g', ['baking powder', 'baking soda', 'yeast', 'cocoa powder', 'food colour', 'food color', 'essence', 'vanilla essence', 'cooking chocolate']),
   t('custard', 'Custard', 'pantry', 'g', ['custard', 'custard powder']),
-  t('dessert-mix', 'Dessert mix', 'pantry', 'g', ['kheer mix', 'sheer khurma', 'gulab jamun mix', 'gulaab jamun mix', 'cake mix', 'dessert mix', 'jelly crystals', 'falooda', 'kulfa']),
+  t('dessert-mix', 'Dessert mix', 'pantry', 'g', ['kheer mix', 'sheer khurma', 'gulab jamun mix', 'gulaab jamun mix', 'cake mix', 'dessert mix', 'jelly crystals', 'falooda', 'kulfa', 'pudding', 'pudding mix', 'egg pudding']),
   t('tomato-paste', 'Tomato paste', 'pantry', 'g', ['tomato paste', 'tomato puree', 'pizza sauce', 'pasta sauce']),
   t('coconut-milk', 'Coconut milk', 'pantry', 'ml', ['coconut milk', 'coconut cream']),
   t('corn-flour', 'Corn flour', 'pantry', 'g', ['corn flour', 'cornflour', 'corn starch', 'cornstarch']),
@@ -186,10 +192,10 @@ export const ITEM_TYPES: ItemType[] = [
   t('ice-cream', 'Ice cream', 'frozen', 'ml', ['ice cream', 'icecream', 'cornetto', 'kulfi', 'ice lolly', 'choc bar', 'cone']),
 
   // Snacks & biscuits
-  t('biscuits', 'Biscuits', 'snacks', 'g', ['biscuit', 'biscuits', 'cookie', 'cookies', 'crackers', 'wafer', 'wafers', 'nan khatai', 'nankhatai']),
+  t('biscuits', 'Biscuits', 'snacks', 'g', ['biscuit', 'biscuits', 'cookie', 'cookies', 'crackers', 'wafer', 'wafers', 'nan khatai', 'nankhatai', 'gala egg']),
   t('chips', 'Chips', 'snacks', 'g', ['chips', 'crisps', 'nachos', 'potato sticks', 'puffs', 'cheese balls', 'chipsticks']),
   t('nimko', 'Nimko', 'snacks', 'g', ['nimko', 'nimco', 'namkeen', 'namkin', 'bhel puri', 'papdi', 'chewara', 'daal moong', 'dal moong']),
-  t('chocolate', 'Chocolate', 'snacks', 'g', ['chocolate', 'chocolates', 'dairy milk', 'chocolate bar', 'kitkat', 'snickers']),
+  t('chocolate', 'Chocolate', 'snacks', 'g', ['chocolate', 'chocolates', 'dairy milk', 'chocolate bar', 'kitkat', 'snickers', 'surprise egg', 'chocolate egg', 'choco egg']),
   t('candy', 'Sweets & candy', 'snacks', 'g', ['candy', 'candies', 'toffee', 'toffees', 'lollipop', 'jelly', 'jellies', 'gummy', 'gummies', 'bubble gum', 'chewing gum', 'marshmallow', 'mints']),
   t('nuts', 'Nuts', 'snacks', 'g', ['nuts', 'mixed nuts', 'almond', 'almonds', 'badam', 'pistachio', 'pistachios', 'pista', 'cashew', 'cashews', 'kaju', 'walnut', 'walnuts', 'akhrot', 'peanuts', 'moongphali'], { display: 'kg' }),
   t('dry-fruit', 'Dry fruit', 'snacks', 'g', ['dry fruit', 'dry fruits', 'raisins', 'kishmish', 'apricots', 'khubani', 'figs', 'anjeer'], { display: 'kg' }),
@@ -262,6 +268,7 @@ export const ITEM_TYPES: ItemType[] = [
   t('batteries', 'Batteries', 'household', 'pc', ['battery', 'batteries', 'aa battery', 'aaa battery']),
   t('light-bulb', 'Light bulbs', 'household', 'pc', ['light bulb', 'bulb', 'bulbs', 'led bulb', 'energy saver', 'tube light']),
   t('matches', 'Matches & lighters', 'household', 'pc', ['matches', 'matchbox', 'match box', 'lighter']),
+  t('pet-food', 'Pet food', 'household', 'g', ['pet food', 'dog food', 'cat food', 'puppy food', 'kitten food'], { display: 'kg' }),
 ];
 
 export const ITEM_TYPE_BY_ID = new Map(ITEM_TYPES.map((it) => [it.id, it]));
@@ -378,14 +385,16 @@ export function findTypes(text: string, skipTokens = 0): TypeMatch[] {
 /**
  * The item type a name is most likely about. `categoryHint` (a canonical
  * category id) breaks ties and flags doubtful matches; `skipTokens` is the
- * number of leading tokens that are the brand.
+ * number of leading tokens that are the brand; `accept` drops types the caller
+ * knows don't fit (a size too small for eggs), so the next best one wins.
  */
 export function matchItemType(
   text: string,
   categoryHint?: string | null,
   skipTokens = 0,
+  accept?: (type: ItemType) => boolean,
 ): { type: ItemType; words: string[]; confident: boolean } | null {
-  const found = findTypes(text, skipTokens);
+  const found = findTypes(text, skipTokens).filter((m) => !accept || accept(m.type));
   if (!found.length) return null;
   const score = (m: TypeMatch) =>
     m.specificity * 100 + m.end + (categoryHint && m.type.category === categoryHint ? 50 : 0);

@@ -15,6 +15,7 @@ export function ProductRow({
   selected,
   sub,
   age,
+  plain,
 }: {
   product: CatalogProduct;
   onClick?: () => void;
@@ -25,6 +26,8 @@ export function ProductRow({
   sub?: React.ReactNode;
   /** When the price named on a custom `sub` line was seen (the default line uses the best price's). */
   age?: string | null;
+  /** No price line: only `sub`, when given (no age chip). */
+  plain?: boolean;
 }) {
   const compare = useCompare();
   const priced = usePriced();
@@ -61,10 +64,14 @@ export function ProductRow({
             <span className="font-semibold text-ink-soft"> · {size}</span>
           )}
         </span>
-        <span className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[12.5px] text-ink-soft truncate">{line}</span>
-          {(sub ? age : best?.price.observedAt) && <AgeChip observedAt={sub ? age : best!.price.observedAt} />}
-        </span>
+        {plain ? (
+          sub && <span className="text-[12.5px] text-ink-soft">{sub}</span>
+        ) : (
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[12.5px] text-ink-soft truncate">{line}</span>
+            {(sub ? age : best?.price.observedAt) && <AgeChip observedAt={sub ? age : best!.price.observedAt} />}
+          </span>
+        )}
       </span>
       {trailing}
     </button>

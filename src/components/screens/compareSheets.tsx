@@ -6,13 +6,14 @@ import { useLists } from '../../contexts/ListsContext';
 import { ListItem } from '../../types';
 import { CatalogProduct, CatalogStore, PreferenceMode, StoreDeliveryRule } from '../../lib/compare/types';
 import { ITEM_TYPE_BY_ID, tokens, typeFamily } from '../../lib/compare/itemTypes';
-import { expand, resolveItem } from '../../lib/compare/resolve';
+import { expand, resolveItem, sameProductKey } from '../../lib/compare/resolve';
+import type { ProductProfile } from '../../lib/compare/resolve';
 import { similarSize } from '../../lib/compare/units';
 import { deliveryLabel, itemTypeName, modeLabel } from '../../lib/compare/describe';
 import { AgeChip, Btn, Chip, ConfirmSheet, Icon, Sheet, ToggleTrack } from '../ui';
 import { Field, NumIn, TextIn } from './manageParts';
 import { ProductRow, StoreName } from './compareParts';
-import { branchArea, groupByChain, HELD_MESSAGE, isBranch, sectionLabel, storeMatches, toPicks, unitPriceText, usePriced } from './compareHelpers';
+import { branchArea, groupByChain, HELD_MESSAGE, isBranch, sectionLabel, storeMatches, toPicks, usePriced } from './compareHelpers';
 import { ChainGroup, StorePickerSheet, StoreSearch } from './storePicker';
 import { ShareShopRow, SuggestShopSheet } from './suggestSheet';
 
@@ -53,23 +54,59 @@ export function ItemChoiceSheet({
   const ref = refId ? ctx.profiles.get(refId) ?? null : null;
   const typeId = resolved?.itemType?.id ?? ref?.itemType ?? null;
 
-  // Candidates: products of this type (and its sub-types), else name matches.
-  const candidates = useMemo(() => {
-    if (!resolved) return [];
-    const words = tokens(q || '');
-    let pool = typeId ? [...typeFamily(typeId)].flatMap((id) => ctx.byType.get(id) || []) : [];
+  // Products of this type (and its sub-types), else ones whose names hold every
+  // word of the item and aren't known to be something else ("eggs" never finds
+  // "Egg Noodles"). The same product at several stores (slightly different
+  // names) is one choice: a group, led by the one most stores price.
+  const { groups, groupOf, matched } = useMemo(() => {
+    const none = { groups: [] as ProductProfile[][], groupOf: new Map<string, ProductProfile[]>(), matched: false };
+    if (!resolved) return none;
+    const family = typeId ? typeFamily(typeId) : null;
+    let pool = family ? [...family].flatMap((id) => ctx.byType.get(id) || []) : [];
+    let matched = false;
     if (!pool.length) {
-      const nameWords = tokens(resolved.item.name);
-      pool = [...ctx.profiles.values()].filter((p) => nameWords.some((w) => p.words.has(w)));
+      matched = true;
+      const nameWords = tokens(resolved.item.name).filter((w) => !/^\d/.test(w));
+      pool = nameWords.length
+        ? [...ctx.profiles.values()].filter(
+            (p) => nameWords.every((w) => p.words.has(w)) && (!family || !p.itemType || family.has(p.itemType)),
+          )
+        : [];
     }
-    if (words.length) pool = pool.filter((p) => words.every((w) => [...p.words].some((x) => x.startsWith(w))));
-    const best = (id: string) => priced(id)[0]?.price.price ?? Infinity;
-    return pool.sort((a, b) => best(a.product.id) - best(b.product.id)).slice(0, MAX_ROWS);
+    const byKey = new Map<string, ProductProfile[]>();
+    for (const p of pool) {
+      const key = sameProductKey(p) ?? p.product.id;
+      byKey.set(key, [...(byKey.get(key) || []), p]);
+    }
+    const stores = (p: ProductProfile) => priced(p.product.id).length;
+    const groups = [...byKey.values()].map((g) => g.sort((a, b) => stores(b) - stores(a)));
+    const groupOf = new Map<string, ProductProfile[]>();
+    for (const g of groups) for (const p of g) groupOf.set(p.product.id, g);
+    return { groups, groupOf, matched };
     // priced reads the latest prices through the context.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolved, typeId, q, ctx]);
+  }, [resolved, typeId, ctx]);
 
-  const acceptable = useMemo(() => (ref ? new Set(expand(ctx, ref, mode).map((p) => p.product.id)) : new Set<string>()), [ctx, ref, mode]);
+  const candidates = useMemo(() => {
+    const words = tokens(q || '');
+    const shown = words.length
+      ? groups.filter((g) => g.some((p) => words.every((w) => [...p.words].some((x) => x.startsWith(w)))))
+      : groups;
+    // Cheapest first (prices aren't shown, but the order still helps); unpriced last.
+    const best = (g: ProductProfile[]) => Math.min(...g.map((p) => priced(p.product.id)[0]?.price.price ?? Infinity));
+    return [...shown].sort((a, b) => best(a) - best(b)).slice(0, MAX_ROWS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, q, ctx]);
+
+  /** The chosen product and its copies at other stores. */
+  const refGroup = useMemo(() => (ref ? groupOf.get(ref.product.id) ?? [ref] : []), [groupOf, ref]);
+  const acceptable = useMemo(
+    () =>
+      ref
+        ? new Set([...expand(ctx, ref, mode), ...(mode === 'exact' ? refGroup : [])].map((p) => p.product.id))
+        : new Set<string>(),
+    [ctx, ref, mode, refGroup],
+  );
   const cheapestId = useMemo(() => {
     let best: string | null = null;
     let bestPrice = Infinity;
@@ -98,7 +135,8 @@ export function ItemChoiceSheet({
   const saveUsual = async () => {
     if (!ref || saving) return;
     setSaving(true);
-    const ok = await compare.setUsual(item.name, mode, ref.product.id, mode === 'exact' ? [ref.product.id] : [ref.product.id]);
+    // "Exactly this one" covers its copies at other stores too.
+    const ok = await compare.setUsual(item.name, mode, ref.product.id, mode === 'exact' ? refGroup.map((p) => p.product.id) : [ref.product.id]);
     setSaving(false);
     if (!ok) {
       onDone?.('Couldn’t save — check your connection and try again');
@@ -183,7 +221,9 @@ export function ItemChoiceSheet({
       </div>
 
       <div className="flex items-center justify-between mb-2">
-        <span className={sectionLabel}>{typeId ? `${ITEM_TYPE_BY_ID.get(typeId)?.name ?? 'Products'} at your stores` : 'Products'}</span>
+        <span className={sectionLabel}>
+          {matched || !typeId ? `Products matching “${item.name}”` : (ITEM_TYPE_BY_ID.get(typeId)?.name ?? 'Products')}
+        </span>
       </div>
       <label htmlFor="choice-search" className="sr-only">
         Search products
@@ -205,33 +245,29 @@ export function ItemChoiceSheet({
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {candidates.map((c) => {
-            const offers = priced(c.product.id);
-            const best = offers[0];
-            const similar = !ref || mode === 'exact' || acceptable.has(c.product.id) || similarSize(c.size, ref.size);
-            const per = best ? unitPriceText(c.product, best.price.price!, compare.fmt) : null;
+          {candidates.map((g) => {
+            const lead = g[0];
+            const ids = new Set(g.map((p) => p.product.id));
+            const carried = g.some((p) => priced(p.product.id).length > 0);
+            const similar = !ref || mode === 'exact' || g.some((p) => acceptable.has(p.product.id)) || similarSize(lead.size, ref.size);
+            const cheapest = !!cheapestId && ids.has(cheapestId);
+            const usual = !!usualId && ids.has(usualId);
             return (
               <ProductRow
-                key={c.product.id}
-                product={c.product}
-                selected={c.product.id === refId}
-                dim={!similar || !best}
-                onClick={() => setRefId(c.product.id)}
-                sub={
-                  best
-                    ? offers
-                        .slice(0, 2)
-                        .map((o) => `${compare.fmt(o.price.price!)} at ${o.store.name}`)
-                        .join(' · ')
-                    : 'No price at your stores yet'
-                }
-                age={best?.price.observedAt}
+                key={lead.product.id}
+                product={lead.product}
+                plain
+                selected={!!refId && ids.has(refId)}
+                dim={!similar || !carried}
+                onClick={() => setRefId(lead.product.id)}
+                sub={carried ? undefined : 'Not at your stores yet'}
                 trailing={
-                  <span className="shrink-0 flex flex-col items-end gap-0.5">
-                    {per && <span className="font-mono text-[12.5px] font-bold">{per}</span>}
-                    {c.product.id === cheapestId && <span className="text-[10.5px] font-extrabold text-accent-ink">CHEAPEST</span>}
-                    {c.product.id === usualId && <span className="text-[10.5px] font-extrabold text-ink-soft">USUAL</span>}
-                  </span>
+                  (cheapest || usual) && (
+                    <span className="shrink-0 flex flex-col items-end gap-0.5">
+                      {cheapest && <span className="text-[10.5px] font-extrabold text-accent-ink">CHEAPEST</span>}
+                      {usual && <span className="text-[10.5px] font-extrabold text-ink-soft">USUAL</span>}
+                    </span>
+                  )
                 }
               />
             );
