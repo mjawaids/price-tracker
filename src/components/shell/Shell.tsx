@@ -1,4 +1,4 @@
-import { ComponentType, ReactNode, Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { ComponentType, ReactNode, Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp, ScreenName, Section } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
@@ -11,6 +11,7 @@ import { CurrencySheet } from '../screens/sheets';
 import { currencyChipLabel } from '../../utils/currency';
 import { InstallBanner, InstallSidebarCta } from './Install';
 import { WhatsNewSheet } from '../onboarding/WhatsNewSheet';
+import { EdgeBack } from './EdgeBack';
 
 import ListsScreen from '../screens/ListsScreen';
 
@@ -417,9 +418,41 @@ export default function Shell() {
     return () => clearTimeout(t);
   }, [shareFailed]);
 
-  // Reset scroll position + track navigation on screen change.
+  // Scroll: a screen opened starts at the top; going back returns to where that
+  // screen was left. Positions are kept per stack depth (a new tab root clears them).
+  const scrollAt = useRef<number[]>([]);
+  const depthRef = useRef(app.depth);
+  const onScroll = () => {
+    if (scrollRef.current) scrollAt.current[depthRef.current - 1] = scrollRef.current.scrollTop;
+  };
+  const handled = useRef('');
+  useLayoutEffect(() => {
+    // Once per screen change (StrictMode runs effects twice in development).
+    const key = `${app.depth}:${app.screen}:${JSON.stringify(app.params)}`;
+    if (handled.current === key) return;
+    handled.current = key;
+    const from = depthRef.current;
+    depthRef.current = app.depth;
+    const el = scrollRef.current;
+    if (!el) return;
+    if (app.depth >= from) {
+      if (app.depth === 1) scrollAt.current = [];
+      scrollAt.current.length = app.depth - 1;
+      el.scrollTo({ top: 0 });
+      return;
+    }
+    const top = scrollAt.current[app.depth - 1] ?? 0;
+    scrollAt.current.length = app.depth;
+    // The screen remounts: wait for its content (a lazy screen may need a frame).
+    let tries = 0;
+    const restore = () => {
+      if (handled.current !== key) return; // moved on meanwhile
+      el.scrollTo({ top });
+      if (Math.abs(el.scrollTop - top) > 2 && tries++ < 10) requestAnimationFrame(restore);
+    };
+    requestAnimationFrame(restore);
+  }, [app.screen, app.params, app.depth]);
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0 });
     trackPageView(`/${app.screen}`, `${app.screen.charAt(0).toUpperCase()}${app.screen.slice(1)}`);
   }, [app.screen, app.params]);
 
@@ -442,6 +475,7 @@ export default function Shell() {
 
   const sheets = (
     <>
+      <EdgeBack />
       <CurrencySheet />
       {app.sheet === 'region' && (
         <Suspense fallback={null}>
@@ -473,7 +507,7 @@ export default function Shell() {
         <InstallBanner />
         {inCompareTabs && <CompareNav />}
         {compareOffline && <CompareOfflineNote />}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden relative">
+        <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto overflow-x-hidden relative">
           {screenEl}
         </div>
         {showBottomNav && (
@@ -491,7 +525,7 @@ export default function Shell() {
         <InstallBanner />
         {app.section === 'compare' && <TopBar onPick={app.go} />}
         {compareOffline && <CompareOfflineNote />}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden relative">
+        <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto overflow-x-hidden relative">
           {screenEl}
         </div>
       </div>
