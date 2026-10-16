@@ -8,7 +8,7 @@ import { ITEM_TYPE_BY_ID, matchItemType, tokens, typeFamily } from './itemTypes.
 import type { ItemType } from './itemTypes.ts';
 import { KNOWN_BRANDS, parseProductName } from './productName.ts';
 import type { ParsedSize } from './productName.ts';
-import { packsNeeded, productSize, similarSize } from './units.ts';
+import { packsNeeded, productSize, similarSize, totalAmount } from './units.ts';
 import type { LineOption } from './optimizer.ts';
 import type { CatalogProduct, CurrentPrice, ItemPreference, PreferenceMode } from './types.ts';
 
@@ -120,6 +120,18 @@ export function canonicalOf(products: Map<string, CatalogProduct>, id: string): 
     cur = next;
   }
   return cur;
+}
+
+/**
+ * Products that are the same thing sold under slightly different names at
+ * different stores ("Haleeb Asli Milk 1000ml" / "Haleeb Asli Milk 1 Ltr") share
+ * this key: brand, type, total size and the words that tell variants apart.
+ * Null (never grouped) without a brand, type and size to compare.
+ */
+export function sameProductKey(p: ProductProfile): string | null {
+  if (!p.brandKey || !p.itemType || !p.size) return null;
+  const variant = [...new Set(tokens(p.product.variant ?? ''))].sort().join(' ');
+  return `${p.brandKey}|${p.itemType}|${totalAmount(p.size)}${p.size.unit}|${variant}`;
 }
 
 /** A product the item or usual names, following merges. */
