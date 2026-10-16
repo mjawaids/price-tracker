@@ -419,22 +419,31 @@ export default function Shell() {
   }, [shareFailed]);
 
   // Scroll: a screen opened starts at the top; going back returns to where that
-  // screen was left. Positions are kept per stack depth (a new tab root clears them).
+  // screen was left. Positions are kept per stack depth; a new tab root (a tab
+  // switch, or back from Compare/Profile to Lists) clears them and starts at the top.
   const scrollAt = useRef<number[]>([]);
   const depthRef = useRef(app.depth);
+  const rootRef = useRef(app.rootId);
   const onScroll = () => {
     if (scrollRef.current) scrollAt.current[depthRef.current - 1] = scrollRef.current.scrollTop;
   };
   const handled = useRef('');
   useLayoutEffect(() => {
     // Once per screen change (StrictMode runs effects twice in development).
-    const key = `${app.depth}:${app.screen}:${JSON.stringify(app.params)}`;
+    const key = `${app.rootId}:${app.depth}:${app.screen}:${JSON.stringify(app.params)}`;
     if (handled.current === key) return;
     handled.current = key;
     const from = depthRef.current;
+    const newRoot = rootRef.current !== app.rootId;
     depthRef.current = app.depth;
+    rootRef.current = app.rootId;
     const el = scrollRef.current;
     if (!el) return;
+    if (newRoot) {
+      scrollAt.current = [];
+      el.scrollTo({ top: 0 });
+      return;
+    }
     if (app.depth >= from) {
       if (app.depth === 1) scrollAt.current = [];
       scrollAt.current.length = app.depth - 1;
@@ -451,7 +460,7 @@ export default function Shell() {
       if (Math.abs(el.scrollTop - top) > 2 && tries++ < 10) requestAnimationFrame(restore);
     };
     requestAnimationFrame(restore);
-  }, [app.screen, app.params, app.depth]);
+  }, [app.screen, app.params, app.depth, app.rootId]);
   useEffect(() => {
     trackPageView(`/${app.screen}`, `${app.screen.charAt(0).toUpperCase()}${app.screen.slice(1)}`);
   }, [app.screen, app.params]);

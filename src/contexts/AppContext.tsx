@@ -53,6 +53,8 @@ export interface AppApi {
   canGoBack: boolean;
   /** Screens on the stack (1 = a tab's root); the Shell keeps scroll per depth. */
   depth: number;
+  /** Changes with every new tab root, so the Shell can tell a tab switch from back. */
+  rootId: number;
   // sheets (help takes an optional topic id)
   sheet: SheetName;
   sheetTopic: string | null;
@@ -76,6 +78,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { clearLocalData: clearLocalLists } = useLists();
   const { clearLocalData: clearLocalCatalog } = useCompare();
   const [stack, setStack] = useState<StackEntry[]>([{ screen: 'lists', params: {} }]);
+  const [rootId, setRootId] = useState(0);
   const [sheet, setSheet] = useState<SheetName>(null);
   const [sheetTopic, setSheetTopic] = useState<string | null>(null);
 
@@ -88,11 +91,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const api: AppApi = useMemo(() => {
     const cur = stack[stack.length - 1];
-    const toLists = () => setStack([{ screen: 'lists', params: {} }]);
+    const toLists = () => {
+      setStack([{ screen: 'lists', params: {} }]);
+      setRootId((n) => n + 1);
+    };
     // A new tab root: earlier screens' history entries go; a root other than Lists
     // gets one, so back returns to Lists.
     const setRoot = (screen: ScreenName, params: ScreenParams) => {
       setStack([{ screen, params }]);
+      setRootId((n) => n + 1);
       clearLayers();
       if (screen !== 'lists') pushLayer(toLists);
     };
@@ -125,6 +132,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       tab: (screen: ScreenName, params: ScreenParams = {}) => setRoot(screen, params),
       canGoBack: stack.length > 1,
       depth: stack.length,
+      rootId,
 
       sheet,
       sheetTopic,
@@ -149,7 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await authSignOut();
       },
     };
-  }, [stack, sheet, sheetTopic, settings.currency, authUser, fmt, updateSettings, authSignOut, clearLocalLists, clearLocalCatalog]);
+  }, [stack, rootId, sheet, sheetTopic, settings.currency, authUser, fmt, updateSettings, authSignOut, clearLocalLists, clearLocalCatalog]);
 
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>;
 };

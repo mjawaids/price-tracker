@@ -25,6 +25,11 @@ On Android (installed app and Chrome), with the back button or gesture:
 - [ ] Compare → a product (Search → product): back returns to Search, then Prices, each
       scrolled where it was; back again goes to Lists; back on Lists leaves the app.
 - [ ] Profile (from the tab): back goes to Lists.
+- [ ] Scroll Prices down, open Search, then tap the Lists tab: Lists starts at the top
+      (a tab switch never brings back another tab's scroll position).
+- [ ] Open a product, follow a link that loads another page (e.g. Privacy from the
+      sign-in screen's footer, or any full page load), come back with back, then press
+      back once on Lists: it leaves the app (no extra press that does nothing).
 - [ ] "Done at <store>" with a changed price: back asks *Discard your answers?*;
       *Keep editing* keeps the sheet; back on the question closes only the question.
 - [ ] Closing a sheet with its × and then pressing back goes back a screen (no dead

@@ -3,7 +3,8 @@
 // Lists), one step at a time; on Lists with nothing open, back leaves the app.
 //
 // Each open "layer" owns one browser history entry above the page's own. The entries
-// carry `sl` (their depth) next to React Router's state, and the URL never changes, so
+// carry `sl` (their depth) and `slid` (this visit) next to React Router's state, and
+// the URL never changes, so
 // routing, the share target and the service worker see nothing new. Layers are the
 // source of truth: history is brought in line with them after each change (in a
 // microtask, so a sheet that remounts in the same tick doesn't move history at all).
@@ -20,11 +21,17 @@ let traversing = false; // a history.go() we started hasn't landed yet
 let scheduled = false;
 let nextId = 1;
 let started = false;
+let session = ''; // this visit's id: entries from an earlier one are told apart by it
 const listeners = new Set<() => void>();
 
 const depthOf = (state: unknown) => {
   const sl = (state as { sl?: unknown } | null)?.sl;
   return typeof sl === 'number' && sl > 0 ? Math.floor(sl) : 0;
+};
+
+const sessionOf = (state: unknown) => {
+  const id = (state as { slid?: unknown } | null)?.slid;
+  return typeof id === 'string' ? id : null;
 };
 
 function notify() {
@@ -36,7 +43,7 @@ function sync() {
   if (histDepth < layers.length) {
     while (histDepth < layers.length) {
       histDepth += 1;
-      window.history.pushState({ ...(window.history.state ?? {}), sl: histDepth }, '');
+      window.history.pushState({ ...(window.history.state ?? {}), sl: histDepth, slid: session }, '');
     }
   } else if (histDepth > layers.length) {
     traversing = true;
@@ -55,6 +62,15 @@ function schedule() {
 }
 
 function onPop(e: PopStateEvent) {
+  const from = sessionOf(e.state);
+  if (from && from !== session) {
+    // An entry from an earlier visit (the app was left by a full page load and come
+    // back to): it lies below this visit's own entry, where back leaves the app, so
+    // keep going back, past that visit's entries and the one it opened on.
+    traversing = true;
+    window.history.go(-(depthOf(e.state) + 1));
+    return;
+  }
   histDepth = depthOf(e.state);
   if (traversing) {
     // Our own go() landed: catch up with anything that changed meanwhile.
@@ -71,15 +87,17 @@ function onPop(e: PopStateEvent) {
 }
 
 /**
- * Starts listening; the entry the app opens on becomes depth 0. Layers added before
- * this (a sheet open on launch: child effects run before the provider's) are kept.
+ * Starts listening; the entry the app opens on becomes depth 0 of a new visit (entries
+ * an earlier visit left below it are skipped by back). Layers added before this (a
+ * sheet open on launch: child effects run before the provider's) are kept.
  */
 export function startBackStack() {
   if (started) return;
   started = true;
   histDepth = 0;
   traversing = false;
-  if (depthOf(window.history.state) > 0) window.history.replaceState({ ...window.history.state, sl: 0 }, '');
+  session = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  window.history.replaceState({ ...(window.history.state ?? {}), sl: 0, slid: session }, '');
   window.addEventListener('popstate', onPop);
   schedule();
 }

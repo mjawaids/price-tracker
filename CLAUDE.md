@@ -320,7 +320,10 @@ Sections (`app.section` / `app.openSection`): `lists` (default; includes `plan`)
   that ask before throwing away typed answers ask then too (one still open afterwards
   takes a new entry). `app.back()` (in-screen back buttons) closes the top layer the
   same way. Bottom sheets also close when pulled down by the handle or title (96 px,
-  or a flick). `Shell` keeps each stack depth's scroll position and restores it on back.
+  or a flick). `Shell` keeps each stack depth's scroll position and restores it on back;
+  a new tab root (`app.rootId` changes) clears them. Entries also carry `slid`, an id
+  per visit: one left by an earlier visit (the app was left by a full page load) lies
+  below this visit's own entry, so back skips past it and leaves the app.
 - Sidebar nav scrolls (scrollbar hidden) above the pinned install card + profile;
   `useNavOverflow` in `Shell.tsx` shows edge fades and a "More ⌄" button when items are hidden
 - Code splitting: `Shell.tsx` lazy-loads every screen except Lists (Suspense skeleton)
