@@ -181,6 +181,8 @@ can share a Supabase project with other apps without mixing data. Tables:
 
 How prices are decided and protected from spam: [docs/compare-data.md](docs/compare-data.md).
 
+Where the app is heading and what's planned next: [docs/roadmap.md](docs/roadmap.md).
+
 User profile data (name, avatar) is stored in Supabase Auth `user_metadata`,
 so no separate profiles table is required by the app.
 

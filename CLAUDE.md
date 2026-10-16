@@ -118,7 +118,12 @@ Context-based (no Redux). Providers in `src/contexts/`:
 - An item's product: pinned (`list_items.product_id`, "Just this time") → usual
   (`item_preferences`) → named in the text → assumed (last bought, else most carried).
   A merged product's id counts as the product it became (`resolve.ts` `aliases`).
-  `ItemChoiceSheet` (`compareSheets.tsx`) changes it.
+  `ItemChoiceSheet` (`compareSheets.tsx`, "Which eggs?") changes it: one row per product
+  with no prices or stores (`ProductRow` `plain`); the same product under slightly
+  different names at several stores is one row (`resolve.ts` `sameProductKey`: brand,
+  type, total size, variant words), and *Exactly this one* saves all its ids. With no
+  products of the item's type it lists names holding every word of the item, minus
+  products known to be another type ("eggs" never shows egg noodles).
 - Help: `src/lib/help.ts` topics in a lazy `HelpSheet` (`app.openSheet('help', id)`);
   `WhatsNewSheet` once per existing user (`spendless-whatsnew:<uid>`).
 
@@ -398,7 +403,7 @@ post-deploy migration drops them.
 | `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
-| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes; `fetchPrices` asks for `STORE_CHUNK` stores per request), `cache.ts` (IndexedDB snapshot) |
+| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2; "Omega 3" / "Vitamin D3" aren't counts; a type's `minUnits` (eggs: 6) rules it out for a smaller size, e.g. "Egg Pudding 78g"), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes; `fetchPrices` asks for `STORE_CHUNK` stores per request), `cache.ts` (IndexedDB snapshot) |
 | `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, receipt saves, cart conversion |
 | `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows and PDF text runs → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js), `pdf.ts` (self-hosted pdf.js: a PDF's text, or its pages for the reader), `flow.ts` (read → parse → session; `readShared`), `session.ts` (the receipt in progress, memory only), `memory.ts` (remembered line choices + last store per chain, IndexedDB), `inbox.ts` (what was shared to SpendLess, main bundle) |
 | `public/share-target-sw.js`, `src/components/shell/SharedReceiptSheet.tsx` | Share to SpendLess: the service-worker handler for the manifest's `share_target` (`POST /share-receipt` → Cache Storage inbox → `/?share=receipt`) and the "Read this receipt?" sheet |
@@ -416,6 +421,7 @@ post-deploy migration drops them.
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
 | `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`) and `WhatsNewSheet` |
 | `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
+| `docs/roadmap.md` | Where the app is heading (global, simple, retention), the UX review of Oct 2026, the PRs planned from it and what's left for later — start here in a new chat |
 | `docs/data-sources.md` | Each imported store: robots.txt, terms checked, method, branch, delivery source; stores not imported and why |
 | `scripts/import/` | Daily price import: `run.ts` (CLI), `sources.ts` (stores, delivery rules, caps, `paused`), `adapters/` (Magento GraphQL, Hydri, Imtiaz menu, Blink product pages), `http.ts` (polite client: honest UA, robots.txt, 1 req/s, stop on a block; redirects followed by hand, each target checked for same site + robots.txt before it's requested), `robots.ts`, `aisles.ts` (what we leave out + aisle → category; pharmacy-typed products left out in any aisle, minus cosmetic look-alikes; mixed aisles decided per product name; `RULES_CHANGED_AT` re-reads listings newly included), `normalize.ts` (name → product + `match_key`), `keys.ts` (re-keys public products no listing keys, e.g. Panda Mart's, before the stores run; fills a missing brand/type from the name, keeps stored ones), `write.sql` (one transaction per store; re-checks each listing's product: key changed → re-match or re-key its own product in place (a blank key clears it), price outside ⅓×–3× of other stores' → held apart, a pack clash — pouch/refill vs jar/bottle/tin in the names — never joins), `db.ts` |
 | `src/pages/Bot.tsx` | `/bot`: what SpendLessBot does and how to opt out (its user agent links here) |
