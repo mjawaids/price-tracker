@@ -81,6 +81,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Mobile-first, fully responsive layout with an adaptive app shell
 - Custom typography (Bricolage Grotesque, Hanken Grotesk, Space Mono)
 - Smooth animations and micro-interactions
+- Back works like an app: the phone's back button (or the browser's) closes the open
+  sheet, then the last screen, then returns to Lists; sheets close when pulled down;
+  in the installed iPhone app, swipe from the left edge to go back
 
 ### 📲 Installable PWA
 - Web app manifest with maskable icons for Android/Chrome
@@ -387,6 +390,7 @@ src/
 │   ├── offline/                # IndexedDB store + sync engine for Lists
 │   ├── compare/                # Compare: item types, name parser, unit prices, matching, optimizer, API, offline cache
 │   ├── receipt/                # Receipts: on-device reader, PDFs, parser, dates, store guess, matching, review, memory, share inbox
+│   ├── backStack.ts            # Back button / gestures ↔ open sheets and screens
 │   ├── help.ts                 # Help topic copy
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy

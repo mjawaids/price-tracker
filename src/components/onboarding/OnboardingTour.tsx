@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Icon, Btn } from '../ui';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { ONBOARDING_STEPS } from './steps';
+import { pushLayer, removeLayer } from '../../lib/backStack';
 
 // Guided slide carousel shown on first login (and replayable from Profile).
 // Responsive: centered card on tablet/desktop, bottom sheet on mobile.
@@ -19,6 +20,15 @@ export function OnboardingTour({ open, onClose }: { open: boolean; onClose: () =
   // Reset to the first slide each time the tour opens.
   useEffect(() => {
     if (open) setStep(0);
+  }, [open]);
+
+  // Back closes it, as it closes a sheet (src/lib/backStack.ts).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const id = pushLayer(() => closeRef.current());
+    return () => removeLayer(id);
   }, [open]);
 
   // Lock scroll + keyboard navigation while open (mirrors Sheet behaviour).

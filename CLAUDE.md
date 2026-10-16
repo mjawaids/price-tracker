@@ -308,6 +308,22 @@ Sections (`app.section` / `app.openSection`): `lists` (default; includes `plan`)
 - Tablet (768–1099px): collapsed sidebar
 - Desktop (≥1100px): full sidebar (your lists on top, then Compare: Prices, Stores,
   Contribute); Compare screens get a top bar with search and the city
+- **Back** (`src/lib/backStack.ts`): the phone's back button, the browser's back and,
+  in the installed iPhone/iPad app, a swipe from the left edge (`EdgeBack.tsx`, a
+  bubble that follows the finger) close the last thing opened, one step at a time:
+  an open sheet (every `Sheet`, and the walkthrough) → the screen opened last → a tab
+  root other than Lists → Lists; on Lists with nothing open, back leaves the app. Each
+  is a *layer* with one history entry (`sl` = its depth, next to React Router's state;
+  the URL never changes): `app.go` and opening a sheet add one, `app.tab` /
+  `openSection` reset them (one for a root other than Lists), and history is brought
+  in line with the layers in a microtask. Back calls a sheet's `onClose`, so sheets
+  that ask before throwing away typed answers ask then too (one still open afterwards
+  takes a new entry). `app.back()` (in-screen back buttons) closes the top layer the
+  same way. Bottom sheets also close when pulled down by the handle or title (96 px,
+  or a flick). `Shell` keeps each stack depth's scroll position and restores it on back;
+  a new tab root (`app.rootId` changes) clears them. Entries also carry `slid`, an id
+  per visit: one left by an earlier visit (the app was left by a full page load) lies
+  below this visit's own entry, so back skips past it and leaves the app.
 - Sidebar nav scrolls (scrollbar hidden) above the pinned install card + profile;
   `useNavOverflow` in `Shell.tsx` shows edge fades and a "More ⌄" button when items are hidden
 - Code splitting: `Shell.tsx` lazy-loads every screen except Lists (Suspense skeleton)
@@ -430,7 +446,8 @@ post-deploy migration drops them.
 | `scripts/seed/add-branches.ts` (+ `add-branches-read.sql`, `add-branches-write.sql`, `branches/<city>.json`) | A city's public in-store branches from a reviewed list (fixed ids; validates, dry run, one transaction; never deletes or touches private/online stores); job `add-branches` in `catalog-jobs.yml` |
 | `src/utils/currency.ts` | 50+ currencies, formatting, default currency from the browser locale |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
-| `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing |
+| `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing (+ scroll kept per stack depth) |
+| `src/lib/backStack.ts`, `src/components/shell/EdgeBack.tsx` | Back like an app: layers (sheets, screens, a tab root) ↔ history entries; the left-edge swipe in the installed iOS app |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
 | `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
 | `public/_headers` | Netlify cache headers (no-cache HTML/SW/manifest/`share-target-sw.js`, immutable `/assets/*`, `/ocr/*` and `/pdf/*` (+ the pdf.js worker CSP)) |

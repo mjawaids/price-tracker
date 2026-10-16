@@ -108,8 +108,8 @@ Found while looking into eggs being matched with noodles:
 
 | # | What | Status |
 |---|---|---|
-| 1 | Correct matches (eggs need 6+ units, Omega-3 isn't a count, pudding / pet food / Gala typed); the picker shows one row per product with no prices or stores, and its fallback needs every word; migration `20261016000000_egg_products.sql` fixes 13 shared rows; this roadmap | In review |
-| 2 | Back and gestures: history integration in `AppContext`, sheets close on back, swipe down closes a sheet, left-edge swipe goes back, asks before leaving a receipt review, scroll kept | Planned |
+| 1 | Correct matches (eggs need 6+ units, Omega-3 isn't a count, pudding / pet food / Gala typed); the picker shows one row per product with no prices or stores, and its fallback needs every word; migration `20261016000000_egg_products.sql` fixes 13 shared rows; this roadmap | Merged ([#48](https://github.com/mjawaids/price-tracker/pull/48)) |
+| 2 | Back and gestures (`src/lib/backStack.ts`): back closes a sheet, then the last screen, then a non-Lists tab, then leaves the app; pull a sheet down to close it; left-edge swipe in the installed iOS app; scroll kept per screen. No receipt prompt: going back from a receipt review keeps it ("Finish your receipt") | In review |
 | 3 | Lists: a typed quantity box with steps that follow the unit; long-press drag between aisles (`@dnd-kit/core`); no cut-off text | Planned |
 | 4 | Region gating (above); a first-run welcome and city step; currency from the browser locale; neutral copy; dead push switch removed; retention analytics events (counts only) | Planned |
 | 5 | Invite a friend: `navigator.share` / copy; `spendless.invite_codes` + `spendless.referrals` with own-row RLS | Planned |

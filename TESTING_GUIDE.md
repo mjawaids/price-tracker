@@ -18,6 +18,36 @@ When nav items are hidden, the nav fades at the edge and a **More ⌄** button s
 bottom (tap it to scroll down; a top fade appears once scrolled). Windows ≤860px tall
 show the install card as a single "Install the app" row.
 
+## Back and gestures
+
+On Android (installed app and Chrome), with the back button or gesture:
+- [ ] With a sheet open (e.g. an item's sheet), back closes only the sheet.
+- [ ] Compare → a product (Search → product): back returns to Search, then Prices, each
+      scrolled where it was; back again goes to Lists; back on Lists leaves the app.
+- [ ] Profile (from the tab): back goes to Lists.
+- [ ] Scroll Prices down, open Search, then tap the Lists tab: Lists starts at the top
+      (a tab switch never brings back another tab's scroll position).
+- [ ] Open a product page, reload the page (pull to refresh, or the browser's reload),
+      then press back once on Lists: it leaves the app (no extra press that does
+      nothing).
+- [ ] "Done at <store>" with a changed price: back asks *Discard your answers?*;
+      *Keep editing* keeps the sheet; back on the question closes only the question.
+- [ ] Closing a sheet with its × and then pressing back goes back a screen (no dead
+      press), and on Lists one back leaves the app.
+- [ ] The in-screen back buttons (Where to buy, product, Search) behave like back.
+- [ ] Pull a bottom sheet down by its handle or title: the handle turns magenta and
+      the sheet follows; past ~a thumb's length (or a flick) it closes, else it slides
+      back. Pulling the list inside the sheet scrolls it instead. Buttons in the
+      header still work.
+- [ ] The Where to buy walkthrough closes on back.
+In the installed app on iPhone/iPad:
+- [ ] On a screen you can go back from, a swipe from the left edge shows a bubble with
+      a back arrow that turns magenta past the mark; letting go goes back, letting go
+      early doesn't. On Lists with nothing open, nothing appears.
+On desktop:
+- [ ] The browser's back button closes sheets and screens the same way; reloading on
+      any screen opens Lists, and back after that leaves the site as before.
+
 ## Lists (default section)
 
 - [ ] First sign-in lands on an empty **Groceries** list with "Tap to add" chips.
