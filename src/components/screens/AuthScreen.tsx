@@ -1,15 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { Icon, GoogleIcon, Btn, IconName } from '../ui';
 import { supportUrl } from '../../lib/links';
 import { InstallButton } from '../shell/Install';
+import { inviterName, pendingRef } from '../../lib/invite';
 
 const FEATURES: [IconName, string, string][] = [
   ['lists', 'Quick lists', 'No brands or sizes needed. Items find their aisle.'],
   ['tag', 'Where to buy', 'In cities with shared prices: the cheapest stores for your whole list.'],
   ['cloud', 'Works offline', 'Add and tick items anywhere. It syncs when you’re back.'],
 ];
+
+/** "Jawaid invited you" when the app was opened from an invite link. */
+function InvitedBadge() {
+  const [code] = useState(pendingRef);
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!code) return;
+    let live = true;
+    void inviterName(code).then((n) => live && setName(n));
+    return () => {
+      live = false;
+    };
+  }, [code]);
+  if (!code) return null;
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full bg-surface shadow-[inset_0_0_0_1.5px_var(--line)] text-[13px] font-bold mb-5" style={{ padding: '6px 12px' }}>
+      <Icon name="users" size={15} color="var(--accent-ink)" stroke={2.2} />
+      <span>
+        {name ? (
+          <>
+            <span className="break-words">{name}</span> invited you
+          </>
+        ) : (
+          'A friend invited you'
+        )}
+      </span>
+    </div>
+  );
+}
 
 function BrandPanel({ big }: { big?: boolean }) {
   return (
@@ -18,6 +48,9 @@ function BrandPanel({ big }: { big?: boolean }) {
         <div className="absolute bg-accent-wash" style={{ top: -120, right: -90, width: 320, height: 320, borderRadius: 999 }} />
       )}
       <div className="relative z-10">
+        <div>
+          <InvitedBadge />
+        </div>
         <div className="inline-flex items-center gap-2.5" style={{ marginBottom: big ? 30 : 22 }}>
           <span className="grid place-items-center bg-accent text-accent-on" style={{ width: 38, height: 38, borderRadius: 12 }}>
             <Icon name="tag" size={21} stroke={2.4} />
@@ -52,7 +85,8 @@ function BrandPanel({ big }: { big?: boolean }) {
 
 function AuthForm() {
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  // Opened from an invite: most likely a new account.
+  const [mode, setMode] = useState<'signin' | 'signup'>(() => (pendingRef() ? 'signup' : 'signin'));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');

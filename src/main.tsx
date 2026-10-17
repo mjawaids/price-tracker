@@ -8,10 +8,14 @@ import './lib/install';
 import './index.css';
 import { Privacy, Refund, Terms, Pricing, Bot } from './pages/lazy';
 import { APP_VERSION } from './lib/version';
+import { captureRef } from './lib/invite';
 
 // Expose the build on <html data-app-version> (handy for support). It also keeps
 // the version string in the entry bundle, which the deploy smoke test checks.
 document.documentElement.dataset.appVersion = APP_VERSION;
+
+// Opened from an invite link (`/?ref=<code>`): keep the code for sign-up.
+captureRef();
 
 // A tab still running an old build can ask for a code chunk that the new
 // deploy no longer has. Reload once onto the current build instead of breaking.

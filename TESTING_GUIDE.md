@@ -35,6 +35,23 @@ On a device with no saved settings (clear site data, then sign up):
 - [ ] A device that already had SpendLess open keeps its settings and never sees it.
 - [ ] 320px, 375×667 and 768px: nothing cut off, the button stays at the bottom.
 
+## Invite a friend
+
+- [ ] Profile → Share SpendLess → *Invite a friend*: the sheet shows "Your invite says
+      it's from <your first name>" (never your email), the link with *Copy*, and
+      *Share invite* (the phone's share sheet; on a computer without one it copies).
+- [ ] *Edit* the name: "Jay" saves; "visit scam.com" or a phone number is refused with
+      a plain message; empty shows "a friend".
+- [ ] Offline: the sheet says the link needs a connection, with *Try again*.
+- [ ] Open the link in a private window: the address bar loses `ref=`, the sign-in page
+      says "<name> invited you" and opens on *Create account*. A made-up code shows "A
+      friend invited you".
+- [ ] Sign up from the link: the inviter's Profile row and sheet show "1 joined". Signing
+      in to an older account from a link, or opening your own link, adds nothing.
+- [ ] Where to buy with savings: one "Know someone who shops here?" card under the
+      total; *Invite* opens the sheet; × (or inviting) hides it for good on this device.
+- [ ] Signing out forgets a kept invite link.
+
 ## Back and gestures
 
 On Android (installed app and Chrome), with the back button or gesture:

@@ -395,6 +395,10 @@ are in `public`). SpendLess data must never mix with theirs:
 | `product_merges` | merge script only (clients can't read): from_id → into_id, rule (`same-name` \| `approved`), moved (what moved, for undo), undone_at (= keep that pair apart). `price_reports.copy_of` marks a merge's copy of a report |
 | *function* `save_receipt` | `spendless.save_receipt(store, observed_at, currency, items jsonb)` — a receipt's new private products (reusing same-named ones) + its price reports in one transaction; SECURITY INVOKER, EXECUTE for `authenticated` only |
 | `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
+| `invite_codes` | user_id (PK), code (8 characters from A–Z minus I/O + 2–9, set by `spendless.new_invite_code()`, never changes), display_name (what invites say they're from: plain, ≤30, no links/emails, at most 2 digits in any script via `spendless.digit_count` (every Unicode Nd range, mirrored by `\p{Nd}` in `cleanInviteName`), so no phone number), created_at, updated_at. Owner only; clients insert `display_name` and update it, nothing else (column grants) |
+| `referrals` | user_id (PK = who joined, once ever), code (→ `invite_codes`), created_at. The person who joined inserts their own row (never their own code, and only from an account under 7 days old: `spendless.my_account_is_new()` in the insert policy); the inviter can read `code` and `created_at` for their code only (column grants), so the app shows a count, never who |
+| *function* `invite_from` | `spendless.invite_from(code)` → the display name for one exact code, for the sign-up page while signed out. SECURITY DEFINER (pinned `search_path`, checks the code's format, returns only the name), because a policy letting `anon` read `invite_codes` would let anyone list every code and name; EXECUTE for `anon`/`authenticated` |
+| *function* `my_account_is_new` | `spendless.my_account_is_new()` → whether the caller's own account is under 7 days old (`auth.users.created_at`, which clients can't read). SECURITY DEFINER, no argument, answers only for `auth.uid()`; used by the `referrals` insert policy; EXECUTE for `authenticated` only |
 | `branch_suggestions` | id, user_id, store_id? (their own in-store shop; SET NULL), region_id, chain, area (plain names, `chain + area ≤ 77`), chain_key, area_key (trigger-set), status (`open` \| `promoted` \| `declined`), promoted_store_id?, decided_at, created_at. Users add (own open in-store shop in a live city, ≤10 waiting; the trigger sets user, city, keys, the shared chain spelling) and withdraw while open; no updates; the nightly job decides |
 | *function* `place_key` | `spendless.place_key(text)`: how shop and area names compare ("DHA Phase VIII" = "dha ph 8"); whole keys only. Mirrored by `placeKey` in `src/lib/compare/areas.ts` |
 | `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`; one row per store per run (counts, status). A store's listings with the exact same name share one product (priced by the in-stock one, the cheaper if both are) |
@@ -440,6 +444,7 @@ post-deploy migration drops them.
 | `src/components/screens/storePicker.tsx` | Shared store picker (`StorePickerSheet`: Online / In a shop, search over name, chain and address, branches grouped by chain), `ChainGroup`, `StoreSearch` — used by receipts, Add a price, My stores and the Stores screen |
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
 | `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`), `WhatsNewSheet`, and `FirstRun` (lazy, shown by `Shell` while `!settings.setupDone`: a welcome — skipped for accounts older than a day — then the detected city with *Change* (`CityList` from `compareSheets.tsx`); finishing sets `regionId`, currency and `features`: all on in a live city, all off elsewhere; Lists-only devices without the city list leave `regionId` null) |
+| `src/lib/invite.ts`, `src/components/screens/inviteSheet.tsx` | Invite a friend: `captureRef()` (in `src/main.tsx`: `/?ref=<code>` → `spendless-invite-ref` on the device for 30 days, taken out of the address bar), `inviterName()` ("Jawaid invited you" on `AuthScreen`, which then opens on *Create account*), `recordReferral()` (`AppContext`: once, for an account under 7 days old, retried online), `myInvite()` / `setInviteName()` / `joinedCount()`; `InviteSheet` (name with Edit, link with Copy, *Share invite* = `navigator.share` else copy, how many joined) from Profile → Share SpendLess and from the one dismissible card under a plan's savings (`spendless-invite-nudge:<uid>`) |
 | `src/lib/geo.ts`, `netlify/edge-functions/geo.ts` | First-run city suggestion: `GET /api/geo` (Netlify Edge Function, `context.geo`, `no-store`, nothing kept) → `detectPlace()` (3 s; falls back to the time zone, `Asia/Karachi` → PK; never the device's location), `matchRegion()` (same country, city name ignoring case/accents/spaces) |
 | `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
 | `docs/roadmap.md` | Where the app is heading (global, simple, retention), the UX review of Oct 2026, the PRs planned from it and what's left for later — start here in a new chat |
@@ -490,7 +495,7 @@ say so and propose a safe alternative.
   migration; never disable RLS or add `USING (true)` policies on user data. Never trust
   a client-supplied `user_id` without a policy that enforces it.
 - **Database functions**: avoid `SECURITY DEFINER`; if one is truly needed, pin
-  `SET search_path` and keep it in `spendless`. Never build SQL from string
+  `SET search_path` and keep it in `spendless` (the only ones are `invite_from` and `my_account_is_new`, see the tables). Never build SQL from string
   concatenation — use the Supabase client's query builder or parameters.
 - **Storage**: users may only write, list and delete inside their own `<user id>/`
   folder; keep policies that way. Validate file type and size before uploading.
@@ -503,8 +508,9 @@ say so and propose a safe alternative.
   lists (`AppContext.signOut` → `ListsContext.clearLocalData`, after a final sync), the
   cached catalogue (`CompareContext.clearLocalData`), recent searches, the receipt in
   progress (`resetReceipt`), anything shared and not yet read (`clearShared`), the
-  remembered receipt lines (`deleteReceiptMemory`) and the price checks kept on the
-  device (queued answers and answered items, also in `CompareContext.clearLocalData`).
+  remembered receipt lines (`deleteReceiptMemory`), the price checks kept on the
+  device (queued answers and answered items, also in `CompareContext.clearLocalData`)
+  and a kept invite code (`clearRef`).
 - **Privacy**: no PII or user content in analytics events, logs or error messages.
 - **Dependencies**: add packages sparingly from reputable sources; keep the lockfile
   committed; check `npm audit` when adding or upgrading; no scripts from untrusted CDNs.

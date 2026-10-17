@@ -7,6 +7,8 @@ import { useFmt } from '../hooks/useFmt';
 import { clearShared } from '../lib/receipt/inbox';
 import { deleteReceiptMemory } from '../lib/receipt/memory';
 import { resetReceipt } from '../lib/receipt/session';
+import { clearRef, recordReferral } from '../lib/invite';
+import { trackUserAction } from '../utils/analytics';
 import { clearLayers, goBack, pushLayer, startBackStack, stopBackStack } from '../lib/backStack';
 
 export type ScreenName =
@@ -89,6 +91,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return stopBackStack;
   }, []);
 
+  // Opened from an invite link and signed in with a new account: record it once
+  // (src/lib/invite.ts), now or when back online.
+  const accountId = authUser?.id;
+  const accountCreatedAt = authUser?.created_at;
+  useEffect(() => {
+    if (!accountId) return;
+    const send = () => void recordReferral(accountCreatedAt).then((ok) => {
+      if (ok && typeof window.gtag !== 'undefined') trackUserAction('invite_joined');
+    });
+    send();
+    window.addEventListener('online', send);
+    return () => window.removeEventListener('online', send);
+  }, [accountId, accountCreatedAt]);
+
   const api: AppApi = useMemo(() => {
     const cur = stack[stack.length - 1];
     const toLists = () => {
@@ -149,6 +165,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await clearLocalLists();
         await clearLocalCatalog();
         if (authUser?.id) await deleteReceiptMemory(authUser.id);
+        clearRef();
         try {
           localStorage.removeItem('spendless-recent-searches'); // SearchScreen's recent terms
         } catch {
