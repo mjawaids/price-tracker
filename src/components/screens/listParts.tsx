@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ListItem } from '../../types';
 import { formatQty } from '../../utils/quickAdd';
 import { SyncStatus } from '../../lib/offline/sync';
@@ -98,6 +98,16 @@ export function ItemRow({
   const swiping = useRef(false);
   const qty = formatQty(item.quantity, item.unit);
   const aisle = showAisle && !item.done ? categoryMeta(item.category) : null;
+  const lifted = !!drag?.dragging;
+
+  // Once the row is lifted to another aisle, the same finger mustn't also swipe it
+  // (a long sideways drag would tick or delete it on release).
+  useEffect(() => {
+    if (!lifted) return;
+    start.current = null;
+    swiping.current = false;
+    setDx(0);
+  }, [lifted]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType !== 'touch') return;
@@ -106,7 +116,7 @@ export function ItemRow({
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const s = start.current;
-    if (!s || s.id !== e.pointerId) return;
+    if (!s || s.id !== e.pointerId || lifted) return;
     const mx = e.clientX - s.x;
     const my = e.clientY - s.y;
     if (!swiping.current) {
@@ -121,7 +131,7 @@ export function ItemRow({
     setDx(Math.max(-140, Math.min(140, mx)));
   };
   const onPointerEnd = () => {
-    if (swiping.current) {
+    if (swiping.current && !lifted) {
       if (dx >= SWIPE_TRIGGER) {
         buzz();
         onToggle();
