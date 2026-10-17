@@ -4,6 +4,7 @@ import { formatQty } from '../../utils/quickAdd';
 import { SyncStatus } from '../../lib/offline/sync';
 import { AgeChip, Icon } from '../ui';
 import { buzz, categoryMeta } from './listHelpers';
+import type { GroupDrop, RowDrag } from './listDragHooks';
 
 const sectionLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-ink-soft';
 
@@ -73,6 +74,7 @@ export function ItemRow({
   onSwiped,
   showAisle,
   planned,
+  drag,
 }: {
   item: ListItem;
   onToggle: () => void;
@@ -88,6 +90,8 @@ export function ItemRow({
   showAisle?: boolean;
   /** Planned product under the name, and its price on the right (store sections). */
   planned?: { product: string; price: string; seen?: string };
+  /** Can be dragged to another aisle (grouped list, `listDrag.tsx`). */
+  drag?: RowDrag;
 }) {
   const [dx, setDx] = useState(0);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -136,7 +140,13 @@ export function ItemRow({
 
   const revealTick = dx > 0;
   return (
-    <li className={`relative overflow-hidden bg-surface ${fresh ? 'animate-sl-item' : ''}`}>
+    <li
+      ref={drag?.ref}
+      {...(drag?.listeners ?? {})}
+      className={`relative overflow-hidden bg-surface ${fresh ? 'animate-sl-item' : ''}`}
+      style={drag?.dragging ? { background: 'var(--paper)' } : undefined}
+    >
+      {drag?.dragging && <div aria-hidden className="absolute inset-0 z-10 bg-paper" />}
       {dx !== 0 && (
         <div
           aria-hidden
@@ -191,25 +201,25 @@ export function ItemRow({
           style={{ minHeight: 48, padding: '8px 0' }}
         >
           <span
-            className={`truncate ${item.done ? 'text-[16px] font-medium text-ink-soft line-through decoration-[var(--ink-faint)]' : 'text-[16.5px] font-semibold tracking-[-0.01em] text-ink'}`}
+            className={`line-clamp-2 break-words ${item.done ? 'text-[16px] font-medium text-ink-soft line-through decoration-[var(--ink-faint)]' : 'text-[16.5px] font-semibold tracking-[-0.01em] text-ink'}`}
           >
             {item.name}
           </span>
           {planned ? (
-            <span className="truncate text-[13px] text-ink-soft">
+            <span className="line-clamp-2 break-words text-[13px] text-ink-soft">
               {planned.product}
               {item.note && ` · ${item.note}`}
             </span>
           ) : aisle ? (
             <span className="flex items-center gap-1.5 min-w-0 text-[13px] text-ink-soft">
               <span aria-hidden className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: aisle.dot }} />
-              <span className="truncate">
+              <span className="line-clamp-2 break-words">
                 {aisle.name}
                 {item.note && ` · ${item.note}`}
               </span>
             </span>
           ) : (
-            item.note && !item.done && <span className="truncate text-[13px] text-ink-soft">{item.note}</span>
+            item.note && !item.done && <span className="line-clamp-2 break-words text-[13px] text-ink-soft">{item.note}</span>
           )}
         </button>
         {planned && (
@@ -233,17 +243,37 @@ export function ItemRow({
 }
 
 /** A card of item rows; without a `name` it renders headless (ungrouped list). */
-export function ItemGroup({ name, dot, count, children }: { name?: string; dot?: string; count?: number; children: React.ReactNode }) {
+export function ItemGroup({
+  name,
+  dot,
+  count,
+  drop,
+  children,
+}: {
+  name?: string;
+  dot?: string;
+  count?: number;
+  /** Takes an item dragged from another aisle (`listDrag.tsx`). */
+  drop?: GroupDrop;
+  children: React.ReactNode;
+}) {
+  const over = !!drop?.over;
   return (
-    <section aria-label={name || 'To buy'} className="flex flex-col gap-2">
+    <section ref={drop?.ref} aria-label={name || 'To buy'} className="flex flex-col gap-2">
       {name && (
-        <h3 className={`m-0 flex items-center gap-2 px-1.5 ${sectionLabel}`}>
+        <h3 className={`m-0 flex items-center gap-2 px-1.5 ${sectionLabel} ${over ? '!text-accent-ink' : ''}`}>
           <span aria-hidden className="rounded-full" style={{ width: 8, height: 8, background: dot }} />
           {name}
-          {count != null && <span className="font-normal">{count}</span>}
+          {over ? <span className="font-normal">· drop to move here</span> : count != null && <span className="font-normal">{count}</span>}
         </h3>
       )}
-      <ul className="list-none m-0 p-0 flex flex-col gap-px bg-[var(--line)] rounded-[18px] overflow-hidden shadow-card">{children}</ul>
+      <ul
+        className={`list-none m-0 p-0 flex flex-col gap-px bg-[var(--line)] rounded-[18px] overflow-hidden transition-shadow duration-150 motion-reduce:transition-none ${
+          over ? 'shadow-[0_0_0_2px_var(--accent)]' : 'shadow-card'
+        }`}
+      >
+        {children}
+      </ul>
     </section>
   );
 }
@@ -389,7 +419,7 @@ export function SuggestionPanel({
         style={{ minHeight: 48, padding: '0 12px' }}
       >
         <Icon name="plus" size={18} stroke={2.8} />
-        <span className="truncate">{exactLabel}</span>
+        <span className="line-clamp-2 break-words">{exactLabel}</span>
       </button>
       {suggestions.map((s) => {
         const c = categoryMeta(s.category);
@@ -408,7 +438,7 @@ export function SuggestionPanel({
                 <span className="rounded-full" style={{ width: 8, height: 8, background: c.dot }} />
               )}
             </span>
-            <span className="flex-1 text-[15.5px] font-semibold truncate">{s.name}</span>
+            <span className="flex-1 text-[15.5px] font-semibold line-clamp-2 break-words">{s.name}</span>
             <span className="text-[12.5px] text-ink-soft shrink-0">{c.name}</span>
           </button>
         );

@@ -13,6 +13,7 @@ Live at https://spendless.ibexoft.com
 - React 18 + TypeScript + Vite + Tailwind CSS
 - Supabase (PostgreSQL + Auth + RLS)
 - Lucide React icons, React Router 7
+- `@dnd-kit/core` (drag an item to another aisle)
 
 ## Commands
 - `npm run dev` — start dev server
@@ -451,7 +452,8 @@ post-deploy migration drops them.
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
 | `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
 | `public/_headers` | Netlify cache headers (no-cache HTML/SW/manifest/`share-target-sw.js`, immutable `/assets/*`, `/ocr/*` and `/pdf/*` (+ the pdf.js worker CSP)) |
-| `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx`, `listHelpers.ts`, `listCompare.tsx` for the Where to buy chip, plan banner and store sections) |
+| `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx` (item details: *How much* box with −/+ by `stepFor(unit)`, typed amounts via `parseQuantity`, both in `src/utils/quickAdd.ts`), `listHelpers.ts`, `listCompare.tsx` for the Where to buy chip, plan banner and store sections, `listDrag.tsx` + `listDragHooks.ts`: in the aisle view, hold an item (touch: 350 ms long press, so swipes still work; mouse: 6 px) and drop it on another aisle → `updateItem(category)`, which `categoryFor` then uses for that name; keyboard users have the Aisle chips) |
+| `src/components/screens/compareHelpers.ts` `splitStoreName` | "Imtiaz · DHA Phase 6" → name + area on its own line (`StoreName`, store sections); names and notes wrap to two lines (`line-clamp-2`) rather than `truncate` |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
 | `src/utils/quickAdd.ts` | Parses "2 milk", "milk x2", "atta 10 kg" |
 | `src/lib/groceryDictionary.ts` | Item → aisle (English + romanized Urdu) |

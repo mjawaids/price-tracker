@@ -5,6 +5,7 @@ import { deliveryFeeFor } from '../../lib/compare/optimizer';
 import { storeLink } from '../../lib/links';
 import { Icon, StoreDot } from '../ui';
 import type { PriceAsk } from './priceCheckHelpers';
+import { splitStoreName } from './compareHelpers';
 
 /** The one Compare entry point on a list. */
 export function WhereToBuyChip({
@@ -32,8 +33,8 @@ export function WhereToBuyChip({
           <Icon name="tag" size={19} stroke={2.2} />
         </span>
         <span className="flex-1 min-w-0">
-          <span className={`block font-extrabold text-[15px] ${big ? 'leading-snug' : 'truncate'}`}>{title}</span>
-          <span className={`block text-[13px] text-accent-ink ${big ? 'leading-snug mt-0.5' : 'truncate'}`}>{sub}</span>
+          <span className="block font-extrabold text-[15px] leading-snug">{title}</span>
+          <span className="block text-[13px] text-accent-ink leading-snug mt-0.5">{sub}</span>
         </span>
         <Icon name="chevR" size={18} stroke={2.4} color="var(--accent-ink)" className="shrink-0" />
       </button>
@@ -54,7 +55,7 @@ export function WhereToBuyChip({
 export function PlanBanner({ total, stores, onChange, onClear }: { total: string; stores: number; onChange: () => void; onClear: () => void }) {
   return (
     <div className="flex items-center gap-2 rounded-[16px] bg-accent-wash" style={{ padding: '6px 6px 6px 14px' }}>
-      <span className="flex-1 min-w-0 text-[14px] truncate">
+      <span className="flex-1 min-w-0 text-[14px] leading-snug">
         <strong>Plan · {total}</strong>
         <span className="text-accent-ink">
           {' '}
@@ -102,14 +103,16 @@ export function StoreSectionHeader({
   }
   const delivery = store.kind === 'online' ? deliveryFeeFor(store.deliveryRule, subtotal) : 0;
   const link = store.kind === 'online' ? storeLink(store.website) : null;
+  const [storeTitle, storeArea] = splitStoreName(store.name);
   const what =
     store.kind === 'physical' ? 'In store' : delivery > 0 ? `Delivery ${fmt(delivery)}` : store.deliveryRule.type === 'none' ? 'Pickup' : 'Free delivery';
   return (
     <div className="flex items-center gap-2 pl-1.5">
       <StoreDot store={store} size={12} />
       <span className="flex-1 min-w-0">
-        <span className="block font-display font-extrabold text-[17px] truncate">{store.name}</span>
-        <span className="block text-[12.5px] text-ink-soft truncate">
+        <span className="block font-display font-extrabold text-[17px] leading-snug break-words">{storeTitle}</span>
+        {storeArea && <span className="block text-[13.5px] text-ink-soft leading-snug break-words">{storeArea}</span>}
+        <span className="block text-[12.5px] text-ink-soft leading-snug">
           {what} · {done ? `${done} of ${count} done` : `${count} ${count === 1 ? 'item' : 'items'}`} · ~{fmt(subtotal + delivery)}
         </span>
       </span>
@@ -180,7 +183,7 @@ export function PriceCheckToast({
             Was it <span className="font-mono">{fmt(ask.price)}</span>
             {ask.each ? ' each' : ''}?
           </span>
-          <span className="block truncate text-[12.5px]" style={{ color: 'var(--coach-muted)' }}>
+          <span className="block line-clamp-2 break-words text-[12.5px]" style={{ color: 'var(--coach-muted)' }}>
             {ask.storeName} · {ask.productName}
           </span>
         </span>

@@ -162,10 +162,10 @@ export function ItemChoiceSheet({
       footer={
         <div className="flex flex-col gap-2">
           <div className="flex gap-2.5">
-            <Btn variant="ghost" onClick={justOnce} disabled={!ref} className="flex-1 whitespace-nowrap min-h-[52px]">
+            <Btn variant="ghost" onClick={justOnce} disabled={!ref} className="flex-1 text-center leading-tight min-h-[52px]">
               Just this time
             </Btn>
-            <Btn onClick={() => void saveUsual()} disabled={!ref || saving || !compare.online} className="flex-[1.3] whitespace-nowrap min-h-[52px]">
+            <Btn onClick={() => void saveUsual()} disabled={!ref || saving || !compare.online} className="flex-[1.3] text-center leading-tight min-h-[52px]">
               {saving ? 'Saving…' : 'Save as my usual'}
             </Btn>
           </div>
@@ -397,7 +397,7 @@ export function StoresSheet({ open, onClose, onAddStore }: { open: boolean; onCl
           {on && <Icon name="check" size={14} stroke={3} />}
         </span>
         <span className="flex-1 min-w-0 flex flex-col">
-          {inGroup ? <span className="font-bold text-[15px] truncate">{branchArea(s)}</span> : <StoreName store={s} className="font-bold text-[15px]" />}
+          {inGroup ? <span className="font-bold text-[15px] leading-snug break-words">{branchArea(s)}</span> : <StoreName store={s} className="font-bold text-[15px]" />}
           <span className="text-[12.5px] text-ink-soft truncate">
             {s.ownerId ? 'Your store · only you see it' : inGroup ? s.address || 'In store' : deliveryLabel(s.deliveryRule, compare.fmt, s.kind)}
           </span>

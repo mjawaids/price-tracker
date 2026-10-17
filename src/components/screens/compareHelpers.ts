@@ -63,6 +63,12 @@ export function groupByChain(stores: CatalogStore[]): { chain: string; stores: C
 }
 
 /** "Gulshan" from "Imtiaz · Gulshan": a branch's own part of its name. */
+/** "Imtiaz · DHA Phase 6" → ["Imtiaz", "DHA Phase 6"]: a shared shop's area goes on its own line. */
+export function splitStoreName(name: string): [string, string | null] {
+  const i = name.indexOf(' · ');
+  return i > 0 ? [name.slice(0, i), name.slice(i + 3)] : [name, null];
+}
+
 export const branchArea = (s: CatalogStore) => (s.chain && s.name.startsWith(`${s.chain} · `) ? s.name.slice(s.chain.length + 3) : s.name);
 
 /** My-stores picks to save: none when they're exactly the default set (so new online stores join on their own). */

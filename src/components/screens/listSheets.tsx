@@ -3,7 +3,7 @@ import { ListItem } from '../../types';
 import { useLists } from '../../contexts/ListsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { trackUserAction } from '../../utils/analytics';
-import { UNIT_CHOICES } from '../../utils/quickAdd';
+import { UNIT_CHOICES, clampQuantity, parseQuantity, stepFor } from '../../utils/quickAdd';
 import { Btn, Icon, Sheet, ToggleTrack } from '../ui';
 import { CATEGORY_ORDER, categoryMeta } from './listHelpers';
 
@@ -27,11 +27,14 @@ export function ItemSheet({
   const lists = useLists();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
+  // What's typed in the quantity box while it has focus (null = show the saved amount).
+  const [qtyDraft, setQtyDraft] = useState<string | null>(null);
   const aisleRowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setName(item?.name ?? '');
     setNote(item?.note ?? '');
+    setQtyDraft(null);
     // Only reset the drafts when a different item is opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.id]);
@@ -57,11 +60,23 @@ export function ItemSheet({
     if (nt !== item.note) patch.note = nt;
     if (Object.keys(patch).length) lists.updateItem(item.id, patch);
   };
+  // −/+ move by a step that suits the unit (50 g, ½ kg, 1); a plain count starts at 1,
+  // a weight or volume at 0.
+  const step = stepFor(item.unit);
+  const stepText = item.unit ? `${step} ${item.unit}` : String(step);
+  const base = item.quantity ?? (step === 1 ? 1 : 0);
+  const shownQty = item.quantity != null ? String(item.quantity) : step === 1 ? '1' : '';
+  const commitQty = () => {
+    if (qtyDraft == null) return;
+    const v = parseQuantity(qtyDraft);
+    setQtyDraft(null);
+    if (v !== undefined && v !== item.quantity) lists.updateItem(item.id, { quantity: v });
+  };
   const close = () => {
     saveText();
+    commitQty();
     onClose();
   };
-  const qty = item.quantity ?? 1;
 
   return (
     <Sheet
@@ -102,31 +117,53 @@ export function ItemSheet({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <span className={fieldLabel}>How many</span>
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2.5">
+          <label htmlFor="item-qty" className={fieldLabel}>
+            How much
+          </label>
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
-              aria-label="Decrease quantity"
-              onClick={() => lists.updateItem(item.id, { quantity: qty > 1 ? qty - 1 : null })}
-              className="grid place-items-center rounded-full bg-surface text-ink shadow-[inset_0_0_0_1.5px_var(--line)] active:scale-95"
-              style={{ width: 44, height: 44 }}
+              aria-label={`Decrease by ${stepText}`}
+              onClick={() => lists.updateItem(item.id, { quantity: clampQuantity(base - step) })}
+              className="shrink-0 grid place-items-center rounded-full bg-surface text-ink shadow-[inset_0_0_0_1.5px_var(--line)] active:scale-95"
+              style={{ width: 48, height: 48 }}
             >
               <Icon name="minus" size={18} stroke={2.8} />
             </button>
-            <span className="font-mono text-[18px] font-bold text-center" style={{ minWidth: 28 }} aria-live="polite">
-              {qty}
-            </span>
+            <input
+              id="item-qty"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={qtyDraft ?? shownQty}
+              placeholder="1"
+              onFocus={(e) => {
+                setQtyDraft(shownQty);
+                e.currentTarget.select();
+              }}
+              onChange={(e) => setQtyDraft(e.target.value.slice(0, 8))}
+              onBlur={commitQty}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+              }}
+              className={`${inputCls} font-mono font-bold text-center text-[18px]`}
+              style={{ width: 96, height: 48 }}
+            />
             <button
               type="button"
-              aria-label="Increase quantity"
-              onClick={() => lists.updateItem(item.id, { quantity: qty + 1 })}
-              className="grid place-items-center rounded-full bg-surface text-ink shadow-[inset_0_0_0_1.5px_var(--line)] active:scale-95"
-              style={{ width: 44, height: 44 }}
+              aria-label={`Increase by ${stepText}`}
+              onClick={() => lists.updateItem(item.id, { quantity: clampQuantity(base + step) })}
+              className="shrink-0 grid place-items-center rounded-full bg-surface text-ink shadow-[inset_0_0_0_1.5px_var(--line)] active:scale-95"
+              style={{ width: 48, height: 48 }}
             >
               <Icon name="plus" size={18} stroke={2.8} />
             </button>
-            <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto no-scrollbar -mr-5 pr-5" role="group" aria-label="Unit">
+            <span className="text-[13.5px] text-ink-soft" aria-hidden>
+              ± {stepText}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Unit">
             {UNIT_CHOICES.map((u) => {
               const on = (item.unit || '') === u;
               return (
@@ -135,14 +172,13 @@ export function ItemSheet({
                   type="button"
                   aria-pressed={on}
                   onClick={() => lists.updateItem(item.id, { unit: u || null })}
-                  className={`shrink-0 rounded-full text-sm ${on ? 'bg-ink text-paper font-bold' : 'bg-surface text-ink-soft font-semibold shadow-[inset_0_0_0_1px_var(--line)]'}`}
+                  className={`rounded-full text-sm ${on ? 'bg-ink text-paper font-bold' : 'bg-surface text-ink-soft font-semibold shadow-[inset_0_0_0_1px_var(--line)]'}`}
                   style={{ minHeight: 40, padding: '0 14px' }}
                 >
                   {u || 'pcs'}
                 </button>
               );
             })}
-            </div>
           </div>
         </div>
 

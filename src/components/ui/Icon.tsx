@@ -57,6 +57,7 @@ import {
   Pill,
   FileText,
   LucideProps,
+  GripVertical,
 } from 'lucide-react';
 import { ComponentType } from 'react';
 
@@ -119,6 +120,7 @@ const MAP: Record<string, ComponentType<LucideProps>> = {
   pill: Pill,
   file: FileText,
   users: Users,
+  grip: GripVertical,
 };
 
 export type IconName = keyof typeof MAP | string;

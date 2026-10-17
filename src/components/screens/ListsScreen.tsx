@@ -28,7 +28,9 @@ import {
   SuggestionPanel,
   SyncBadge,
 } from './listParts';
-import { groupByCategory, groupByStore } from './listHelpers';
+import { categoryMeta, groupByCategory, groupByStore } from './listHelpers';
+import { AisleDnd } from './listDrag';
+import { useGroupDrop, useRowDrag } from './listDragHooks';
 import { ItemSheet, ListSwitcherSheet } from './listSheets';
 import { PlanBanner, PriceCheckToast, StoreSectionHeader, WhereToBuyChip } from './listCompare';
 import { checkMessage, doneLately, PriceAsk, planStoreOf, priceAskFor, summaryMessage } from './priceCheckHelpers';
@@ -68,6 +70,19 @@ interface StoreSummary {
 const track = (action: string, details?: Record<string, unknown>) => {
   if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') trackUserAction(action, details);
 };
+
+/** An aisle card that takes items dragged from other aisles. */
+function AisleGroup(props: Omit<React.ComponentProps<typeof ItemGroup>, 'drop'> & { id: string }) {
+  const { id, ...rest } = props;
+  const drop = useGroupDrop(id);
+  return <ItemGroup {...rest} drop={drop} />;
+}
+
+/** A row that can be held and dragged to another aisle. */
+function DraggableRow(props: Omit<React.ComponentProps<typeof ItemRow>, 'drag'>) {
+  const drag = useRowDrag(props.item.id);
+  return <ItemRow {...props} drag={drag} />;
+}
 
 export default function ListsScreen() {
   const app = useApp();
@@ -514,13 +529,21 @@ export default function ListsScreen() {
     </div>
   );
 
-  const groupsEl = byStore ? storesEl : (
+  // Grouped by aisle: hold an item and drag it onto another aisle (listDrag.tsx).
+  const moveToAisle = (item: ListItem, categoryId: string) => {
+    lists.updateItem(item.id, { category: categoryId });
+    markHintSeen('aisles');
+    showToast(`Next time, “${item.name}” goes to ${categoryMeta(categoryId).name} too`);
+  };
+  const Group = grouped ? AisleGroup : ItemGroup;
+  const Row = grouped ? DraggableRow : ItemRow;
+  const groupList = (
     <div className={isDesktop && grouped ? 'columns-2 gap-[18px]' : 'flex flex-col gap-[18px]'}>
       {groups.map((g) => (
         <div key={g.id} className={isDesktop && grouped ? 'break-inside-avoid mb-[18px]' : ''}>
-          <ItemGroup name={g.name} dot={g.dot} count={g.items.length}>
+          <Group id={g.id} name={g.name} dot={g.dot} count={g.items.length}>
             {g.items.map((item, idx) => (
-              <ItemRow
+              <Row
                 key={item.id}
                 item={item}
                 fresh={fresh.has(item.id)}
@@ -532,11 +555,18 @@ export default function ListsScreen() {
                 onSwiped={() => markHintSeen('swipe')}
               />
             ))}
-          </ItemGroup>
+          </Group>
           {g === firstGroup && groupCoach && <div className="mt-3">{groupCoach}</div>}
         </div>
       ))}
     </div>
+  );
+  const groupsEl = byStore ? storesEl : grouped ? (
+    <AisleDnd items={lists.todo} onMove={moveToAisle}>
+      {groupList}
+    </AisleDnd>
+  ) : (
+    groupList
   );
 
   const doneEl = doneCount > 0 && (

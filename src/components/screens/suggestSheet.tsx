@@ -166,8 +166,8 @@ export function SuggestShopSheet({ store, onClose, onDone }: { store: CatalogSto
                   style={{ padding: '10px 14px', minHeight: 56, borderTop: i ? '1px solid var(--line)' : 'none', background: on ? 'var(--accent-wash)' : undefined }}
                 >
                   <span className="flex-1 min-w-0">
-                    <span className="block font-bold text-[15px] truncate">{branchArea(b)}</span>
-                    <span className="block text-[12.5px] text-ink-soft truncate">{b.address || 'In store'}</span>
+                    <span className="block font-bold text-[15px] line-clamp-2 break-words">{branchArea(b)}</span>
+                    <span className="block text-[12.5px] text-ink-soft line-clamp-2 break-words">{b.address || 'In store'}</span>
                   </span>
                   {on ? <Icon name="checkCircle" size={19} stroke={2.2} color="var(--accent-ink)" className="shrink-0" /> : <span className="shrink-0 text-[12.5px] font-bold text-accent-ink">That’s my shop</span>}
                 </button>

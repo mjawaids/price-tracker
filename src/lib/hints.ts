@@ -4,7 +4,7 @@
 export const HINTS = {
   paste: 'Press Enter to add. Paste a whole list to add everything at once.',
   tick: 'Tap the circle when it’s in your cart. Ticked items wait at the bottom.',
-  aisles: 'Your list is sorted by aisle so you can shop in one pass. Tap an item to move it.',
+  aisles: 'Your list is sorted by aisle so you can shop in one pass. Hold an item and drag it to another aisle.',
   details: 'Need a brand or size? Tap an item to add a note or quantity.',
   clear: 'Ticked items wait here. Tap Clear when you’re done shopping — we’ll remember them for next time.',
   swipe: 'Swipe right to tick, left to delete.',
