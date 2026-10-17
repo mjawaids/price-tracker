@@ -29,11 +29,18 @@ export function firstName(fullName: unknown): string | null {
   return cleanInviteName(first);
 }
 
-/** A name invites can show (the database's own check, done first here): plain, ≤30 characters. */
+/** Digits in any script people type (ASCII, Arabic-Indic, Urdu, fullwidth). */
+const DIGITS = /[0-9\u0660-\u0669\u06F0-\u06F9\uFF10-\uFF19]/g;
+
+/**
+ * A name invites can show (the database's own check, done first here): plain, ≤30
+ * characters, at most 2 digits in all, so no phone number fits however it's spaced.
+ */
 export function cleanInviteName(raw: string): string | null {
   const s = raw.replace(/\s+/g, ' ').trim().slice(0, INVITE_NAME_MAX).trim();
   if (!s) return null;
-  if (/[0-9]{3,}|[/:@<>\\]/.test(s) || /(www\.|\.[a-z]{2,}\b)/i.test(s)) return null;
+  if ((s.match(DIGITS)?.length ?? 0) > 2) return null;
+  if (/[/:@<>\\]/.test(s) || /(www\.|\.[a-z]{2,}\b)/i.test(s)) return null;
   return s;
 }
 

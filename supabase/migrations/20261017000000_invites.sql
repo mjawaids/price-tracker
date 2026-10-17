@@ -28,11 +28,14 @@ CREATE TABLE IF NOT EXISTS spendless.invite_codes (
   user_id uuid PRIMARY KEY DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   code text NOT NULL UNIQUE DEFAULT spendless.new_invite_code() CHECK (code ~ '^[A-HJ-NP-Z2-9]{8}$'),
   -- What the invite says it's from. Shown to anyone with the link, so plain names only:
-  -- no web addresses, emails, phone numbers or markup.
+  -- no web addresses, emails, phone numbers or markup. At most 2 digits in all, in any
+  -- script (ASCII, Arabic-Indic, Urdu, fullwidth), so no phone number fits however
+  -- it's spaced ("12 34 56 78", "0300-123-4567").
   display_name text CHECK (
     display_name IS NULL OR (
       char_length(btrim(display_name)) BETWEEN 1 AND 30
-      AND display_name !~ '[0-9]{3,}|[/:@<>\\]'
+      AND char_length(regexp_replace(display_name, '[^0-9٠-٩۰-۹０-９]', '', 'g')) <= 2
+      AND display_name !~ '[/:@<>\\]'
       AND display_name !~* '(www\.|\.[a-z]{2,}\M)'
     )
   ),
