@@ -18,7 +18,8 @@ import {
 import { ListItem } from '../../types';
 import { Icon } from '../ui';
 
-const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const reducedMotion = () =>
+  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export function AisleDnd({
   items,
@@ -39,7 +40,7 @@ export function AisleDnd({
   const onDragStart = (e: DragStartEvent) => {
     setActive(items.find((i) => i.id === e.active.id) ?? null);
     try {
-      navigator.vibrate?.(12);
+      if (typeof navigator !== 'undefined') navigator.vibrate?.(12);
     } catch {
       /* no vibration */
     }
