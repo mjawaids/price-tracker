@@ -20,7 +20,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     icon: 'lists',
     summary: 'Quick add, aisles, ticking off, offline',
     body: [
-      'Type what you need — “bread”, “2 milk”, “atta 10 kg” — and press Enter. You can paste a whole list to add it all at once.',
+      'Type what you need — “bread”, “2 milk”, “rice 5 kg” — and press Enter. You can paste a whole list to add it all at once.',
       'Items are grouped by aisle so you can shop in one pass. Tap an item to change its name, quantity or note.',
       'Tap the circle when something is in your cart. When you’re done, Clear ticked items — we remember them so you can add them again with one tap.',
       'Lists work without a connection and sync when you’re back online.',
@@ -70,7 +70,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     body: [
       'Pick your city once. Where shared prices are live, its stores are added for you. Anywhere else, Compare uses the stores and prices you add yourself.',
       'Where to buy compares your city’s online stores and your own stores. In Compare → Stores, choose the ones you actually shop at — Where to buy then compares only those.',
-      'Shared shop branches (like “Imtiaz · Gulshan”) show their prices everywhere, but Where to buy compares a branch only once you add it to My stores — so a plan never sends you across the city.',
+      'Shared shop branches (a chain’s shop in one area, like “Imtiaz · Gulshan” in Karachi) show their prices everywhere, but Where to buy compares a branch only once you add it to My stores — so a plan never sends you across the city.',
       'Add a store of your own (a local shop or a delivery app) with its delivery fee and minimum order. Stores you add are private to you, unless you share a shop — see Sharing a shop.',
     ],
   },
@@ -97,7 +97,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       'To keep shared prices honest, a price far from the usual one at a shared store is used for you only at first. It counts for everyone once someone else sees about the same price there (another person, or the store’s own website). Adding a new price for the same product and store within 10 minutes replaces your last one, and you can add up to 500 prices a day.',
       'Prices from people whose prices usually match what others see count a little more; prices that often don’t match count a little less. It’s worked out automatically, never shown, and everyone starts the same.',
       'Your own stores and products — and the prices you add to them — stay private, unless you share a shop (see Sharing a shop).',
-      'Shopping with a plan? When you tick an item, SpendLess asks “Was it Rs 210?” — tap Yes, or Different to add what you paid (or that they didn’t have it). When a store’s part of the list is all ticked, the ones you didn’t answer come up together. Offline in the shop, your answers wait on this device and are sent when you’re back online. Turn it off in Profile → Shopping features → Ask for prices while I shop.',
+      'Shopping with a plan? When you tick an item, SpendLess asks if the price was right — tap Yes, or Different to add what you paid (or that they didn’t have it). When a store’s part of the list is all ticked, the ones you didn’t answer come up together. Offline in the shop, your answers wait on this device and are sent when you’re back online. Turn it off in Profile → Compare prices → Ask for prices while I shop.',
       'Compare → Contribute → Your contributions lists the prices you’ve added and where each one stands. Got one wrong? Remove it there (it asks first).',
       'Have a receipt? Add a whole shop’s prices in one go — see Adding a receipt.',
     ],
@@ -124,7 +124,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     summary: 'Turn features on or off',
     body: [
       'SpendLess works as a simple shopping list. Compare is there when you want it.',
-      'Profile → Shopping features turns Where to buy, Receipt import and Tips on or off. Lists look exactly as before when they’re off.',
+      'Profile → Compare prices turns Compare (Where to buy and the Compare tab) on or off, with price checks and receipts under it. Lists look exactly as before when it’s off.',
       'You can replay the Where to buy walkthrough from Profile → Help.',
     ],
   },

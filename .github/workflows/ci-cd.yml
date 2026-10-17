@@ -187,6 +187,13 @@ jobs:
           if ! grep -qi "^content-security-policy: default-src 'none'" <<<"$pdf_headers"; then
             echo "::warning::/$pdf_dir/ has no Content-Security-Policy header (public/_headers)"
           fi
+          # First run: the city suggestion (netlify/edge-functions/geo.ts). The app falls back to
+          # the time zone without it, so a missing function warns instead of failing.
+          if fetch "$ORIGIN_URL/api/geo" | jq -e 'has("country") and has("city")' >/dev/null 2>&1; then
+            echo "City suggestion (/api/geo) ✔"
+          else
+            echo "::warning::/api/geo didn't answer with JSON: the edge function may not have been deployed (netlify/edge-functions/geo.ts)"
+          fi
           # A share that reaches the network is sent back to the app (no service worker yet).
           share="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' -X POST -F text=smoke "$ORIGIN_URL/share-receipt" || true)"
           case "$share" in

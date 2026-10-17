@@ -3,7 +3,7 @@ import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompare, CART_LIST_NAME } from '../../contexts/CompareContext';
 import { useLists } from '../../contexts/ListsContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { useFeatures, useSettings } from '../../contexts/SettingsContext';
 import { useShared } from '../../lib/receipt/inbox';
 import { Btn, Icon, IconName, Sheet } from '../ui';
 
@@ -48,7 +48,9 @@ export function WhatsNewSheet() {
   const { user } = useAuth();
   const lists = useLists();
   const compare = useCompare();
-  const { settings } = useSettings();
+  const compareOn = useFeatures().compare;
+  // Never over the first run (FirstRun.tsx).
+  const setupDone = useSettings().settings.setupDone;
   const [open, setOpen] = useState(false);
   // A receipt shared to SpendLess is asked about first.
   const sharing = !!useShared();
@@ -58,7 +60,7 @@ export function WhatsNewSheet() {
     lists.hasHistory || lists.lists.some((l) => (lists.todoCountByList[l.id] || 0) > 0) || compare.products.some((p) => p.ownerId) || !!compare.convertedCart;
 
   useEffect(() => {
-    if (!uid || open || sharing || !lists.ready || !compare.ready || !settings.features.whereToBuy) return;
+    if (!uid || open || sharing || !lists.ready || !compare.ready || !compareOn || !setupDone) return;
     if (seen(uid)) return;
     if (!hadActivity) {
       // Started after this release: nothing to catch up on.
@@ -68,7 +70,7 @@ export function WhatsNewSheet() {
     // Let the app settle (and any update toast show) before asking for attention.
     const t = setTimeout(() => setOpen(true), 1200);
     return () => clearTimeout(t);
-  }, [uid, open, sharing, lists.ready, compare.ready, settings.features.whereToBuy, hadActivity]);
+  }, [uid, open, sharing, lists.ready, compare.ready, compareOn, setupDone, hadActivity]);
 
   if (!uid || !open) return null;
 
@@ -120,7 +122,7 @@ export function WhatsNewSheet() {
             body={`The ${cart.count} ${cart.count === 1 ? 'item' : 'items'} in your Compare cart are in a new list, “${CART_LIST_NAME}”.`}
           />
         )}
-        <Card icon="sliders" title="Only if you want it" body="Turn Where to buy off any time in Profile → Shopping features, and your lists look just as before." />
+        <Card icon="sliders" title="Only if you want it" body="Turn it off any time in Profile → Compare prices, and your lists look just as before." />
       </div>
     </Sheet>
   );

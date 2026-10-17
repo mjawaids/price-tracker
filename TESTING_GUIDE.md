@@ -18,6 +18,23 @@ When nav items are hidden, the nav fades at the edge and a **More ⌄** button s
 bottom (tap it to scroll down; a top fade appears once scrolled). Windows ≤860px tall
 show the install card as a single "Install the app" row.
 
+## First run
+
+On a device with no saved settings (clear site data, then sign up):
+- [ ] A new account sees the welcome (*Get started*, "Step 1 of 2"); an account older
+      than a day goes straight to the city.
+- [ ] In Karachi: "You're in Karachi LIVE", *Start my first list* → Compare tab, Where to
+      buy and Profile → Compare prices all on; prices in Rs.
+- [ ] Another Pakistani city (e.g. Lahore): "Shared prices aren't in Lahore yet"; after
+      starting there's no Compare tab, and Profile → Compare prices is off.
+- [ ] Outside Pakistan (a VPN, or another country): that city and country; Lists only,
+      and the currency is that country's (e.g. AED in Dubai).
+- [ ] *Change* opens the city list; *My city isn't listed* → "Your city · Another city".
+- [ ] Offline, or `/api/geo` not answering: Pakistan's time zone shows the city list; no
+      city list at all (offline on a new device) still lets you start with Lists.
+- [ ] A device that already had SpendLess open keeps its settings and never sees it.
+- [ ] 320px, 375×667 and 768px: nothing cut off, the button stays at the bottom.
+
 ## Back and gestures
 
 On Android (installed app and Chrome), with the back button or gesture:
@@ -156,13 +173,14 @@ service worker.
       *Open* on an online store opens its website in a new tab.
 - [ ] Renaming a planned item clears its plan and pinned product.
 - [ ] Offline: the plan still opens from saved prices, with an offline note.
-- [ ] Profile → Shopping features → Where to buy **off**: no chip, no store sections,
-      lists look as before, and ticking asks no prices.
-- [ ] The **x** on the chip turns Where to buy off (with a toast saying where to turn it on).
+- [ ] Profile → Compare prices **off**: no chip, no store sections, no Compare tab
+      (bottom bar or sidebar), no *Your contributions* or walkthrough row in Profile,
+      lists look as before, and ticking asks no prices. On again: all of it is back.
+- [ ] The **x** on the chip turns Compare prices off (with a toast saying where to turn it on).
 
 ## Compare
 
-- [ ] The tab bar shows **Lists · Compare · Profile**; Compare has Prices · Stores ·
+- [ ] With Compare prices on, the tab bar shows **Lists · Compare · Profile**; Compare has Prices · Stores ·
       Contribute (desktop: sidebar items + a top bar with search and the city).
 - [ ] Prices: search, browse by aisle, your usuals; a product page shows prices at your
       stores and other stores with unit prices and how old each price is.
@@ -225,7 +243,7 @@ medicine products and all the prices, in one transaction) and re-reads those pri
 - [ ] Leave the screen while reading or reviewing: Contribute shows *Finish your
       receipt*, and the review is still there. An app update doesn't auto-reload while
       a receipt is open.
-- [ ] Profile → Shopping features → Receipt import **off**: Contribute's card says it's
+- [ ] Profile → Compare prices → Add receipts **off**: Contribute's card says it's
       off and opens Profile; the screen shows "Receipt import is off" with *Turn on*.
 - [ ] Sign out and back in: remembered choices are gone (IndexedDB
       `spendless-receipts-<uid>` deleted).
@@ -246,7 +264,7 @@ when the installed app is opened and its manifest is a day old, or on a fresh in
 - [ ] Gmail → an order email → Share (text) → SpendLess: "You shared some text…" → review.
 - [ ] Share while signed out: sign in, and the question is still asked (within 30 minutes).
 - [ ] Sharing reloads the app: an unsaved receipt you were checking is gone (expected).
-- [ ] Profile → Shopping features → Receipt import off: the sheet offers *Turn on and read*.
+- [ ] Profile → Compare prices → Add receipts off (or Compare prices off): the sheet offers *Turn on and read*, which turns both on.
 - [ ] Sign out with a share waiting: it's gone (Cache Storage `spendless-share-inbox`).
 - [ ] iPhone: SpendLess isn't in the share menu (no web share target on iOS); the PDF
       tile and Paste text work.
@@ -394,7 +412,7 @@ Use generic test accounts, on a list with a plan applied (Where to buy → Use t
       them with prices and age chips. Change one, mark one "Wasn't there", then *Not now*
       → "Discard your answers?" (*Keep editing* keeps them) → *Save N answers* → "Thanks —
       N answers saved." *Not now* without edits: no more questions there on that list today.
-- [ ] Profile → Shopping features → *Ask for prices while I shop* off: ticking asks
+- [ ] Profile → Compare prices → *Ask for prices while I shop* off: ticking asks
       nothing. Your own price from today isn't asked about.
 - [ ] Offline in the shop (open a price sheet once online first if the service worker
       isn't installed yet): answering says "Saved on this device…"; back online, the

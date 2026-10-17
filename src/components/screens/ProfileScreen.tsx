@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { ShoppingFeatures, useSettings } from '../../contexts/SettingsContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useCompare } from '../../contexts/CompareContext';
 import { useContributionStats } from './contributionHelpers';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
-import { Icon, Btn, IconName, Sheet, Toggle, ToggleTrack } from '../ui';
+import { Icon, Btn, IconName, Sheet, ToggleTrack } from '../ui';
 import { Field, TextIn } from './manageParts';
 import { currencyChipLabel } from '../../utils/currency';
 import { versionLabel } from '../../lib/version';
@@ -15,8 +15,9 @@ import { AVATARS_BUCKET, storagePathFromUrl } from '../../lib/storage';
 import { supportUrl } from '../../lib/links';
 import { useInstall } from '../../lib/install';
 import { InstallSheet } from '../shell/Install';
+import { trackUserAction } from '../../utils/analytics';
 
-type ProfileSheet = 'edit' | 'notifications' | 'privacy' | 'install' | null;
+type ProfileSheet = 'edit' | 'privacy' | 'install' | null;
 
 function SettingRow({
   icon,
@@ -85,6 +86,7 @@ function SwitchRow({
   on,
   onChange,
   last,
+  indent,
 }: {
   icon: IconName;
   label: string;
@@ -92,6 +94,8 @@ function SwitchRow({
   on: boolean;
   onChange: (v: boolean) => void;
   last?: boolean;
+  /** Part of the switch above (shown only while it's on). */
+  indent?: boolean;
 }) {
   return (
     <button
@@ -100,7 +104,7 @@ function SwitchRow({
       aria-checked={on}
       onClick={() => onChange(!on)}
       className="w-full flex items-center gap-3 text-left"
-      style={{ padding: '13px 16px', borderBottom: last ? 'none' : '1px solid var(--line)' }}
+      style={{ padding: indent ? '13px 16px 13px 32px' : '13px 16px', borderBottom: last ? 'none' : '1px solid var(--line)' }}
     >
       <span className="grid place-items-center shrink-0 bg-accent-wash" style={{ width: 38, height: 38, borderRadius: 11 }}>
         <Icon name={icon} size={19} color="var(--accent-ink)" stroke={2} />
@@ -290,37 +294,6 @@ function EditProfileSheet({ open, onClose }: { open: boolean; onClose: () => voi
   );
 }
 
-function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { settings, updateSettings } = useSettings();
-
-  const Row = ({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) => (
-    <div className="flex items-center gap-3" style={{ padding: '14px 0' }}>
-      <div className="flex-1">
-        <div className="font-semibold text-[15px]">{label}</div>
-        <div className="text-[12.5px] text-ink-faint leading-snug mt-0.5">{desc}</div>
-      </div>
-      <Toggle on={value} onChange={onChange} label={label} />
-    </div>
-  );
-
-  return (
-    <Sheet open={open} onClose={onClose} title="Notifications">
-      <div className="text-[13px] text-ink-faint -mt-1 mb-2">Choose what SpendLess can notify you about.</div>
-      <div className="divide-y divide-line">
-        <Row
-          label="Push notifications"
-          desc="Price drops and deals on products you track."
-          value={settings.notifications}
-          onChange={(v) => updateSettings({ notifications: v })}
-        />
-      </div>
-      <Btn full onClick={onClose} className="mt-4">
-        Done
-      </Btn>
-    </Sheet>
-  );
-}
-
 function PrivacySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { updatePassword } = useAuth();
   const [pw, setPw] = useState('');
@@ -381,6 +354,12 @@ function PrivacySheet({ open, onClose }: { open: boolean; onClose: () => void })
 export default function ProfileScreen() {
   const app = useApp();
   const { settings, updateSettings } = useSettings();
+  const compareOn = settings.features.whereToBuy;
+  const setFeature = (key: keyof ShoppingFeatures, on: boolean) => {
+    updateSettings({ features: { ...settings.features, [key]: on } });
+    // Counts only: which switch and where it ended up.
+    if (typeof window.gtag !== 'undefined') trackUserAction('feature_toggled', { feature: key, on });
+  };
   const compare = useCompare();
   const { stats } = useContributionStats();
   const { compact } = useBreakpoint();
@@ -437,16 +416,18 @@ export default function ProfileScreen() {
           </div>
         </div>
 
-        <Group title="Your prices">
-          <SettingRow
-            icon="heart"
-            label="Your contributions"
-            accent
-            value={stats ? `${stats.month} this month` : compare.recentReports ? `${compare.recentReports} lately` : undefined}
-            onClick={() => app.go('contributions')}
-            last
-          />
-        </Group>
+        {compareOn && (
+          <Group title="Your prices">
+            <SettingRow
+              icon="heart"
+              label="Your contributions"
+              accent
+              value={stats ? `${stats.month} this month` : compare.recentReports ? `${compare.recentReports} lately` : undefined}
+              onClick={() => app.go('contributions')}
+              last
+            />
+          </Group>
+        )}
 
         <Group title="Preferences">
           <SettingRow
@@ -459,34 +440,43 @@ export default function ProfileScreen() {
           <SettingRow icon="coin" label="Currency" accent value={compare.region ? compare.region.currency : currencyChipLabel(app.currencyCode)} onClick={() => app.openSheet('currency')} last />
         </Group>
 
-        <Group title="Shopping features">
+        <Group title="Compare prices">
           <SwitchRow
             icon="tag"
-            label="Where to buy"
-            sub="Find the cheapest stores for a list, delivery included"
-            on={settings.features.whereToBuy}
-            onChange={(v) => updateSettings({ features: { ...settings.features, whereToBuy: v } })}
+            label="Compare prices"
+            sub={
+              compare.isLive
+                ? 'See where your list is cheapest, delivery included. Adds the Compare tab.'
+                : 'Add your own stores and prices, and see where your list is cheapest. Adds the Compare tab.'
+            }
+            on={compareOn}
+            onChange={(v) => setFeature('whereToBuy', v)}
           />
-          <SwitchRow
-            icon="checkCircle"
-            label="Ask for prices while I shop"
-            sub="When you tick an item from a plan: “Was it Rs 210?” — one tap to confirm"
-            on={settings.features.askPrices}
-            onChange={(v) => updateSettings({ features: { ...settings.features, askPrices: v } })}
-          />
-          <SwitchRow
-            icon="receipt"
-            label="Receipt import"
-            sub="Add a whole shop’s prices from a screenshot, PDF, photo or text — read on your device"
-            on={settings.features.receipts}
-            onChange={(v) => updateSettings({ features: { ...settings.features, receipts: v } })}
-          />
+          {compareOn && (
+            <>
+              <SwitchRow
+                indent
+                icon="checkCircle"
+                label="Ask for prices while I shop"
+                sub="Asks if the price was right when you tick a planned item — one tap to confirm"
+                on={settings.features.askPrices}
+                onChange={(v) => setFeature('askPrices', v)}
+              />
+              <SwitchRow
+                indent
+                icon="receipt"
+                label="Add receipts"
+                sub="Read a shop’s prices from a screenshot, PDF, photo or text — on your device"
+                on={settings.features.receipts}
+                onChange={(v) => setFeature('receipts', v)}
+              />
+            </>
+          )}
           <SwitchRow icon="bulb" label="Tips" sub="Short hints as you go, one at a time" on={onboarding.tipsOn} onChange={onboarding.setTipsOn} last />
         </Group>
 
         <Group title="Account">
           <SettingRow icon="user" label="Edit profile" onClick={() => setSheet('edit')} />
-          <SettingRow icon="bell" label="Notifications" value={settings.notifications ? 'On' : 'Off'} onClick={() => setSheet('notifications')} />
           <SettingRow icon="lock" label="Privacy & security" onClick={() => setSheet('privacy')} last />
         </Group>
 
@@ -506,7 +496,7 @@ export default function ProfileScreen() {
 
         <Group title="Help">
           <SettingRow icon="bulb" label="How SpendLess works" accent onClick={() => app.openSheet('help')} />
-          <SettingRow icon="spark" label="Where to buy walkthrough" value="Replay" onClick={onboarding.start} />
+          {compareOn && <SettingRow icon="spark" label="Where to buy walkthrough" value="Replay" onClick={onboarding.start} />}
           <SettingRow icon="refresh" label="Show tips again" value="Reset" onClick={onboarding.resetTips} />
           <SettingRow icon="mail" label="Contact support" href={supportUrl('app_profile')} last />
         </Group>
@@ -554,7 +544,6 @@ export default function ProfileScreen() {
       </div>
 
       <EditProfileSheet open={sheet === 'edit'} onClose={() => setSheet(null)} />
-      <NotificationsSheet open={sheet === 'notifications'} onClose={() => setSheet(null)} />
       <PrivacySheet open={sheet === 'privacy'} onClose={() => setSheet(null)} />
       <InstallSheet open={sheet === 'install'} onClose={() => setSheet(null)} />
     </div>

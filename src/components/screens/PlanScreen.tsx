@@ -4,6 +4,7 @@ import { useLists } from '../../contexts/ListsContext';
 import { useCompare } from '../../contexts/CompareContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { trackUserAction } from '../../utils/analytics';
 import { useHint } from '../../hooks/useHint';
 import { Plan } from '../../lib/compare/optimizer';
 import { ResolvedItem } from '../../lib/compare/resolve';
@@ -52,6 +53,12 @@ export default function PlanScreen() {
   useEffect(() => {
     maybeStartCompareTour();
   }, [maybeStartCompareTour]);
+  // Counts only: how many items, whether the city has shared prices.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') trackUserAction('plan_viewed', { items: items.length, live: compare.isLive });
+    // Once per visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (compare.ready && !compare.regionChosen && compare.regions.length) setStoresOpen(true);
   }, [compare.ready, compare.regionChosen, compare.regions.length]);

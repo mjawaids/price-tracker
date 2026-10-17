@@ -491,7 +491,7 @@ export function EmptyList({ starters, onPick }: { starters: string[]; onPick: (n
       </div>
       <h2 className="m-0 font-display font-extrabold text-[23px] tracking-[-0.02em]">What do you need?</h2>
       <p className="m-0 max-w-[280px] text-[15px] leading-relaxed text-ink-soft">
-        Just type it — milk, bread, atta. No brands or sizes needed. Try “2 milk” to set a quantity.
+        Just type it — milk, bread, eggs. No brands or sizes needed. Try “2 milk” to set a quantity.
       </p>
       <div className={`mt-[18px] ${sectionLabel}`}>Tap to add</div>
       <div className="flex flex-wrap justify-center gap-2 max-w-[340px]">

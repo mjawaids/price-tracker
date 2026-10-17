@@ -1,20 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useTheme } from './ThemeContext';
 
-/** Shopping features people can turn off (Profile → Shopping features). */
+/** Shopping features people can turn on or off (Profile → Compare prices). */
 export interface ShoppingFeatures {
-  /** "Where to buy" on lists. */
+  /** Compare prices: "Where to buy" on lists and the Compare section. The other two count only while it's on. */
   whereToBuy: boolean;
-  /** "Was it Rs 210?" when ticking an item from a plan, and the store summary (Profile → Shopping features). */
+  /** "Was it …?" when ticking an item from a plan, and the store summary. */
   askPrices: boolean;
   /** Receipt import. */
   receipts: boolean;
 }
 
+
 interface UserSettings {
   currency: string;
   theme: 'light' | 'dark' | 'system';
-  notifications: boolean;
   language: string;
   /** Legacy free-text location; replaced by `regionId`. */
   location: string | null;
@@ -23,6 +23,8 @@ interface UserSettings {
   features: ShoppingFeatures;
   /** Lists: group open items by aisle (off = order added). */
   groupListsByAisle: boolean;
+  /** The first run (welcome, city) is done. False only on a device with no saved settings yet. */
+  setupDone: boolean;
 }
 
 interface SettingsContextType {
@@ -34,12 +36,12 @@ interface SettingsContextType {
 const defaultSettings: UserSettings = {
   currency: 'PKR',
   theme: 'light',
-  notifications: true,
   language: 'en',
   location: null,
   regionId: null,
   features: { whereToBuy: true, askPrices: true, receipts: true },
   groupListsByAisle: true,
+  setupDone: false,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -52,6 +54,16 @@ export const useSettings = () => {
   return context;
 };
 
+/**
+ * The features in effect. Compare prices (`whereToBuy`) is the main switch: price checks
+ * and receipts are part of Compare, so they're off while it is.
+ */
+export const useFeatures = () => {
+  const f = useSettings().settings.features;
+  const compare = f.whereToBuy;
+  return { compare, whereToBuy: compare, askPrices: compare && f.askPrices, receipts: compare && f.receipts };
+};
+
 const STORAGE_KEY = 'price-tracker-settings';
 
 // Read synchronously so the first render already uses the saved settings (no
@@ -60,8 +72,10 @@ function loadSettings(): UserSettings {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      const parsed = JSON.parse(saved) as Partial<UserSettings>;
-      return { ...defaultSettings, ...parsed, features: { ...defaultSettings.features, ...(parsed.features || {}) } };
+      const parsed = JSON.parse(saved) as Partial<UserSettings> & { notifications?: unknown };
+      delete parsed.notifications; // an old switch nothing read
+      // Saved settings = someone already used the app here: keep them as they are, no first run.
+      return { ...defaultSettings, setupDone: true, ...parsed, features: { ...defaultSettings.features, ...(parsed.features || {}) } };
     }
   } catch (error) {
     console.error('Error loading settings:', error);

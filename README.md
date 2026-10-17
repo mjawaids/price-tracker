@@ -37,9 +37,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - **Use this plan** splits the same list into one section per store; *Shop here*
   shows just that store's part
 - Works offline from the prices saved on the device
-- **While you shop**: tick an item and SpendLess asks "Was it Rs 210?" — tap Yes, or
-  Different to add what you paid; when a store's part is done, the rest come up in one
-  go. Answers given offline are sent later. Off in Profile → Shopping features
+- **While you shop**: tick an item and SpendLess asks if the price was right — tap Yes,
+  or Different to add what you paid; when a store's part is done, the rest come up in
+  one go. Answers given offline are sent later. Off in Profile → Compare prices
 
 ### 🏷️ Prices, stores and contributing
 - Shared prices for your city where they're live (Karachi first); anywhere else,
@@ -74,8 +74,12 @@ The app has two sections: **Lists** (the default) and **Compare**.
   or just say it's wrong — once two people say so, Where to buy leaves it out until a
   newer price comes in. Prices from people whose prices often disagree with others'
   quietly count for less
-- Use as much as you like: Profile → **Shopping features** turns Where to buy and receipt
-  import off, and lists look exactly as before
+- Use as much as you like: Profile → **Compare prices** turns Compare on or off (Where to
+  buy, the Compare tab, and under it price checks and receipts). It starts on in a city
+  with shared prices and off everywhere else, where SpendLess is a shopping list
+- **First run**: a short welcome, then the city we think you're in (from your
+  connection, never your device's location) with *Change*. It sets the currency and
+  whether Compare starts on
 - In-app help (Profile → Help), a short walkthrough the first time you open Where to buy,
   and one-at-a-time tips
 
@@ -363,7 +367,7 @@ src/
 │   │   ├── suggestSheet.tsx    # Share this shop (suggest it as a shared one), its row, "Your shop is now shared"
 │   │   ├── productSheet.tsx    # Add/edit your product
 │   │   └── ProfileScreen.tsx   # Profile, shopping features, help
-│   ├── onboarding/         # Where to buy walkthrough + "What's new" sheet
+│   ├── onboarding/         # First run (welcome + city), Where to buy walkthrough, "What's new" sheet
 │   ├── ui/                 # Reusable UI primitives (Icon, Sheet, Toast, CoachMark, Toggle, …)
 │   ├── PageHeader.tsx      # Header for marketing/legal pages
 │   └── PageFooter.tsx      # Footer with developer credits
@@ -381,7 +385,7 @@ src/
 │   ├── AppContext.tsx          # Navigation, sections & app sheets
 │   ├── OnboardingContext.tsx   # Walkthrough + contextual tips
 │   ├── ThemeContext.tsx        # Theme management
-│   ├── SettingsContext.tsx     # User settings (currency, city, shopping features, list grouping)
+│   ├── SettingsContext.tsx     # User settings (currency, city, Compare prices switch, list grouping, first run done)
 │   └── AnalyticsContext.tsx    # Analytics wiring
 ├── hooks/                  # Custom React hooks
 │   ├── useBreakpoint.ts        # Responsive breakpoints
@@ -394,6 +398,7 @@ src/
 │   ├── compare/                # Compare: item types, name parser, unit prices, matching, optimizer, API, offline cache
 │   ├── receipt/                # Receipts: on-device reader, PDFs, parser, dates, store guess, matching, review, memory, share inbox
 │   ├── backStack.ts            # Back button / gestures ↔ open sheets and screens
+│   ├── geo.ts                  # First run: the city suggested from the connection (/api/geo)
 │   ├── help.ts                 # Help topic copy
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy

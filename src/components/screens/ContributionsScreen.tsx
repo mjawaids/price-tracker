@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompare } from '../../contexts/CompareContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { useFeatures } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import * as api from '../../lib/compare/api';
 import { Btn, ConfirmSheet, Icon, IconName, Toast } from '../ui';
@@ -39,7 +39,7 @@ function dayLabel(iso: string, now = new Date()): string {
 export default function ContributionsScreen() {
   const app = useApp();
   const compare = useCompare();
-  const { settings } = useSettings();
+  const receiptsOn = useFeatures().receipts;
   const uid = useAuth().user?.id ?? null;
   const { compact, isDesktop } = useBreakpoint();
   const { stats, failed: statsFailed, reload } = useContributionStats();
@@ -348,7 +348,7 @@ export default function ContributionsScreen() {
         <Btn full onClick={back}>
           Add a price
         </Btn>
-        {settings.features.receipts && (
+        {receiptsOn && (
           <Btn full variant="ghost" className="bg-surface" onClick={() => app.go('receipt')}>
             Add a receipt
           </Btn>

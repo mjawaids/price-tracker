@@ -99,6 +99,7 @@ Found while looking into eggs being matched with noodles:
 ## Decisions
 
 - **Outside live cities the app is Lists-only.** Compare (Where to buy, receipts, price checks) is off with its tab hidden, and one Profile switch turns it on. A live city gets everything, as before.
+- **The city is detected, not picked** (from the connection, never the device's location), with *Change* one tap away. People who already use the app keep their settings, with no extra notice.
 - **Sharing this round is an invite link** (share sheet or copy, with a random invite code). Shared family lists come later.
 - **Push** ("still to buy") goes out once when a list's oldest open item is 2+ days old, then stays quiet until the list changes, only 10:00–20:00 local time. OneSignal is set up the way DailyWins does it (`mjawaids/daily-accomplishments`: `src/lib/onesignal.ts`, its worker at `/onesignal/` scope, an opaque `push_alias`).
 - **The usual-product picker shows each product once, with no prices or stores.**
@@ -110,8 +111,8 @@ Found while looking into eggs being matched with noodles:
 |---|---|---|
 | 1 | Correct matches (eggs need 6+ units, Omega-3 isn't a count, pudding / pet food / Gala typed); the picker shows one row per product with no prices or stores, and its fallback needs every word; migration `20261016000000_egg_products.sql` fixes 13 shared rows; this roadmap | Merged ([#48](https://github.com/mjawaids/price-tracker/pull/48)) |
 | 2 | Back and gestures (`src/lib/backStack.ts`): back closes a sheet, then the last screen, then a non-Lists tab, then leaves the app; pull a sheet down to close it; left-edge swipe in the installed iOS app; scroll kept per screen. No receipt prompt: going back from a receipt review keeps it ("Finish your receipt") | Merged ([#49](https://github.com/mjawaids/price-tracker/pull/49)) |
-| 3 | Lists: a typed quantity box with steps that follow the unit (`quickAdd.ts` `stepFor`, `parseQuantity`); long-press drag between aisles (`@dnd-kit/core`, `listDrag.tsx`; keyboard users keep the Aisle chips); names wrap to two lines, a shared shop's area on its own line (`splitStoreName`) | In review |
-| 4 | Region gating (above); a first-run welcome and city step; currency from the browser locale; neutral copy; dead push switch removed; retention analytics events (counts only) | Planned |
+| 3 | Lists: a typed quantity box with steps that follow the unit (`quickAdd.ts` `stepFor`, `parseQuantity`); long-press drag between aisles (`@dnd-kit/core`, `listDrag.tsx`; keyboard users keep the Aisle chips); names wrap to two lines, a shared shop's area on its own line (`splitStoreName`) | Merged ([#50](https://github.com/mjawaids/price-tracker/pull/50)) |
+| 4 | First run (`FirstRun.tsx`): a welcome, then the city detected from the connection (`/api/geo` Edge Function, time-zone fallback) with *Change*; it sets the currency and whether Compare starts on (on in a live city, off elsewhere). One Profile switch, **Compare prices**, hides or shows the Compare tab, with price checks and receipts under it. Devices that already had settings keep them. Neutral copy; dead push switch removed; events `welcome_done`, `list_created`, `plan_viewed`, `feature_toggled` (counts only). Design: [first run](https://claude.ai/artifact/Wxyi2cTiLBSXzrMAdovh6t) | In review |
 | 5 | Invite a friend: `navigator.share` / copy; `spendless.invite_codes` + `spendless.referrals` with own-row RLS | Planned |
 | 6 | "Still to buy" push via OneSignal: `spendless.push_settings`, a script-only `notification_log`, an hourly GitHub Actions sender. Needs a OneSignal app, `VITE_ONESIGNAL_APP_ID` and the `ONESIGNAL_REST_API_KEY` secret | Planned |
 
