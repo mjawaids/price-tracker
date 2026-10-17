@@ -29,8 +29,8 @@ export function firstName(fullName: unknown): string | null {
   return cleanInviteName(first);
 }
 
-/** Digits in any script people type (ASCII, Arabic-Indic, Urdu, fullwidth). */
-const DIGITS = /[0-9\u0660-\u0669\u06F0-\u06F9\uFF10-\uFF19]/g;
+/** Decimal digits in any script (Unicode Nd), as the database's spendless.digit_count counts them. */
+const DIGITS = /\p{Nd}/gu;
 
 /**
  * A name invites can show (the database's own check, done first here): plain, ≤30

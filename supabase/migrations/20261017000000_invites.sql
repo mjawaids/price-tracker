@@ -24,17 +24,47 @@ AS $$
        unnest(ARRAY[0, 1, 2, 3, 4, 5, 10, 11]) WITH ORDINALITY AS t(i, n);
 $$;
 
+-- How many decimal digits a text holds, in any script: Unicode category Nd (Latin,
+-- Arabic-Indic, Urdu, Devanagari, Bengali, fullwidth, … — every range of Unicode 16,
+-- generated from /\p{Nd}/u). Spelled out because the regex class [[:digit:]] depends on
+-- the database's locale. Mirrored by `\p{Nd}` in cleanInviteName (src/lib/invite.ts).
+CREATE OR REPLACE FUNCTION spendless.digit_count(t text)
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = ''
+AS $$
+  SELECT char_length(regexp_replace(coalesce(t, ''),
+    U&'[^\0030-\0039\0660-\0669\06F0-\06F9\07C0-\07C9\0966-\096F\09E6-\09EF\0A66-\0A6F'
+    || U&'\0AE6-\0AEF\0B66-\0B6F\0BE6-\0BEF\0C66-\0C6F\0CE6-\0CEF\0D66-\0D6F\0DE6-\0DEF'
+    || U&'\0E50-\0E59\0ED0-\0ED9\0F20-\0F29\1040-\1049\1090-\1099\17E0-\17E9\1810-\1819'
+    || U&'\1946-\194F\19D0-\19D9\1A80-\1A89\1A90-\1A99\1B50-\1B59\1BB0-\1BB9\1C40-\1C49'
+    || U&'\1C50-\1C59\A620-\A629\A8D0-\A8D9\A900-\A909\A9D0-\A9D9\A9F0-\A9F9\AA50-\AA59'
+    || U&'\ABF0-\ABF9\FF10-\FF19\+0104A0-\+0104A9\+010D30-\+010D39\+010D40-\+010D49'
+    || U&'\+011066-\+01106F\+0110F0-\+0110F9\+011136-\+01113F\+0111D0-\+0111D9'
+    || U&'\+0112F0-\+0112F9\+011450-\+011459\+0114D0-\+0114D9\+011650-\+011659'
+    || U&'\+0116C0-\+0116C9\+0116D0-\+0116E3\+011730-\+011739\+0118E0-\+0118E9'
+    || U&'\+011950-\+011959\+011BF0-\+011BF9\+011C50-\+011C59\+011D50-\+011D59'
+    || U&'\+011DA0-\+011DA9\+011F50-\+011F59\+016130-\+016139\+016A60-\+016A69'
+    || U&'\+016AC0-\+016AC9\+016B50-\+016B59\+016D70-\+016D79\+01CCF0-\+01CCF9'
+    || U&'\+01D7CE-\+01D7FF\+01E140-\+01E149\+01E2F0-\+01E2F9\+01E4F0-\+01E4F9'
+    || U&'\+01E5F1-\+01E5FA\+01E950-\+01E959\+01FBF0-\+01FBF9'
+    || ']',
+    '', 'g'));
+$$;
+
 CREATE TABLE IF NOT EXISTS spendless.invite_codes (
   user_id uuid PRIMARY KEY DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   code text NOT NULL UNIQUE DEFAULT spendless.new_invite_code() CHECK (code ~ '^[A-HJ-NP-Z2-9]{8}$'),
   -- What the invite says it's from. Shown to anyone with the link, so plain names only:
   -- no web addresses, emails, phone numbers or markup. At most 2 digits in all, in any
-  -- script (ASCII, Arabic-Indic, Urdu, fullwidth), so no phone number fits however
-  -- it's spaced ("12 34 56 78", "0300-123-4567").
+  -- script (spendless.digit_count), so no phone number fits however it's spaced or
+  -- written ("12 34 56 78", "0300-123-4567", Urdu or Bengali digits).
   display_name text CHECK (
     display_name IS NULL OR (
       char_length(btrim(display_name)) BETWEEN 1 AND 30
-      AND char_length(regexp_replace(display_name, '[^0-9٠-٩۰-۹０-９]', '', 'g')) <= 2
+      AND spendless.digit_count(display_name) <= 2
       AND display_name !~ '[/:@<>\\]'
       AND display_name !~* '(www\.|\.[a-z]{2,}\M)'
     )
@@ -103,6 +133,9 @@ REVOKE ALL ON spendless.referrals FROM anon, authenticated;
 GRANT SELECT (code, created_at) ON spendless.referrals TO authenticated;
 GRANT INSERT (code) ON spendless.referrals TO authenticated;
 GRANT ALL ON spendless.referrals TO service_role;
+
+REVOKE ALL ON FUNCTION spendless.digit_count(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION spendless.digit_count(text) TO authenticated, service_role;
 
 REVOKE ALL ON FUNCTION spendless.new_invite_code() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION spendless.new_invite_code() TO authenticated, service_role;
