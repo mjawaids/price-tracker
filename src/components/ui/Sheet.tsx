@@ -8,7 +8,8 @@ import { pushLayer, removeLayer } from '../../lib/backStack';
 const CLOSE_DISTANCE = 96;
 const CLOSE_SPEED = 0.6; // px per ms
 
-const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const reducedMotion = () =>
+  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // Responsive modal: bottom sheet on mobile, centered dialog on wider screens. It grows
 // to fit its content and scrolls inside only when that is taller than the screen.
