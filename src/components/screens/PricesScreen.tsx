@@ -98,7 +98,7 @@ export default function PricesScreen() {
           style={{ height: 52, padding: '0 14px' }}
         >
           <Icon name="search" size={20} stroke={2.2} />
-          <span className="text-[15.5px]">Search milk, atta, Surf…</span>
+          <span className="text-[15.5px]">Search milk, rice, soap…</span>
         </button>
 
         {!compare.ready ? (

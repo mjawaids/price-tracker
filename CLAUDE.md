@@ -87,10 +87,12 @@ Context-based (no Redux). Providers in `src/contexts/`:
 - `OnboardingContext` — Where to buy walkthrough (`ONBOARDING_VERSION`, opened from
   `PlanScreen`) + contextual tips (`useHint`)
 - `SettingsContext` — currency, `regionId` (null = not chosen, `'other'` = a city
-  without shared prices), `features` (`whereToBuy`, `askPrices`, `receipts`; Profile →
-  Shopping features), `groupListsByAisle` (Lists: aisle groups vs order added; switch in
-  the list options sheet). Persisted to localStorage, read on first render. `location`
-  is legacy (mapped to `regionId` once)
+  without shared prices), `features` (`whereToBuy` = **Compare prices**, the main switch:
+  Where to buy and the Compare tab; `askPrices`, `receipts` count only while it's on —
+  read them through `useFeatures()`; Profile → Compare prices), `groupListsByAisle`
+  (Lists: aisle groups vs order added; switch in the list options sheet), `setupDone`
+  (false only on a device with no saved settings: the first run shows). Persisted to
+  localStorage, read on first render. `location` is legacy (mapped to `regionId` once)
 - `ThemeContext` — light-only
 - `AnalyticsContext` — gtag wrappers
 
@@ -304,7 +306,8 @@ Stack-based within `AppContext`. Screen enum values: `lists`, `plan` (Where to b
 contributions, highlighted as Contribute), `profile`.
 Sections (`app.section` / `app.openSection`): `lists` (default; includes `plan`),
 `compare` (opens `prices`), `profile`.
-- Mobile (<768px): bottom tab bar **Lists · Compare · Profile**; Compare has a
+- Mobile (<768px): bottom tab bar **Lists · Compare · Profile** (Compare only while
+  Compare prices is on; the sidebar's Compare items too); Compare has a
   Prices · Stores · Contribute segmented control (Contribute → Your products, Add a receipt)
 - Tablet (768–1099px): collapsed sidebar
 - Desktop (≥1100px): full sidebar (your lists on top, then Compare: Prices, Stores,
@@ -436,7 +439,8 @@ post-deploy migration drops them.
 | `scripts/seed/promote-suggestions.ts` (+ `.sql`), `scripts/seed/close-branch.ts` (+ `.sql`) | Nightly: suggested shops become shared and people's shops move in (`.github/workflows/shared-branches.yml`, variables `SHARED_BRANCHES_MIN_PEOPLE`, `SHARED_BRANCHES_PAUSED`); undo one shared shop (*Catalog jobs* → `close-branch`) |
 | `src/components/screens/storePicker.tsx` | Shared store picker (`StorePickerSheet`: Online / In a shop, search over name, chain and address, branches grouped by chain), `ChainGroup`, `StoreSearch` — used by receipts, Add a price, My stores and the Stores screen |
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
-| `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`) and `WhatsNewSheet` |
+| `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`), `WhatsNewSheet`, and `FirstRun` (lazy, shown by `Shell` while `!settings.setupDone`: a welcome — skipped for accounts older than a day — then the detected city with *Change* (`CityList` from `compareSheets.tsx`); finishing sets `regionId`, currency and `features`: all on in a live city, all off elsewhere; Lists-only devices without the city list leave `regionId` null) |
+| `src/lib/geo.ts`, `netlify/edge-functions/geo.ts` | First-run city suggestion: `GET /api/geo` (Netlify Edge Function, `context.geo`, `no-store`, nothing kept) → `detectPlace()` (3 s; falls back to the time zone, `Asia/Karachi` → PK; never the device's location), `matchRegion()` (same country, city name ignoring case/accents/spaces) |
 | `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
 | `docs/roadmap.md` | Where the app is heading (global, simple, retention), the UX review of Oct 2026, the PRs planned from it and what's left for later — start here in a new chat |
 | `docs/data-sources.md` | Each imported store: robots.txt, terms checked, method, branch, delivery source; stores not imported and why |
@@ -514,7 +518,9 @@ say so and propose a safe alternative.
   guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
   build → Netlify → smoke test (version in the entry bundle; manifest `share_target`,
   `sw.js` importing the share handler, its and the PDF reader's headers, the
-  `/share-receipt` fallback) → post-deploy migrations → tag + GitHub Release.
+  `/share-receipt` fallback; `/api/geo` answering JSON, a warning only) → post-deploy
+  migrations → tag + GitHub Release. `netlify deploy` also ships the Edge Functions in
+  `netlify/edge-functions/` (no `netlify.toml`; each declares its own `config.path`).
 - `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue, picked
   by the `job` input (`add-branches`: a city's in-store branches; `promote-store`: a
   private store to public; `close-branch`: undo a shared shop; `merge-products`: the

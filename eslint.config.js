@@ -39,6 +39,7 @@ export default tseslint.config(
             'useApp',
             'useAuth',
             'useCompare',
+            'useFeatures',
             'useLists',
             'useOnboarding',
             'useSettings',

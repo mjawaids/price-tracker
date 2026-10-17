@@ -8,7 +8,7 @@ import { ProductRow } from './compareParts';
 import { usePriced } from './compareHelpers';
 
 // Starting points shown before there are recent searches.
-const SUGGESTED = ['Milk', 'Atta', 'Eggs', 'Bread', 'Cooking oil', 'Tea'];
+const SUGGESTED = ['Milk', 'Eggs', 'Bread', 'Rice', 'Cooking oil', 'Tea'];
 const RECENTS_KEY = 'spendless-recent-searches';
 const MAX_RECENTS = 8;
 const MAX_RESULTS = 60;

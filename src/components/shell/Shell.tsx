@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp, ScreenName, Section } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useCompare } from '../../contexts/CompareContext';
+import { useFeatures, useSettings } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackPageView } from '../../utils/analytics';
 import { Icon, IconName, SegmentedControl, Toast } from '../ui';
@@ -30,6 +31,7 @@ const ReceiptScreen = lazy(() => import('../screens/ReceiptScreen'));
 const ContributionsScreen = lazy(() => import('../screens/ContributionsScreen'));
 const HelpSheet = lazy(() => import('./HelpSheet'));
 const RegionSheet = lazy(() => import('../screens/compareSheets').then((m) => ({ default: m.RegionSheet })));
+const FirstRun = lazy(() => import('../onboarding/FirstRun'));
 const SharedReceiptSheet = lazy(() => import('./SharedReceiptSheet'));
 
 const SCREENS: Record<ScreenName, ComponentType> = {
@@ -191,6 +193,7 @@ function useNavOverflow() {
 function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => void }) {
   const app = useApp();
   const lists = useLists();
+  const compareOn = useFeatures().compare;
   const initials = app.user.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
   const compareItems: NavDef[] = [
     { id: 'prices', icon: 'tag', label: 'Prices' },
@@ -247,18 +250,22 @@ function Sidebar({ mini, onPick }: { mini: boolean; onPick: (id: ScreenName) => 
                 </>
               )}
             </div>
-            <SidebarLabel mini={mini}>Compare</SidebarLabel>
-            <div className="flex flex-col gap-[3px]">
-              {compareItems.map((it) => (
-                <NavItem
-                  key={it.id}
-                  it={it}
-                  mini={mini}
-                  on={app.section === 'compare' && compareTabOf(app.screen) === it.id && app.screen !== 'search' && app.screen !== 'detail'}
-                  onClick={() => onPick(it.id as ScreenName)}
-                />
-              ))}
-            </div>
+            {compareOn && (
+              <>
+                <SidebarLabel mini={mini}>Compare</SidebarLabel>
+                <div className="flex flex-col gap-[3px]">
+                  {compareItems.map((it) => (
+                    <NavItem
+                      key={it.id}
+                      it={it}
+                      mini={mini}
+                      on={app.section === 'compare' && compareTabOf(app.screen) === it.id && app.screen !== 'search' && app.screen !== 'detail'}
+                      onClick={() => onPick(it.id as ScreenName)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
         <div
@@ -399,6 +406,9 @@ function TopBar({ onPick }: { onPick: (id: ScreenName) => void }) {
 export default function Shell() {
   const app = useApp();
   const compare = useCompare();
+  const compareOn = useFeatures().compare;
+  const { settings } = useSettings();
+  const firstRun = !settings.setupDone;
   const { compact, isTablet } = useBreakpoint();
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -412,6 +422,11 @@ export default function Shell() {
     if (shareParam) navigate({ search: '' }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Compare prices turned off while a Compare screen was open: back to Lists.
+  useEffect(() => {
+    if (!compareOn && app.section === 'compare') app.openSection('lists');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compareOn, app.section]);
   useEffect(() => {
     if (!shareFailed) return;
     const t = setTimeout(() => setShareFailed(false), 6000);
@@ -472,9 +487,10 @@ export default function Shell() {
     </Suspense>
   );
 
+  // Compare is a tab only while Compare prices is on (Profile); outside live cities it starts off.
   const tabs: NavDef[] = [
     { id: 'lists', icon: 'lists', label: 'Lists' },
-    { id: 'compare', icon: 'tag', label: 'Compare' },
+    ...(compareOn ? [{ id: 'compare', icon: 'tag', label: 'Compare' } as NavDef] : []),
     { id: 'profile', icon: 'user', label: 'Profile' },
   ];
 
@@ -497,7 +513,7 @@ export default function Shell() {
           <HelpSheet />
         </Suspense>
       )}
-      {shared && (
+      {shared && !firstRun && (
         <Suspense fallback={null}>
           <SharedReceiptSheet summary={shared} />
         </Suspense>
@@ -506,6 +522,11 @@ export default function Shell() {
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50" style={{ width: 'min(440px, calc(100vw - 32px))' }}>
           <Toast message="That share didn’t come through. Try sharing it again." icon="alert" onDismiss={() => setShareFailed(false)} />
         </div>
+      )}
+      {firstRun && (
+        <Suspense fallback={<div className="fixed inset-0 z-[60] bg-paper" />}>
+          <FirstRun />
+        </Suspense>
       )}
     </>
   );

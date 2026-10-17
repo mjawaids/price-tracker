@@ -3,7 +3,7 @@
 // something was shared.
 import { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { useFeatures, useSettings } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { clearShared, takeShared } from '../../lib/receipt/inbox';
 import type { SharedSummary } from '../../lib/receipt/inbox';
@@ -26,7 +26,7 @@ export default function SharedReceiptSheet({ summary }: { summary: SharedSummary
   const { settings, updateSettings } = useSettings();
   const { compact } = useBreakpoint();
   const [busy, setBusy] = useState(false);
-  const off = !settings.features.receipts;
+  const off = !useFeatures().receipts;
   const kind = kindOf(summary);
   const track = (action: 'read' | 'dismissed') => {
     // Counts only: never names, sizes or text.
@@ -36,7 +36,7 @@ export default function SharedReceiptSheet({ summary }: { summary: SharedSummary
   const read = async () => {
     setBusy(true);
     track('read');
-    if (off) updateSettings({ features: { ...settings.features, receipts: true } });
+    if (off) updateSettings({ features: { ...settings.features, whereToBuy: true, receipts: true } });
     const shared = await takeShared();
     if (shared) {
       const flow = await import('../../lib/receipt/flow');

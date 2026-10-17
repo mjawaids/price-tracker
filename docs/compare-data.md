@@ -197,7 +197,7 @@ plans, remembered receipt lines, product pages) and loads the products merges le
 - The old Compare cart (`shopping_lists`) is turned into a list called "From Compare
   cart" once per user (flag `spendless-cart-migrated:<userId>` in localStorage), after
   the user's lists have synced and only if no list with that name exists.
-- **Price checks while shopping** (Profile → Shopping features → *Ask for prices while
+- **Price checks while shopping** (Profile → Compare prices → *Ask for prices while
   I shop*, `features.askPrices`, on by default). Ticking an item that has a plan
   (`plan_store_id` + `plan_product_id`, an open store, a current price) shows "Was it
   Rs 210?" under the tick toast (`PriceCheckToast`, 8 s): **Yes** sends a `confirm`

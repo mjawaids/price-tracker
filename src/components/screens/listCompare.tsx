@@ -1,5 +1,5 @@
 // "Where to buy" on a list: the entry chip, the applied-plan banner and the
-// store section headers. Everything here is optional (Profile → Shopping features).
+// store section headers. Everything here is optional (Profile → Compare prices).
 import { CatalogStore } from '../../lib/compare/types';
 import { deliveryFeeFor } from '../../lib/compare/optimizer';
 import { storeLink } from '../../lib/links';
@@ -139,7 +139,7 @@ export function StoreSectionHeader({
 
 /**
  * The tick toast with a price question under it: "Bread is in your cart · Undo", then
- * "Was it Rs 210?" with Different and Yes (Profile → Shopping features → Ask for prices
+ * "Was it Rs 210?" with Different and Yes (Profile → Compare prices → Ask for prices
  * while I shop).
  */
 export function PriceCheckToast({

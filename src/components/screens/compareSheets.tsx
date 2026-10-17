@@ -279,7 +279,16 @@ export function ItemChoiceSheet({
 }
 
 // ── City picker ──────────────────────────────────────────────────────────────
-function CityList({ value, onPick }: { value: string | null; onPick: (id: string) => void }) {
+export function CityList({
+  value,
+  onPick,
+  otherLabel = 'Another city',
+}: {
+  value: string | null;
+  onPick: (id: string) => void;
+  /** The last row, for a city without shared prices (`'other'`). */
+  otherLabel?: string;
+}) {
   const compare = useCompare();
   const regions = [...compare.regions].sort((a, b) => Number(b.status === 'live') - Number(a.status === 'live') || a.sortOrder - b.sortOrder);
   const row = (id: string, name: string, live: boolean) => {
@@ -310,7 +319,7 @@ function CityList({ value, onPick }: { value: string | null; onPick: (id: string
   return (
     <div className="flex flex-col gap-2">
       {regions.map((r) => row(r.id, r.name, r.status === 'live'))}
-      {row('other', 'Another city', false)}
+      {row('other', otherLabel, false)}
     </div>
   );
 }

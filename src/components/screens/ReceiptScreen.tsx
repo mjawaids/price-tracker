@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompare } from '../../contexts/CompareContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { useFeatures, useSettings } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackUserAction } from '../../utils/analytics';
 import { ageInDays, MAX_AGE_DAYS, OLDISH_DAYS } from '../../lib/receipt/dates';
@@ -42,6 +42,7 @@ const track = (action: string, details: Record<string, unknown>) => {
 export default function ReceiptScreen() {
   const app = useApp();
   const { settings, updateSettings } = useSettings();
+  const receiptsOn = useFeatures().receipts;
   const r = useReceipt();
   const { compact, isTablet } = useBreakpoint();
   const wide = !compact && !isTablet;
@@ -60,13 +61,13 @@ export default function ReceiptScreen() {
   );
 
   let body: JSX.Element;
-  if (!settings.features.receipts) {
+  if (!receiptsOn) {
     body = (
       <>
         <ScreenHeader title="Add a receipt" onBack={back} />
         <div className="mt-5">
-          <ProblemCard icon="receipt" title="Receipt import is off" body="Turn it on in Profile → Shopping features.">
-            <Btn full onClick={() => updateSettings({ features: { ...settings.features, receipts: true } })}>
+          <ProblemCard icon="receipt" title="Receipt import is off" body="Turn it on here, or in Profile → Compare prices.">
+            <Btn full onClick={() => updateSettings({ features: { ...settings.features, whereToBuy: true, receipts: true } })}>
               Turn on
             </Btn>
           </ProblemCard>
@@ -99,7 +100,7 @@ export default function ReceiptScreen() {
       {body}
       {paste}
       <ReaderConsentSheet
-        open={!!consent && settings.features.receipts}
+        open={!!consent && receiptsOn}
         kind={consent?.kind ?? 'image'}
         onClose={() => setReceipt({ step: { name: 'start' } })}
         onDownload={() => {
@@ -117,6 +118,7 @@ export default function ReceiptScreen() {
 // ── 1 · Start ────────────────────────────────────────────────────────────────
 function StartStep({ onBack, onPaste }: { onBack: () => void; onPaste: () => void }) {
   const app = useApp();
+  const karachi = useSettings().settings.regionId === 'karachi';
   const device = useDeviceWord();
   const pickRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
@@ -152,7 +154,7 @@ function StartStep({ onBack, onPaste }: { onBack: () => void; onPaste: () => voi
         Add a whole shop’s prices in one go — from an order screenshot, a PDF invoice, a photo of a till receipt, or copied text.
       </p>
       <div className="flex flex-col gap-2.5 mt-[18px]">
-        <SourceTile icon="image" title="Screenshot or image" sub="Order screens from Imtiaz, Chase Up or Pandamart work best" onClick={() => pickRef.current?.click()} />
+        <SourceTile icon="image" title="Screenshot or image" sub={karachi ? 'Order screens from Imtiaz, Chase Up or Pandamart work best' : 'Order screens from grocery apps work best'} onClick={() => pickRef.current?.click()} />
         <SourceTile icon="file" title="PDF" sub="An invoice from an email or app" onClick={() => pdfRef.current?.click()} />
         {touch && <SourceTile icon="camera" title="Take a photo" sub="A till receipt, flat and well lit" onClick={() => cameraRef.current?.click()} />}
         <SourceTile icon="clipboard" title="Paste text" sub="From an order email or message" onClick={onPaste} />

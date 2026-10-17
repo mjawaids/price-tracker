@@ -290,6 +290,14 @@ deploy), `public/_redirects` sends it back to `/?share=failed` and the app says 
 deploy's smoke test checks the manifest's `share_target`, that `sw.js` imports the
 handler, the handler's and the PDF reader's headers, and that fallback.
 
+The first run suggests a city from `GET /api/geo`, a Netlify Edge Function
+(`netlify/edge-functions/geo.ts`, route set by its own `config`, no `netlify.toml`) that
+answers with the country and city Netlify sees for the connection, never cached and
+never stored. `netlify deploy` bundles `netlify/edge-functions/` along with `dist/`. The
+smoke test warns (doesn't fail) when `/api/geo` doesn't answer JSON: the app then falls
+back to the device's time zone. Edge Functions don't get `public/_headers`; the function
+sets its own headers.
+
 Rolling back is a new deploy too: users get the previous build through the same prompt.
 
 ## Rolling back

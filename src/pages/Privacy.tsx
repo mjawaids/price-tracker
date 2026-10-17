@@ -59,6 +59,12 @@ const Privacy: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    The first time you open the app on a device, we suggest your city from the approximate location of your internet
+                    connection, as our host sees it. It isn’t stored, and you can change the city. We never ask for your device’s
+                    location.
+                  </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     Receipts (pictures, PDFs or text) are read on your device and never uploaded — only the prices you choose to
                     save are. A receipt you share to SpendLess from another app stays on your device until you read it or tap Not
                     now (and is deleted when you sign out). The products you pick for a shop’s receipt lines are remembered on your

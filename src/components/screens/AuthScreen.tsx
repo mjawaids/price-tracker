@@ -6,9 +6,9 @@ import { supportUrl } from '../../lib/links';
 import { InstallButton } from '../shell/Install';
 
 const FEATURES: [IconName, string, string][] = [
-  ['lists', 'Quick lists', 'Type “2 milk” and go — works offline.'],
-  ['tag', 'Where to buy', 'The cheapest stores for your whole list.'],
-  ['truck', 'Delivery-smart', 'Counts delivery fees and minimum orders.'],
+  ['lists', 'Quick lists', 'No brands or sizes needed. Items find their aisle.'],
+  ['tag', 'Where to buy', 'In cities with shared prices: the cheapest stores for your whole list.'],
+  ['cloud', 'Works offline', 'Add and tick items anywhere. It syncs when you’re back.'],
 ];
 
 function BrandPanel({ big }: { big?: boolean }) {
@@ -25,13 +25,12 @@ function BrandPanel({ big }: { big?: boolean }) {
           <span className="font-display font-extrabold text-[23px] tracking-[-0.03em]">SpendLess</span>
         </div>
         <h1 className="m-0 font-display font-extrabold tracking-[-0.035em] leading-[0.98]" style={{ fontSize: big ? 52 : 40 }}>
-          Buy what you
+          Your shopping list,
           <br />
-          love, <span className="text-accent-ink">for less.</span>
+          <span className="text-accent-ink">sorted.</span>
         </h1>
         <p className="text-ink-soft leading-relaxed max-w-[360px]" style={{ fontSize: big ? 17 : 15.5, margin: '18px 0 0' }}>
-          Add your favourite products and the stores you shop. SpendLess builds the cheapest shopping list across them all —
-          delivery fees included.
+          Type “2 milk” and go. It works offline, and ticks off as you shop.
         </p>
         <div className="mt-[26px] flex flex-col gap-3">
           {FEATURES.map(([ic, t, d]) => (

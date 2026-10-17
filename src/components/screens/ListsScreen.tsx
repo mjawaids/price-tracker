@@ -5,7 +5,7 @@ import { useLists } from '../../contexts/ListsContext';
 import { PriceCheck, useCompare } from '../../contexts/CompareContext';
 import { CheckState, isAnswered, loadChecks, markAnswered, markDismissed } from '../../lib/compare/checkState';
 import { useOnboarding } from '../../contexts/OnboardingContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { useFeatures, useSettings } from '../../contexts/SettingsContext';
 import { useHint } from '../../hooks/useHint';
 import { ADD_PLACEHOLDERS } from '../../lib/hints';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
@@ -89,6 +89,7 @@ export default function ListsScreen() {
   const lists = useLists();
   const { compact, isDesktop } = useBreakpoint();
   const { settings, updateSettings } = useSettings();
+  const features = useFeatures();
   const grouped = settings.groupListsByAisle !== false;
   const compare = useCompare();
   const uid = useAuth().user?.id ?? null;
@@ -149,9 +150,9 @@ export default function ListsScreen() {
     [lists, showToast],
   );
 
-  // Price checks while shopping (Profile → Shopping features → Ask for prices while I shop).
+  // Price checks while shopping (Profile → Compare prices → Ask for prices while I shop).
   const listId = lists.activeList?.id ?? null;
-  const asking = settings.features.askPrices !== false && settings.features.whereToBuy !== false && !!uid && !!listId;
+  const asking = features.askPrices && !!uid && !!listId;
 
   /**
    * After ticking the last open item planned at a store: the summary of that store's
@@ -258,7 +259,7 @@ export default function ListsScreen() {
   };
   const hideWhereToBuy = () => {
     updateSettings({ features: { ...settings.features, whereToBuy: false } });
-    showToast('Where to buy is off — turn it back on in Profile → Shopping features');
+    showToast('Compare prices is off — turn it back on in Profile');
   };
 
   const parsed = parseQuickAdd(draft);
@@ -272,7 +273,7 @@ export default function ListsScreen() {
 
   // ── Where to buy ─────────────────────────────────────────────────────────────
   // The plan for the chip runs on a deferred copy of the list, so typing stays smooth.
-  const featureOn = settings.features.whereToBuy !== false;
+  const featureOn = features.compare;
   const deferredTodo = useDeferredValue(lists.todo);
   const { planFor } = compare;
   const chipPlan = useMemo(

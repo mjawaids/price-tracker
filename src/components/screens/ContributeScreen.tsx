@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useCompare } from '../../contexts/CompareContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { useFeatures } from '../../contexts/SettingsContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { tokens } from '../../lib/compare/itemTypes';
 import { CatalogProduct } from '../../lib/compare/types';
@@ -20,7 +20,6 @@ const MAX_RESULTS = 30;
 export default function ContributeScreen() {
   const app = useApp();
   const compare = useCompare();
-  const { settings } = useSettings();
   const receipt = useReceipt();
   const { compact } = useBreakpoint();
   const [q, setQ] = useState('');
@@ -46,7 +45,7 @@ export default function ContributeScreen() {
   }, [q, compare.resolveContext]);
 
   const own = compare.products.filter((p) => p.ownerId).length;
-  const receiptsOn = settings.features.receipts;
+  const receiptsOn = useFeatures().receipts;
   const receiptWaiting = receiptsOn && (receipt.step.name === 'reading' || receipt.step.name === 'review');
   // Your contributions: totals from the database when online, else this device's last 30 days.
   const { stats } = useContributionStats();
@@ -179,7 +178,7 @@ export default function ContributeScreen() {
               <span className="block font-bold text-[15px]">{receiptWaiting ? 'Finish your receipt' : 'Add a receipt'}</span>
               <span className="block text-[12.5px] text-ink-soft">
                 {!receiptsOn
-                  ? 'Turned off — switch it on in Profile → Shopping features'
+                  ? 'Turned off — switch it on in Profile → Compare prices'
                   : receipt.step.name === 'reading'
                     ? 'Reading it now…'
                     : receiptWaiting

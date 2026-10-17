@@ -282,6 +282,8 @@ export function ListSwitcherSheet({ open, onClose, startCreating = false }: { op
     if (!n) return;
     const list = lists.createList(n);
     lists.setActiveList(list.id);
+    // Counts only: never the list's name.
+    if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') trackUserAction('list_created', { lists: lists.lists.length + 1 });
     onClose();
   };
 

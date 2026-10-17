@@ -299,7 +299,7 @@ export function ProductFormSheet({
         <label htmlFor="type-search" className="sr-only">
           Find a type
         </label>
-        <TextIn id="type-search" value={typeQuery} maxLength={40} onChange={(e) => setTypeQuery(e.target.value)} placeholder={type ? 'Change type…' : 'e.g. bread, milk, atta'} />
+        <TextIn id="type-search" value={typeQuery} maxLength={40} onChange={(e) => setTypeQuery(e.target.value)} placeholder={type ? 'Change type…' : 'e.g. bread, milk, rice'} />
         {typeChoices.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {typeChoices
