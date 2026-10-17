@@ -5,6 +5,8 @@ import { useCompare } from '../../contexts/CompareContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { trackUserAction } from '../../utils/analytics';
+import { useAuth } from '../../contexts/AuthContext';
+import { InviteSheet } from './inviteSheet';
 import { useHint } from '../../hooks/useHint';
 import { Plan } from '../../lib/compare/optimizer';
 import { ResolvedItem } from '../../lib/compare/resolve';
@@ -47,6 +49,25 @@ export default function PlanScreen() {
   const [storesOpen, setStoresOpen] = useState(false);
   const [storeForm, setStoreForm] = useState<'new' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // After a plan shows savings: one "invite a friend" card, until dismissed (per account, this device).
+  const uid = useAuth().user?.id ?? '';
+  const nudgeKey = `spendless-invite-nudge:${uid}`;
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [showInviteNudge, setShowInviteNudge] = useState(() => {
+    try {
+      return !!uid && !localStorage.getItem(nudgeKey);
+    } catch {
+      return false;
+    }
+  });
+  const dismissInviteNudge = () => {
+    setShowInviteNudge(false);
+    try {
+      localStorage.setItem(nudgeKey, '1');
+    } catch {
+      /* storage unavailable */
+    }
+  };
 
   // First "Where to buy": the short walkthrough; no city yet: ask for it.
   const { maybeStartCompareTour } = onboarding;
@@ -151,6 +172,7 @@ export default function PlanScreen() {
     <>
       <ItemChoiceSheet item={choiceFor ? items.find((i) => i.id === choiceFor) ?? null : null} onClose={() => setChoiceFor(null)} onDone={setToast} />
       <StoresSheet open={storesOpen} onClose={() => setStoresOpen(false)} onAddStore={() => setStoreForm('new')} />
+      <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} from="plan" />
       <StoreFormSheet target={storeForm} onClose={() => setStoreForm(null)} />
     </>
   );
@@ -251,6 +273,38 @@ export default function PlanScreen() {
                 {compare.fmt(savings)} less than buying it all at {baselineStore.name}
               </div>
             )}
+          </div>
+        )}
+
+        {savings > 0.5 && showInviteNudge && (
+          <div className="flex items-center gap-3 rounded-[18px] bg-accent-wash" style={{ padding: '12px 6px 12px 14px' }}>
+            <span className="grid place-items-center bg-surface shrink-0" style={{ width: 40, height: 40, borderRadius: 12 }}>
+              <Icon name="users" size={19} color="var(--accent-ink)" stroke={2.1} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="font-extrabold text-[15px] leading-snug">Know someone who shops here?</div>
+              <div className="text-[13px] text-ink-soft leading-snug">Send them SpendLess — it’s free.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setInviteOpen(true);
+                dismissInviteNudge();
+              }}
+              className="shrink-0 rounded-full bg-accent text-accent-on font-extrabold text-[14px]"
+              style={{ minHeight: 44, padding: '0 14px' }}
+            >
+              Invite
+            </button>
+            <button
+              type="button"
+              onClick={dismissInviteNudge}
+              aria-label="Not now"
+              className="shrink-0 grid place-items-center rounded-full text-ink-soft"
+              style={{ width: 44, height: 44 }}
+            >
+              <Icon name="x" size={17} stroke={2.2} />
+            </button>
           </div>
         )}
 

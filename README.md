@@ -77,6 +77,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Use as much as you like: Profile → **Compare prices** turns Compare on or off (Where to
   buy, the Compare tab, and under it price checks and receipts). It starts on in a city
   with shared prices and off everywhere else, where SpendLess is a shopping list
+- **Invite a friend** (Profile → Share SpendLess, or the card under a plan's savings):
+  share or copy your link; the person who opens it sees "Jawaid invited you" (your
+  first name, which you can change), and you see how many joined — never who
 - **First run**: a short welcome, then the city we think you're in (from your
   connection, never your device's location) with *Change*. It sets the currency and
   whether Compare starts on
@@ -399,6 +402,7 @@ src/
 │   ├── receipt/                # Receipts: on-device reader, PDFs, parser, dates, store guess, matching, review, memory, share inbox
 │   ├── backStack.ts            # Back button / gestures ↔ open sheets and screens
 │   ├── geo.ts                  # First run: the city suggested from the connection (/api/geo)
+│   ├── invite.ts               # Invite a friend: the link's code, your invite, who invited you, joined count
 │   ├── help.ts                 # Help topic copy
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy

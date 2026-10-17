@@ -16,8 +16,10 @@ import { supportUrl } from '../../lib/links';
 import { useInstall } from '../../lib/install';
 import { InstallSheet } from '../shell/Install';
 import { trackUserAction } from '../../utils/analytics';
+import { InviteSheet } from './inviteSheet';
+import { joinedCount, myInvite } from '../../lib/invite';
 
-type ProfileSheet = 'edit' | 'privacy' | 'install' | null;
+type ProfileSheet = 'edit' | 'privacy' | 'install' | 'invite' | null;
 
 function SettingRow({
   icon,
@@ -368,6 +370,16 @@ export default function ProfileScreen() {
   const u = app.user;
   const initials = u.name.split(' ').map((p) => p[0]).slice(0, 2).join('');
   const [sheet, setSheet] = useState<ProfileSheet>(null);
+  // How many joined with your invite link (only once you have one; refreshed when the sheet closes).
+  const [joined, setJoined] = useState<number | null>(null);
+  useEffect(() => {
+    if (sheet) return;
+    let live = true;
+    void myInvite(null, false).then((inv) => inv && joinedCount(inv.code).then((n) => live && setJoined(n)));
+    return () => {
+      live = false;
+    };
+  }, [sheet]);
   const lists = useLists();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const install = useInstall();
@@ -438,6 +450,17 @@ export default function ProfileScreen() {
             onClick={() => app.openSheet('region')}
           />
           <SettingRow icon="coin" label="Currency" accent value={compare.region ? compare.region.currency : currencyChipLabel(app.currencyCode)} onClick={() => app.openSheet('currency')} last />
+        </Group>
+
+        <Group title="Share SpendLess">
+          <SettingRow
+            icon="users"
+            label="Invite a friend"
+            accent
+            value={joined ? `${joined} joined` : undefined}
+            onClick={() => setSheet('invite')}
+            last
+          />
         </Group>
 
         <Group title="Compare prices">
@@ -546,6 +569,7 @@ export default function ProfileScreen() {
       <EditProfileSheet open={sheet === 'edit'} onClose={() => setSheet(null)} />
       <PrivacySheet open={sheet === 'privacy'} onClose={() => setSheet(null)} />
       <InstallSheet open={sheet === 'install'} onClose={() => setSheet(null)} />
+      <InviteSheet open={sheet === 'invite'} onClose={() => setSheet(null)} from="profile" />
     </div>
   );
 }
