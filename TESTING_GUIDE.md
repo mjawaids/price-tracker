@@ -67,6 +67,20 @@ On desktop:
 - [ ] In details, the aisle row opens on the current aisle and can be scrolled freely (it doesn't
       jump back while you scroll or type); **Delete** / **Done** stay visible at the bottom even on a
       short window (the fields scroll above them).
+- [ ] **How much**: type 750 with *g*, 2.5 with *kg*, or 1,5 (comma decimals) and leave the box or
+      press Enter: it saves and the row shows it. − / + move by 50 for g and ml, ½ for kg and L,
+      otherwise 1 (the step shows next to them, e.g. "± 50 g"); − below one step clears the
+      quantity. Letters are ignored (the box goes back); 0 or empty clears it; over 9999 becomes
+      9999. Works offline. The unit chips wrap onto a second row on small phones.
+- [ ] Grouped by aisle: hold an item (about a third of a second) and drag it onto another aisle:
+      that aisle gets a magenta ring and "drop to move here"; letting go moves it and a toast says
+      the next time you add it it goes there too (add it again later to check). A quick swipe
+      still ticks / deletes; scrolling still scrolls; a tap still opens details. With a mouse,
+      drag after a few pixels. Not in store sections or the ungrouped list.
+- [ ] Long names, notes and planned product names wrap to two lines instead of being cut off
+      (open the item for the full text). Shared shops show their area on a second line
+      ("Imtiaz" / "DHA Phase 6") in store sections, Where to buy, product prices, Stores and the
+      store picker. Buttons such as *Just this time* / *Save as my usual* wrap on a 320px screen.
 - [ ] **Clear** hides ticked items; they still appear under **Often** next time.
 - [ ] Shopping progress ("3 of 10 in cart") shows once something is ticked;
       ticking everything shows **All picked up**.

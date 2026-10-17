@@ -63,7 +63,7 @@ export function ChainGroup({
           <Icon name="store" size={17} stroke={2.2} />
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block font-bold text-[15px] truncate">{chain}</span>
+          <span className="block font-bold text-[15px] line-clamp-2 break-words">{chain}</span>
           <span className="block text-[12.5px] text-ink-soft">
             {count} {count === 1 ? 'branch' : 'branches'}
             {note ? ` · ${note}` : ''}
@@ -149,8 +149,8 @@ export function StorePickerSheet({
       <input type="radio" name={name} checked={picked === s.id} onChange={() => setPicked(s.id)} className="m-0 shrink-0" style={{ width: 20, height: 20, accentColor: 'var(--accent)' }} />
       {!inGroup && <StoreDot store={s} size={11} />}
       <span className="flex-1 min-w-0">
-        <span className="block font-bold text-[15px] truncate">{inGroup ? branchArea(s) : s.name}</span>
-        <span className="block text-[12.5px] text-ink-soft truncate">{sub(s)}</span>
+        <span className="block font-bold text-[15px] line-clamp-2 break-words">{inGroup ? branchArea(s) : s.name}</span>
+        <span className="block text-[12.5px] text-ink-soft line-clamp-2 break-words">{sub(s)}</span>
       </span>
     </label>
   );

@@ -82,16 +82,16 @@ export default function DetailScreen() {
       >
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-start gap-1.5 min-w-0">
               <StoreName store={x.store} className="font-bold text-[15px]" />
               {top && (
-                <span className="bg-accent text-accent-on text-[10.5px] font-extrabold rounded-full shrink-0" style={{ padding: '2px 7px' }}>
+                <span className="bg-accent text-accent-on text-[10.5px] font-extrabold rounded-full shrink-0 mt-0.5" style={{ padding: '2px 7px' }}>
                   BEST
                 </span>
               )}
             </div>
             <div className="flex items-center gap-1.5 min-w-0 text-[12px] mt-0.5 text-ink-soft">
-              <span className="truncate">
+              <span className="leading-snug">
                 {deliveryLabel(x.store.deliveryRule, compare.fmt, x.store.kind)}
                 {x.price.mine ? ' · your price' : ''}
               </span>
@@ -199,10 +199,10 @@ export default function DetailScreen() {
         className="sticky bottom-0 z-10 flex items-center gap-2.5 safe-bottom w-full"
         style={{ padding: '14px 18px 18px', background: 'linear-gradient(transparent, var(--paper) 22%)', maxWidth: big ? 640 : '100%', margin: '0 auto', boxSizing: 'border-box' }}
       >
-        <Btn variant="ghost" size="lg" icon="tag" onClick={() => setPriceOpen(true)} disabled={!compare.online} className="whitespace-nowrap">
+        <Btn variant="ghost" size="lg" icon="tag" onClick={() => setPriceOpen(true)} disabled={!compare.online} className="text-center leading-tight">
           Add price
         </Btn>
-        <Btn size="lg" icon="plus" onClick={addToList} className="flex-1 whitespace-nowrap">
+        <Btn size="lg" icon="plus" onClick={addToList} className="flex-1 text-center leading-tight">
           Add to list
         </Btn>
       </div>

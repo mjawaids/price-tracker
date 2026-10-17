@@ -56,8 +56,8 @@ export default function StoresScreen() {
       <div key={s.id} className="flex items-center gap-3 bg-surface rounded-[16px] shadow-[inset_0_0_0_1.5px_var(--line)]" style={{ padding: '10px 8px 10px 14px', minHeight: 64 }}>
         <StoreDot store={s} size={13} />
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-[15px] truncate">{s.name}</div>
-          <div className="text-[12.5px] text-ink-soft truncate">
+          <div className="font-bold text-[15px] line-clamp-2 break-words">{s.name}</div>
+          <div className="text-[12.5px] text-ink-soft line-clamp-2 break-words">
             {s.kind === 'physical' && s.deliveryRule.type === 'none'
               ? 'In store'
               : `${s.kind === 'online' ? 'Online' : 'In store'} · ${deliveryLabel(s.deliveryRule, compare.fmt, s.kind)}`}
@@ -107,8 +107,8 @@ export default function StoresScreen() {
         style={{ padding: '10px 8px 10px 14px', minHeight: 60, borderTop: i ? '1px solid var(--line)' : 'none' }}
       >
         <span className="flex-1 min-w-0">
-          <span className="block font-bold text-[15px] truncate">{branchArea(s)}</span>
-          <span className="block text-[12.5px] text-ink-soft truncate">{s.address || 'In store'}</span>
+          <span className="block font-bold text-[15px] line-clamp-2 break-words">{branchArea(s)}</span>
+          <span className="block text-[12.5px] text-ink-soft line-clamp-2 break-words">{s.address || 'In store'}</span>
         </span>
         <span className={`shrink-0 text-[12px] font-bold rounded-full ${on ? 'bg-ok-wash text-ok-ink' : 'text-ink-soft'}`} style={{ padding: on ? '3px 9px' : 0 }}>
           {on ? 'In My stores' : 'Not compared'}
@@ -139,7 +139,7 @@ export default function StoresScreen() {
           <Icon name="pin" size={19} stroke={2.2} color="var(--accent-ink)" />
           <span className="flex-1 min-w-0">
             <span className="block text-[12px] text-ink-soft">City</span>
-            <span className="block font-bold text-[15px] truncate">
+            <span className="block font-bold text-[15px] line-clamp-2 break-words">
               {compare.region?.name ?? (compare.regionChosen ? 'Another city' : 'Choose your city')}
               {compare.isLive && <span className="text-accent-ink font-semibold"> · shared prices on</span>}
             </span>

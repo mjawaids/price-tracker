@@ -14,7 +14,10 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Items sorted by aisle automatically (English and romanized Urdu names) — or turn off
   **Group by aisle** in list options (⋯) to keep them in the order you added them (each item still shows its aisle)
 - Tick items as you shop, swipe to tick/delete, undo anything, see your progress
-- Several lists (Groceries, Pharmacy, …) with optional quantity, unit and notes
+- Several lists (Groceries, Pharmacy, …) with optional quantity (type any amount, or −/+ in steps that
+  suit the unit: 50 g, ½ kg, 1), unit and notes
+- Hold an item and drag it to another aisle; next time that item goes there by itself
+- Long names wrap instead of being cut off
 - Friendly one-at-a-time tips that teach the app as you use it
 
 ### 📴 Works Offline

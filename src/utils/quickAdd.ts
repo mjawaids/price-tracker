@@ -24,6 +24,32 @@ const UNITS: Record<string, string | null> = {
 /** Units offered in the item sheet ('' = plain count). */
 export const UNIT_CHOICES = ['', 'kg', 'g', 'L', 'ml', 'dozen', 'pack'];
 
+/** How much − / + changes the quantity: 50 for g and ml, half for kg and L, else 1. */
+export function stepFor(unit: string | null): number {
+  if (unit === 'g' || unit === 'ml') return 50;
+  if (unit === 'kg' || unit === 'L') return 0.5;
+  return 1;
+}
+
+export const MAX_QUANTITY = 9999;
+
+/** Round to 2 decimals and keep within 0.01–9999; 0 or less means "no quantity". */
+export function clampQuantity(n: number): number | null {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(MAX_QUANTITY, Math.max(0.01, Math.round(n * 100) / 100));
+}
+
+/**
+ * A typed quantity: "750", "2.5", "1,5" (comma decimals). Empty or 0 → null (no
+ * quantity); undefined when it isn't a number, so the box goes back to what it was.
+ */
+export function parseQuantity(text: string): number | null | undefined {
+  const t = text.trim().replace(',', '.');
+  if (!t) return null;
+  if (!/^\d*\.?\d+$|^\d+\.$/.test(t)) return undefined;
+  return clampQuantity(Number(t));
+}
+
 const UNIT_RE = `(${Object.keys(UNITS).sort((a, b) => b.length - a.length).join('|')})`;
 const NUM = '(\\d+(?:\\.\\d+)?)';
 const LEADING = new RegExp(`^${NUM}\\s*(?:${UNIT_RE}\\b)?\\s*(?:x\\s+)?(.+)$`, 'i');

@@ -202,10 +202,10 @@ export function StoreDoneSheet({
       title={`Done at ${storeName}`}
       footer={
         <div className="flex gap-2.5">
-          <Btn variant="ghost" size="lg" onClick={leave} disabled={saving} className="whitespace-nowrap">
+          <Btn variant="ghost" size="lg" onClick={leave} disabled={saving} className="text-center leading-tight">
             Not now
           </Btn>
-          <Btn full size="lg" className="flex-1 whitespace-nowrap" onClick={() => void save()} disabled={saving}>
+          <Btn full size="lg" className="flex-1 text-center leading-tight" onClick={() => void save()} disabled={saving}>
             {saving ? 'Saving…' : label}
           </Btn>
         </div>

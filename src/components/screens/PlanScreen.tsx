@@ -132,7 +132,7 @@ export default function PlanScreen() {
       </button>
       <div className="min-w-0">
         <h1 className="m-0 font-display font-extrabold text-[22px] tracking-[-0.02em]">Where to buy</h1>
-        <div className="text-[13px] text-ink-soft truncate">
+        <div className="text-[13px] text-ink-soft leading-snug">
           {list?.name ?? 'Your list'} · {items.length} {items.length === 1 ? 'item' : 'items'}
           {compare.region ? ` · ${compare.region.name}` : ''}
         </div>
@@ -216,7 +216,7 @@ export default function PlanScreen() {
                 >
                   <span className={`text-[12px] font-extrabold ${on ? 'text-accent-ink' : 'text-ink-soft'}`}>{t.label}</span>
                   <span className="font-mono text-[15px] font-bold mt-0.5">{compare.fmt(p.total)}</span>
-                  <span className={`text-[11.5px] truncate ${t.partial ? 'text-warn-ink font-semibold' : 'text-ink-soft'}`}>
+                  <span className={`text-[11.5px] leading-snug break-words ${t.partial ? 'text-warn-ink font-semibold' : 'text-ink-soft'}`}>
                     {extra > 0.5 ? `+${compare.fmt(extra)} · ${t.sub}` : t.sub}
                   </span>
                 </button>
@@ -271,7 +271,7 @@ export default function PlanScreen() {
                 >
                   <span className="flex-1 min-w-0">
                     <span className="block font-bold text-[15px]">{r.item.name}</span>
-                    <span className="block text-[13px] text-ink-soft truncate">{choiceLabel(r)}</span>
+                    <span className="block text-[13px] text-ink-soft line-clamp-2 break-words">{choiceLabel(r)}</span>
                   </span>
                   <span className="text-[13px] font-extrabold text-accent-ink">Change</span>
                 </button>
@@ -317,7 +317,7 @@ export default function PlanScreen() {
                         <li key={l.key} className="flex items-start justify-between gap-3" style={{ padding: '8px 0' }}>
                           <button type="button" onClick={() => setChoiceFor(l.key)} className="flex-1 min-w-0 text-left">
                             <span className="block text-[14.5px] font-semibold">{r?.item.name}</span>
-                            <span className="block text-[12.5px] text-ink-soft truncate">
+                            <span className="block text-[12.5px] text-ink-soft line-clamp-2 break-words">
                               {product?.name}
                               {size && product && !product.name.toLowerCase().includes(size.toLowerCase().replace(' ', '')) ? ` · ${size}` : ''}
                               {l.option.packs > 1 ? ` · ${l.option.packs} × ${compare.fmt(l.option.unitPrice)}` : ''}

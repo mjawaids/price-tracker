@@ -4,7 +4,7 @@ import { useCompare } from '../../contexts/CompareContext';
 import { CatalogProduct, CatalogStore } from '../../lib/compare/types';
 import { freshness } from '../../lib/compare/describe';
 import { AgeChip, Icon, StoreDot, Thumb } from '../ui';
-import { productSizeText, usePriced } from './compareHelpers';
+import { productSizeText, splitStoreName, usePriced } from './compareHelpers';
 
 /** A product with its best price at your stores. */
 export function ProductRow({
@@ -78,12 +78,21 @@ export function ProductRow({
   );
 }
 
-/** A store's name with its kind dot. */
+/**
+ * A store's name with its kind dot. A shared shop's area ("Imtiaz · DHA Phase 6") goes
+ * on its own line, since the area is what tells branches apart; long names wrap.
+ */
 export function StoreName({ store, className = '' }: { store: CatalogStore; className?: string }) {
+  const [title, area] = splitStoreName(store.name);
   return (
-    <span className={`inline-flex items-center gap-2 min-w-0 ${className}`}>
-      <StoreDot store={store} size={11} />
-      <span className="truncate">{store.name}</span>
+    <span className={`inline-flex items-start gap-2 min-w-0 ${className}`}>
+      <span className="shrink-0 flex items-center" style={{ height: '1.375em' }}>
+        <StoreDot store={store} size={11} />
+      </span>
+      <span className="min-w-0 flex flex-col">
+        <span className="leading-snug break-words">{title}</span>
+        {area && <span className="text-[13px] font-semibold text-ink-soft leading-snug break-words">{area}</span>}
+      </span>
     </span>
   );
 }
