@@ -4,11 +4,14 @@
 --
 -- Who sees what:
 -- - invite_codes: only its owner reads and edits it (the name; the code never changes).
--- - referrals: the person who joined writes their own row once; the inviter can count
---   the rows for their code but read only `code` and `created_at` (never who joined).
+-- - referrals: the person who joined writes their own row once, only from an account
+--   under 7 days old (`my_account_is_new()`); the inviter can count the rows for their
+--   code but read only `code` and `created_at` (never who joined).
 -- - Signed out, the sign-up page needs the name for one code: `invite_from(code)`
 --   returns just that, for an exact code. It is SECURITY DEFINER, because a policy that
 --   let signed-out visitors read invite_codes would let anyone list every code and name.
+--   `my_account_is_new()` is the other SECURITY DEFINER function: it reads only the
+--   caller's own auth.users.created_at, which signed-in users can't read themselves.
 
 -- ── Codes ────────────────────────────────────────────────────────────────────
 -- 8 characters from 32 (A–Z without I and O, 2–9): ≈1.1e12 codes. Random bytes from
@@ -112,12 +115,31 @@ CREATE POLICY "Read own or own code's referrals"
     OR code IN (SELECT c.code FROM spendless.invite_codes c WHERE c.user_id = auth.uid())
   );
 
--- Once, for yourself, and never your own code (the subquery sees only your own code).
+-- Is the signed-in person's own account under 7 days old? Only a new account can say
+-- it came from an invite, so an older one can't inflate someone's "joined" count.
+-- SECURITY DEFINER because signed-in users can't read auth.users; it takes no argument
+-- and answers only for the caller's own account.
+CREATE OR REPLACE FUNCTION spendless.my_account_is_new()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT coalesce(
+    (SELECT u.created_at > now() - interval '7 days' FROM auth.users u WHERE u.id = auth.uid()),
+    false
+  );
+$$;
+
+-- Once, for yourself, only from a new account, and never your own code (the subquery
+-- sees only your own code).
 DROP POLICY IF EXISTS "Record own referral" ON spendless.referrals;
 CREATE POLICY "Record own referral"
   ON spendless.referrals FOR INSERT TO authenticated
   WITH CHECK (
     auth.uid() = user_id
+    AND spendless.my_account_is_new()
     AND NOT EXISTS (SELECT 1 FROM spendless.invite_codes c WHERE c.code = referrals.code AND c.user_id = auth.uid())
   );
 
@@ -136,6 +158,9 @@ GRANT ALL ON spendless.referrals TO service_role;
 
 REVOKE ALL ON FUNCTION spendless.digit_count(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION spendless.digit_count(text) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION spendless.my_account_is_new() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION spendless.my_account_is_new() TO authenticated, service_role;
 
 REVOKE ALL ON FUNCTION spendless.new_invite_code() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION spendless.new_invite_code() TO authenticated, service_role;
