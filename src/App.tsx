@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -8,9 +9,21 @@ import { ListsProvider } from './contexts/ListsContext';
 import { CompareProvider } from './contexts/CompareContext';
 import AuthScreen from './components/screens/AuthScreen';
 import Shell from './components/shell/Shell';
+import { supabase } from './lib/supabase';
+import { clearPushAliasIfStale } from './lib/onesignal';
+
+/** Asked when it matters: the clean-up below can run long after it was started. */
+const isSignedOut = async () => !(await supabase.auth.getSession()).data.session;
 
 function AppContent() {
   const { user, loading } = useAuth();
+
+  // Shared-device safety net: signed out by any route (expired session, another tab)
+  // while this browser still gets the last account's reminders. Loads nothing unless
+  // this browser was ever logged in to OneSignal.
+  useEffect(() => {
+    if (!loading && !user) void clearPushAliasIfStale(isSignedOut);
+  }, [loading, user]);
 
   if (loading) {
     return (

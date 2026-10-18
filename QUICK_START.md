@@ -24,6 +24,7 @@ VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon key>
 VITE_GA_MEASUREMENT_ID=        # optional
 VITE_GA_ENABLE_IN_DEV=false
+VITE_ONESIGNAL_APP_ID=         # optional: still-to-buy reminders (push works only on the real domain)
 ```
 
 Without these the marketing/legal pages still load, but sign-in and data are disabled.

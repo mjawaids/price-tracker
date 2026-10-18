@@ -36,6 +36,8 @@ import { PlanBanner, PriceCheckToast, StoreSectionHeader, WhereToBuyChip } from 
 import { checkMessage, doneLately, PriceAsk, planStoreOf, priceAskFor, summaryMessage } from './priceCheckHelpers';
 import { deliveryFeeFor } from '../../lib/compare/optimizer';
 import { InstallPill } from '../shell/Install';
+import { PushPrompt } from './pushParts';
+import { usePushPrompt } from './pushHelpers';
 
 // Compare's item sheet loads on first use (keeps Lists' start-up small).
 const ItemChoiceSheet = lazy(() => import('./compareSheets').then((m) => ({ default: m.ItemChoiceSheet })));
@@ -125,6 +127,13 @@ export default function ListsScreen() {
     (message: string, undo?: ListItem[], ask?: PriceAsk) => setToast({ id: Date.now(), message, undo, ask }),
     [],
   );
+
+  // Offer still-to-buy reminders once something on this list has waited a day.
+  const oldestOpen = lists.todo.reduce<number | null>((min, i) => {
+    const t = Date.parse(i.createdAt);
+    return Number.isNaN(t) || (min != null && min <= t) ? min : t;
+  }, null);
+  const pushPrompt = usePushPrompt(uid, oldestOpen);
 
   const add = useCallback(
     (texts: string[]) => {
@@ -390,6 +399,11 @@ export default function ListsScreen() {
       {offline && (
         <div className="mt-1.5">
           <OfflineBanner pending={lists.pending} />
+        </div>
+      )}
+      {pushPrompt.show && !hSwitcher.show && !hWhere.show && (
+        <div className="mt-2">
+          <PushPrompt alsoHere={pushPrompt.alsoHere} busy={pushPrompt.busy} onDone={(m) => showToast(m)} onDismiss={pushPrompt.dismiss} />
         </div>
       )}
       {hSwitcher.show && (

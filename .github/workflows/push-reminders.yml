@@ -1,0 +1,60 @@
+# Still-to-buy reminders (see CLAUDE.md → Reminders).
+#
+# Every hour: people who turned reminders on, whose list items have waited 2+ days,
+# get one push between 10:00 and 20:00 their time — then nothing until their list
+# changes (scripts/push/reminders.ts, claim.sql). The message says only how many
+# things are left. A manual run is a dry run unless "send" is ticked. Repository
+# variable PUSH_REMINDERS_PAUSED = exactly `true` makes the scheduled runs dry runs.
+# The log is public: counts and HTTP statuses only.
+#
+# GitHub turns scheduled workflows off after 60 days without repository activity;
+# re-enable it from the Actions tab (docs/deployment.md).
+
+name: Push reminders
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+    inputs:
+      send:
+        description: Send the reminders (unticked = dry run, nothing sent)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    name: Send still-to-buy reminders
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Reminders
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          ONESIGNAL_REST_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
+          VITE_ONESIGNAL_APP_ID: ${{ vars.VITE_ONESIGNAL_APP_ID }}
+          PAUSED: ${{ vars.PUSH_REMINDERS_PAUSED }}
+          EVENT: ${{ github.event_name }}
+          SEND: ${{ inputs.send }}
+        run: |
+          args=()
+          if { [ "$EVENT" = "schedule" ] && [ "$PAUSED" != "true" ]; } || [ "$SEND" = "true" ]; then args+=(--send); fi
+          node --experimental-strip-types --no-warnings scripts/push/reminders.ts "${args[@]}"

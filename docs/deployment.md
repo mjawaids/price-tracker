@@ -15,7 +15,7 @@ build system any more.
 | 4 | **Expose the `spendless` schema** in the Data API | Only adds it if missing; never removes other apps' schemas |
 | 5 | Build with the production `VITE_*` values and the version | Same build that's tested below |
 | 6 | **Netlify deploy** (`netlify deploy --prod --no-build --dir dist`) | Publishes `dist/` to spendless.ibexoft.com |
-| 7 | **Smoke test** on Netlify (`<site>.netlify.app`): `/` and `/privacy` return 200, the entry bundle contains the new version; then the public domain, as a notice only | Proves the deploy is live and SPA routing works. The public domain is behind Cloudflare, which answers GitHub's runners with 403 |
+| 7 | **Smoke test** on Netlify (`<site>.netlify.app`): `/` and `/privacy` return 200, the entry bundle contains the new version, the share target, PDF reader and OneSignal worker are served right; then the public domain, as a notice only | Proves the deploy is live and SPA routing works. The public domain is behind Cloudflare, which answers GitHub's runners with 403 |
 | 8 | **Post-deploy migrations** — `scripts/db-migrate.sh supabase/post-deploy` | Cleanup the old app still needed (e.g. dropping old views) |
 | 9 | Tag `vYYYY.M.N` + GitHub Release with auto-generated notes | Release history |
 
@@ -145,6 +145,33 @@ It never changes a report: a new weight applies the next time a price is worked 
 - **GitHub disables scheduled workflows after 60 days without repository activity.**
   If it stops, open *Actions → Reporter trust* and click *Enable workflow*.
 
+## Push reminders (hourly)
+
+[`.github/workflows/push-reminders.yml`](../.github/workflows/push-reminders.yml) runs
+`scripts/push/reminders.ts` every hour (minute 23) in the `production` environment with
+`SUPABASE_DB_URL`, the secret `ONESIGNAL_REST_API_KEY` and the variable
+`VITE_ONESIGNAL_APP_ID`. It picks people who turned reminders on, whose list items have
+waited 2+ days, and for whom it's 10:00–20:00 in their time zone (`claim.sql`: once,
+then nothing until their list changes, and never within 2 days of the last one), claims
+a `spendless.notification_log` row for each (committed before sending, so nothing goes
+out twice), sends one OneSignal push per group with the same count ("You still have N
+things to buy. Shopping today?"), and records the outcome (`record.sql`; log rows older
+than 90 days are deleted). The log (public) prints counts and HTTP statuses only.
+
+- **Run by hand:** *Actions → Push reminders → Run workflow*. Unticked *send* (the
+  default) only counts who would get one and rolls back.
+- **Pause:** repository variable `PUSH_REMINDERS_PAUSED` = exactly `true` (lowercase;
+  same place as the Shared shops variables) makes the hourly runs dry runs. Delete it,
+  or set anything else, to send again.
+- **Turn it off:** *Actions → Push reminders → ⋯ → Disable workflow*.
+- **OneSignal app** (one-time): a Web app for `https://spendless.ibexoft.com`, typical
+  site setup *Custom Code*; its App ID is `VITE_ONESIGNAL_APP_ID` (public, also baked
+  into the build), its REST API key is the `ONESIGNAL_REST_API_KEY` secret. The app's
+  worker is `public/onesignal/OneSignalSDKWorker.js` (scope `/onesignal/`, headers in
+  `public/_headers`; the smoke test checks it's served as JavaScript).
+- **GitHub disables scheduled workflows after 60 days without repository activity.**
+  If it stops, open *Actions → Push reminders* and click *Enable workflow*.
+
 ## Price import (daily)
 
 [`.github/workflows/price-import.yml`](../.github/workflows/price-import.yml) runs
@@ -239,10 +266,11 @@ Sources, rules and exclusions are in `docs/data-sources.md`.
    deploy by hand.)
 2. In the `production` environment add:
    - **Environment secrets**: `NETLIFY_AUTH_TOKEN`, `SUPABASE_ACCESS_TOKEN`,
-     `SUPABASE_DB_URL`, `VITE_SUPABASE_ANON_KEY`
+     `SUPABASE_DB_URL`, `VITE_SUPABASE_ANON_KEY`, `ONESIGNAL_REST_API_KEY` (push reminders)
    - **Environment variables**: `NETLIFY_SITE_ID`, `SUPABASE_PROJECT_REF`
      (`xutrdyjoqthxqwejarpz`), `VITE_SUPABASE_URL`, `VITE_GA_MEASUREMENT_ID`
-     (optional), `PRODUCTION_URL` (optional, defaults to `https://spendless.ibexoft.com`)
+     (optional), `VITE_ONESIGNAL_APP_ID` (push reminders; empty = no push),
+     `PRODUCTION_URL` (optional, defaults to `https://spendless.ibexoft.com`)
 3. *Actions → General → Workflow permissions*: if the release step fails with a
    permissions error, choose **Read and write permissions**.
 4. **Protect `main`** (free for public repos): *Settings* → *Rules* → **Rulesets** →

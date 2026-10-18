@@ -32,3 +32,10 @@
 # revalidated so a new deploy's version is used.
 /share-target-sw.js
   Cache-Control: no-cache
+
+# OneSignal's push worker (still-to-buy reminders): its own service worker, scoped to
+# /onesignal/, always revalidated like sw.js.
+/onesignal/*
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: max-age=0, must-revalidate
+  Service-Worker-Allowed: /onesignal/

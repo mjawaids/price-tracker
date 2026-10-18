@@ -70,6 +70,11 @@ const Privacy: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    If you turn on reminders, your time zone (so they only come between 10 am and 8 pm) and a record of each
+                    reminder sent. A reminder only says how many things are left on your lists, never what they are.
+                  </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     Receipts (pictures, PDFs or text) are read on your device and never uploaded — only the prices you choose to
                     save are. A receipt you share to SpendLess from another app stays on your device until you read it or tap Not
                     now (and is deleted when you sign out). The products you pick for a shop’s receipt lines are remembered on your
@@ -126,6 +131,12 @@ const Privacy: React.FC = () => {
                   <li className="flex items-start">
                     <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                     Paddle processes all payments, and shares limited order information with us for account management.
+                  </li>
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    If you turn on reminders, OneSignal delivers them. It receives your browser’s push subscription and basic
+                    device details (such as browser and language), and knows you only by a random id, never your name, email or
+                    account; the reminder’s text is the only content it gets. Turning reminders off or signing out stops them.
                   </li>
                 </ul>
               </section>

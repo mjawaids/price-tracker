@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string;
   readonly VITE_GA_MEASUREMENT_ID?: string;
   readonly VITE_GA_ENABLE_IN_DEV?: string;
+  /** OneSignal app id (public) for still-to-buy reminders; unset = push off */
+  readonly VITE_ONESIGNAL_APP_ID?: string;
   /** Set by CI/CD: CalVer release, e.g. 2026.10.0 */
   readonly VITE_APP_VERSION?: string;
   /** Set by CI/CD: git commit SHA of the build */

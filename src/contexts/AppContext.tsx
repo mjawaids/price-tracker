@@ -8,6 +8,7 @@ import { clearShared } from '../lib/receipt/inbox';
 import { deleteReceiptMemory } from '../lib/receipt/memory';
 import { resetReceipt } from '../lib/receipt/session';
 import { clearRef, recordReferral } from '../lib/invite';
+import { startPush, stopPush } from '../lib/push';
 import { trackUserAction } from '../utils/analytics';
 import { clearLayers, goBack, pushLayer, startBackStack, stopBackStack } from '../lib/backStack';
 
@@ -105,6 +106,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => window.removeEventListener('online', send);
   }, [accountId, accountCreatedAt]);
 
+  // Still-to-buy reminders: read this account's setting; a device that already allows
+  // notifications joins by itself (src/lib/push.ts).
+  useEffect(() => {
+    if (!accountId) return;
+    void startPush();
+  }, [accountId]);
+
   const api: AppApi = useMemo(() => {
     const cur = stack[stack.length - 1];
     const toLists = () => {
@@ -158,6 +166,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
 
       signOut: async () => {
+        // First, so this browser stops getting this account's reminders.
+        await stopPush();
         toLists();
         clearLayers();
         resetReceipt();

@@ -20,5 +20,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["scripts/import", "scripts/seed"]
+  "include": ["scripts/import", "scripts/seed", "scripts/push"]
 }
