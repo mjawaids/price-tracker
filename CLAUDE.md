@@ -315,7 +315,8 @@ planned list items, closes the private copy. `close-branch.ts` undoes a shop. Ru
   default / denied / granted-off / granted-on; `isIosNeedsInstall`; `enablePush` /
   `disablePush` / `resubscribeIfPermitted`; `loginPushAlias` / `logoutPush` /
   `clearPushAliasIfStale` / `dropOtherAlias`, with the alias this browser is logged in as
-  kept in `spendless-push-aliased`). Its worker is
+  kept in `spendless-push-aliased`; logins and logouts run one at a time, in the order
+  asked, so a late SDK can't finish a logout after the next login). Its worker is
   `public/onesignal/OneSignalSDKWorker.js`, scope `/onesignal/` (never meets our `sw.js`:
   `globIgnores` + `navigateFallbackDenylist` in `vite.config.ts`, headers in `public/_headers`).
 - `src/lib/push.ts`: a module store (`usePush()`) — the account's `push_settings` row

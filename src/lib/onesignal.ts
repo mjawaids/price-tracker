@@ -221,26 +221,42 @@ export function onPushStateChange(cb: (s: PushState) => void): () => void {
   return () => listeners.delete(cb);
 }
 
+/* Logins and logouts run one at a time, in the order asked. A late SDK runs its
+   waiting callbacks together (dropOtherAlias's logout, then startPush's login), and a
+   logout finishing after the login would leave this browser logged out. */
+let queue: Promise<void> = Promise.resolve();
+function serial(task: () => Promise<void>): Promise<void> {
+  const run = queue.then(task, task);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
 export async function loginPushAlias(alias: string): Promise<void> {
-  if (!(await initOneSignal()) || !sdk) return;
-  try {
-    await sdk.login(alias);
-    setAliasFlag(alias);
-  } catch (err) {
-    console.error('[onesignal] login failed:', err);
-  }
+  if (!(await initOneSignal())) return;
+  await serial(async () => {
+    if (!sdk) return;
+    try {
+      await sdk.login(alias);
+      setAliasFlag(alias);
+    } catch (err) {
+      console.error('[onesignal] login failed:', err);
+    }
+  });
 }
 
 export async function logoutPush(): Promise<void> {
   // Only meaningful if the SDK actually loaded in this page; don't force-init
   // just to log out. clearPushAliasIfStale() handles the cold case.
   if (!sdk) return;
-  try {
-    await sdk.logout();
-    setAliasFlag(null);
-  } catch (err) {
-    console.error('[onesignal] logout failed:', err);
-  }
+  await serial(async () => {
+    if (!sdk) return;
+    try {
+      await sdk.logout();
+      setAliasFlag(null);
+    } catch (err) {
+      console.error('[onesignal] logout failed:', err);
+    }
+  });
 }
 
 /* Shared-device safety net: if someone enabled push and then closed the tab
@@ -258,15 +274,16 @@ export async function clearPushAliasIfStale(isSignedOut: () => Promise<boolean>)
   } catch {
     return;
   }
-  const clear = async () => {
-    if (!sdk || !(await isSignedOut())) return;
-    try {
-      await sdk.logout();
-      setAliasFlag(null);
-    } catch (err) {
-      console.error('[onesignal] stale alias cleanup failed:', err);
-    }
-  };
+  const clear = () =>
+    serial(async () => {
+      if (!sdk || !(await isSignedOut())) return;
+      try {
+        await sdk.logout();
+        setAliasFlag(null);
+      } catch (err) {
+        console.error('[onesignal] stale alias cleanup failed:', err);
+      }
+    });
   if (await initOneSignal()) {
     await clear();
   } else {
@@ -285,16 +302,18 @@ export async function clearPushAliasIfStale(isSignedOut: () => Promise<boolean>)
 export async function dropOtherAlias(current: string | null, stillCurrent: () => boolean): Promise<void> {
   const prior = aliasedTo();
   if (!prior || prior === current) return;
-  const drop = async () => {
-    // Re-checked: this account may have logged in meanwhile, which already replaced it.
-    if (!sdk || !stillCurrent() || aliasedTo() !== prior) return;
-    try {
-      await sdk.logout();
-      setAliasFlag(null);
-    } catch (err) {
-      console.error('[onesignal] dropping the previous account failed:', err);
-    }
-  };
+  // Queued like every login (serial), so it finishes before this account logs in.
+  const drop = () =>
+    serial(async () => {
+      // Re-checked: this account may have logged in meanwhile, which already replaced it.
+      if (!sdk || !stillCurrent() || aliasedTo() !== prior) return;
+      try {
+        await sdk.logout();
+        setAliasFlag(null);
+      } catch (err) {
+        console.error('[onesignal] dropping the previous account failed:', err);
+      }
+    });
   if (await initOneSignal()) await drop();
   else onSdkReady(() => void drop());
 }
