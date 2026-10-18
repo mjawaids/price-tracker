@@ -121,20 +121,7 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
             Already installed on this device? Open SpendLess from your home screen or app list. Removed it? Add it again:
           </p>
         )}
-        <ol className="m-0 p-0 list-none flex flex-col gap-2.5">
-          {steps(install.platform).map((s, i) => (
-            <li key={i} className="flex gap-3 items-start bg-surface rounded-[14px] shadow-[inset_0_0_0_1px_var(--line)]" style={{ padding: '12px 14px' }}>
-              <span
-                aria-hidden
-                className="grid place-items-center shrink-0 bg-accent-wash text-accent-ink font-mono font-bold text-[13px] rounded-full"
-                style={{ width: 26, height: 26 }}
-              >
-                {i + 1}
-              </span>
-              <span className="flex-1 text-[14.5px] leading-relaxed text-ink-soft">{s}</span>
-            </li>
-          ))}
-        </ol>
+        <InstallSteps platform={install.platform} />
         {install.platform === 'ios' && (
           <p className="m-0 mt-3 text-[12.5px] text-ink-faint leading-relaxed">
             On iOS versions before 16.4, only Safari can add apps to the home screen.
@@ -165,6 +152,26 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
       </ul>
       {body}
     </Sheet>
+  );
+}
+
+/** The numbered install steps for a platform (also used by Notifications on iPhone). */
+export function InstallSteps({ platform }: { platform: InstallPlatform }) {
+  return (
+    <ol className="m-0 p-0 list-none flex flex-col gap-2.5">
+      {steps(platform).map((s, i) => (
+        <li key={i} className="flex gap-3 items-start bg-surface rounded-[14px] shadow-[inset_0_0_0_1px_var(--line)]" style={{ padding: '12px 14px' }}>
+          <span
+            aria-hidden
+            className="grid place-items-center shrink-0 bg-accent-wash text-accent-ink font-mono font-bold text-[13px] rounded-full"
+            style={{ width: 26, height: 26 }}
+          >
+            {i + 1}
+          </span>
+          <span className="flex-1 text-[14.5px] leading-relaxed text-ink-soft">{s}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 

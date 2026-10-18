@@ -117,11 +117,14 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           // The receipt and PDF readers are downloaded on first use, not with the
           // app; the share handler is pulled in by importScripts below instead.
-          globIgnores: ['ocr/**', 'pdf/**', 'share-target-sw.js'],
+          // OneSignal's worker (reminders) is its own service worker, not part of ours.
+          globIgnores: ['ocr/**', 'pdf/**', 'share-target-sw.js', 'onesignal/**'],
           // "Share to SpendLess" (Android share menu → POST /share-receipt).
           importScripts: ['share-target-sw.js'],
           // SPA: serve index.html for client-side routes (/privacy, /refund, etc.).
           navigateFallback: '/index.html',
+          // OneSignal registers its worker under /onesignal/; never answer that with the app.
+          navigateFallbackDenylist: [/^\/onesignal\//],
           // The new worker waits for the user (see registerType above), then
           // claims open pages so they reload onto the new build.
           clientsClaim: true,

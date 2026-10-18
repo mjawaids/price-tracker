@@ -126,6 +126,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GA_MEASUREMENT_ID: ${{ vars.VITE_GA_MEASUREMENT_ID }}
+          VITE_ONESIGNAL_APP_ID: ${{ vars.VITE_ONESIGNAL_APP_ID }}
           VITE_APP_VERSION: ${{ steps.version.outputs.version }}
           VITE_APP_COMMIT: ${{ github.sha }}
         run: npm run build
@@ -186,6 +187,11 @@ jobs:
           fi
           if ! grep -qi "^content-security-policy: default-src 'none'" <<<"$pdf_headers"; then
             echo "::warning::/$pdf_dir/ has no Content-Security-Policy header (public/_headers)"
+          fi
+          # Still-to-buy reminders: OneSignal's worker (public/onesignal/, public/_headers).
+          push_headers="$(fetch -I "$ORIGIN_URL/onesignal/OneSignalSDKWorker.js")"
+          if ! grep -qiE '^content-type: [a-z/]*javascript' <<<"$push_headers"; then
+            echo "::error::/onesignal/OneSignalSDKWorker.js isn't served as JavaScript"; exit 1
           fi
           # First run: the city suggestion (netlify/edge-functions/geo.ts). The app falls back to
           # the time zone without it, so a missing function warns instead of failing.

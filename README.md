@@ -19,6 +19,10 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Hold an item and drag it to another aisle; next time that item goes there by itself
 - Long names wrap instead of being cut off
 - Friendly one-at-a-time tips that teach the app as you use it
+- **Still-to-buy reminders** (optional): when things have waited on your lists for 2 days,
+  one push between 10 am and 8 pm your time ("You still have 5 things to buy"), then
+  nothing until the list changes. Turn on from the card on Lists or Profile → Notifications;
+  on iPhone/iPad the app must be on the Home Screen first. The message never names items or lists
 
 ### 📴 Works Offline
 - Lists are stored on the device first (IndexedDB) and sync to Supabase when online
@@ -167,6 +171,9 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 # Google Analytics Configuration (optional)
 VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 VITE_GA_ENABLE_IN_DEV=false
+
+# OneSignal app id (optional, public): still-to-buy reminders; empty = off
+VITE_ONESIGNAL_APP_ID=
 ```
 
 You can find the Supabase values in your project dashboard under **Settings > API**.
@@ -313,7 +320,8 @@ Pull requests run the checks only. Releases use **CalVer `YYYY.M.N`** (e.g.
 A second workflow, `.github/workflows/price-import.yml`, imports store prices once a
 day (and can be run by hand as a dry run); `shared-branches.yml` makes suggested shops
 shared each night; `reporter-trust.yml` works out how much each person's prices count
-each night; and `catalog-jobs.yml` runs manual catalogue jobs (add a city's
+each night; `push-reminders.yml` sends still-to-buy reminders every hour (OneSignal);
+and `catalog-jobs.yml` runs manual catalogue jobs (add a city's
 in-store branches, promote a store to public, close a shared shop).
 
 One-time setup (tokens, GitHub `production` environment, leaving Bolt), rollback and
@@ -326,8 +334,9 @@ how to add new services: **[docs/deployment.md](docs/deployment.md)**.
 .github/workflows/price-import.yml # Daily store price import (docs/data-sources.md)
 .github/workflows/shared-branches.yml # Nightly: suggested shops become shared (docs/compare-data.md)
 .github/workflows/reporter-trust.yml # Nightly: how much each person's prices count (docs/compare-data.md)
+.github/workflows/push-reminders.yml # Hourly: still-to-buy reminders via OneSignal (scripts/push/)
 .github/workflows/catalog-jobs.yml # Manual catalogue jobs (add in-store branches, promote a store to public, close a shared shop)
-public/                     # Static assets (favicons, PWA icons, manifest + share target, _redirects, _headers, share-target-sw.js)
+public/                     # Static assets (favicons, PWA icons, manifest + share target, _redirects, _headers, share-target-sw.js, onesignal/ push worker)
 scripts/
 ├── generate-icons.mjs      # Generates favicon/PWA icons from SVG sources
 ├── check-contrast.mjs      # WCAG contrast check for the colour tokens
@@ -340,6 +349,7 @@ scripts/
 ├── seed/close-branch.ts    # Undo a shared shop: close it, give people their own shop back ("Catalog jobs")
 ├── seed/reporter-trust.ts  # Nightly: each person's price weight from how often they agree with others ("Reporter trust")
 ├── seed/merge-products.ts  # Duplicate products: nightly safe merges after the import; review list, approved merges, undo ("Catalog jobs")
+├── push/reminders.ts       # Hourly: still-to-buy reminders (claim.sql picks who's due, record.sql logs it; "Push reminders")
 └── import/                 # Daily store price import: run.ts, sources.ts, adapters/, polite http + robots.txt, write.sql
 supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless
 supabase/post-deploy/       # Post-deploy (cleanup) migrations
@@ -403,6 +413,8 @@ src/
 │   ├── backStack.ts            # Back button / gestures ↔ open sheets and screens
 │   ├── geo.ts                  # First run: the city suggested from the connection (/api/geo)
 │   ├── invite.ts               # Invite a friend: the link's code, your invite, who invited you, joined count
+│   ├── onesignal.ts            # OneSignal Web SDK wrapper (lazy; this device's push state)
+│   ├── push.ts                 # Still-to-buy reminders: the account's setting + this device, turn on/off
 │   ├── help.ts                 # Help topic copy
 │   ├── groceryDictionary.ts    # Item → aisle dictionary
 │   ├── hints.ts                # Tip copy

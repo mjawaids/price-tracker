@@ -18,8 +18,10 @@ import { InstallSheet } from '../shell/Install';
 import { trackUserAction } from '../../utils/analytics';
 import { InviteSheet } from './inviteSheet';
 import { joinedCount, myInvite } from '../../lib/invite';
+import { usePush } from '../../lib/push';
+import { NotificationsSheet } from './pushParts';
 
-type ProfileSheet = 'edit' | 'privacy' | 'install' | 'invite' | null;
+type ProfileSheet = 'edit' | 'privacy' | 'install' | 'invite' | 'notifications' | null;
 
 function SettingRow({
   icon,
@@ -383,6 +385,7 @@ export default function ProfileScreen() {
   const lists = useLists();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const install = useInstall();
+  const push = usePush();
   // Signing out wipes this device's copy of the lists, so warn about unsynced edits.
   const signOut = () => (lists.pending > 0 ? setConfirmSignOut(true) : void app.signOut());
 
@@ -449,7 +452,15 @@ export default function ProfileScreen() {
             value={compare.region?.name ?? (compare.regionChosen ? 'Another city' : 'Choose')}
             onClick={() => app.openSheet('region')}
           />
-          <SettingRow icon="coin" label="Currency" accent value={compare.region ? compare.region.currency : currencyChipLabel(app.currencyCode)} onClick={() => app.openSheet('currency')} last />
+          <SettingRow icon="coin" label="Currency" accent value={compare.region ? compare.region.currency : currencyChipLabel(app.currencyCode)} onClick={() => app.openSheet('currency')} />
+          <SettingRow
+            icon="bell"
+            label="Notifications"
+            accent
+            value={push.status !== 'ready' ? undefined : push.enabled ? 'On' : 'Off'}
+            onClick={() => setSheet('notifications')}
+            last
+          />
         </Group>
 
         <Group title="Share SpendLess">
@@ -570,6 +581,7 @@ export default function ProfileScreen() {
       <PrivacySheet open={sheet === 'privacy'} onClose={() => setSheet(null)} />
       <InstallSheet open={sheet === 'install'} onClose={() => setSheet(null)} />
       <InviteSheet open={sheet === 'invite'} onClose={() => setSheet(null)} from="profile" />
+      <NotificationsSheet open={sheet === 'notifications'} onClose={() => setSheet(null)} />
     </div>
   );
 }

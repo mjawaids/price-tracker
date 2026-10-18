@@ -14,6 +14,7 @@ Live at https://spendless.ibexoft.com
 - Supabase (PostgreSQL + Auth + RLS)
 - Lucide React icons, React Router 7
 - `@dnd-kit/core` (drag an item to another aisle)
+- `react-onesignal` (still-to-buy reminders; loads OneSignal's Web SDK from its CDN, lazily)
 
 ## Commands
 - `npm run dev` — start dev server
@@ -36,6 +37,9 @@ Live at https://spendless.ibexoft.com
 - `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/merge-products.ts --auto | --list | --pairs "<from>><into> …" | --undo <id> [--apply]`
   — duplicate products: the safe merges + junk names retired (nightly, after the *Price import*), the review list,
   approved merges (*Catalog jobs*, job `merge-products`), undo one (job `unmerge-product`); merges/undo roll back without `--apply`
+- `SUPABASE_DB_URL=… ONESIGNAL_REST_API_KEY=… VITE_ONESIGNAL_APP_ID=… node --experimental-strip-types scripts/push/reminders.ts [--send]`
+  — still-to-buy reminders (hourly *Push reminders* workflow; without `--send` it counts who's due and rolls back,
+  and needs only `SUPABASE_DB_URL`)
 - `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/reporter-trust.ts [--apply]`
   — how much each person's prices count (nightly *Reporter trust* workflow; without `--apply` it runs and rolls back)
 - `node --experimental-strip-types scripts/import/run.ts --dry-run [--source <id>|all] [--max-pages N]` — daily store
@@ -48,6 +52,7 @@ VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_GA_MEASUREMENT_ID=   # optional
 VITE_GA_ENABLE_IN_DEV=false
+VITE_ONESIGNAL_APP_ID=    # optional (public): still-to-buy reminders; empty = no push
 ```
 
 ## Architecture
@@ -256,6 +261,7 @@ planned list items, closes the private copy. `close-branch.ts` undoes a shop. Ru
 - Service worker (vite-plugin-pwa) precaches the app shell and caches Google Fonts
   (and, after first use, the receipt reader under `/ocr/` and the PDF reader under
   `/pdf/`). It also imports `public/share-target-sw.js` (Share to SpendLess, see Receipts).
+  OneSignal's push worker is a separate registration under `/onesignal/` (see reminders).
 
 ### App updates (new deploys)
 - `registerType: 'prompt'` in `vite.config.ts`: a new deploy's service worker installs
@@ -298,6 +304,37 @@ planned list items, closes the private copy. `close-branch.ts` undoes a shop. Ru
   - Profile → **App** → *Install the app* / *Install the app again*.
 - Each one opens the browser's dialog when it can, else the sheet. Everything is
   hidden inside the installed app.
+
+### Still-to-buy reminders (push, OneSignal — ported from DailyWins)
+- One push when items have waited on someone's lists 2+ days, only 10:00–20:00 in their
+  time zone, then nothing until their list changes and never within 2 days of the last:
+  "You still have N things to buy. Shopping today?" (a count; never item or list names).
+  Tapping it opens the app.
+- `src/lib/onesignal.ts`: the Web SDK wrapper (`react-onesignal`, imported lazily; 10 s init
+  timeout, a late SDK still adopted; `PushState` = unsupported / blocked (content blocker) /
+  default / denied / granted-off / granted-on; `isIosNeedsInstall`; `enablePush` /
+  `disablePush` / `resubscribeIfPermitted`; `loginPushAlias` / `logoutPush` /
+  `clearPushAliasIfStale` with the `spendless-push-aliased` flag). Its worker is
+  `public/onesignal/OneSignalSDKWorker.js`, scope `/onesignal/` (never meets our `sw.js`:
+  `globIgnores` + `navigateFallbackDenylist` in `vite.config.ts`, headers in `public/_headers`).
+- `src/lib/push.ts`: a module store (`usePush()`) — the account's `push_settings` row
+  (`enabled`, account-wide) + this device's `PushState`. `startPush()` (AppContext, per
+  account: a device that already allows notifications logs in to OneSignal as the
+  account's `push_alias` and subscribes by itself), `setReminders(on)` (on: browser
+  permission → opt in → `enabled: true` + this device's time zone; off: this device opts
+  out and the account stops; returns the push state or `failed`), `stopPush()` (sign-out).
+  OneSignal logs in with the opaque `push_alias`, never the user id (the Web SDK has no
+  identity verification).
+- UI (`pushParts.tsx`, `pushHelpers.ts`): Profile → Preferences → **Notifications**
+  (`NotificationsSheet`: the switch, "On for this device" / "On for your other devices",
+  denied / blocked / unsupported wording, the iPhone Home Screen steps via
+  `InstallSteps`), and one card on Lists (`PushPrompt` via `usePushPrompt`: only where the
+  browser can still be asked, once something on the list is a day old; *Not now* = 14
+  days, × = never, `spendless-push-prompt:<uid>`). Events `push_enabled {from}`,
+  `push_disabled`, `push_prompt_dismissed {how}` (counts only).
+- Sender: `scripts/push/reminders.ts` + `claim.sql` (who's due; claims a
+  `notification_log` row each, committed before sending) + `record.sql` (sent / failed /
+  released / unknown-kept; 90-day sweep), hourly by `.github/workflows/push-reminders.yml`.
 
 ### Navigation
 Stack-based within `AppContext`. Screen enum values: `lists`, `plan` (Where to buy,
@@ -356,7 +393,7 @@ are in `public`). SpendLess data must never mix with theirs:
   don't create other clients without it.
 - New tables need grants in their migration (`GRANT ALL ON spendless.<t> TO anon,
   authenticated, service_role`) plus RLS. Exception: system tables only scripts use
-  (`store_listings`, `import_runs`, `reporter_trust`, `product_merges`) have RLS on, **no policies**, and are revoked
+  (`store_listings`, `import_runs`, `reporter_trust`, `product_merges`, `notification_log`) have RLS on, **no policies**, and are revoked
   from `anon`/`authenticated` (granted to `service_role` only). `spendless` must stay listed in Dashboard →
   Project Settings → Integrations → **Data API** → *Exposed schemas* (the pipeline
   adds it automatically), or the API can't see it.
@@ -399,6 +436,8 @@ are in `public`). SpendLess data must never mix with theirs:
 | `referrals` | user_id (PK = who joined, once ever), code (→ `invite_codes`), created_at. The person who joined inserts their own row (never their own code, and only from an account under 7 days old: `spendless.my_account_is_new()` in the insert policy); the inviter can read `code` and `created_at` for their code only (column grants), so the app shows a count, never who |
 | *function* `invite_from` | `spendless.invite_from(code)` → the display name for one exact code, for the sign-up page while signed out. SECURITY DEFINER (pinned `search_path`, checks the code's format, returns only the name), because a policy letting `anon` read `invite_codes` would let anyone list every code and name; EXECUTE for `anon`/`authenticated` |
 | *function* `my_account_is_new` | `spendless.my_account_is_new()` → whether the caller's own account is under 7 days old (`auth.users.created_at`, which clients can't read). SECURITY DEFINER, no argument, answers only for `auth.uid()`; used by the `referrals` insert policy; EXECUTE for `authenticated` only |
+| `push_settings` | user_id (PK, default `auth.uid()`), push_alias (random uuid, unique: the id OneSignal knows the account by, never the user id), enabled (reminders on, account-wide), timezone (IANA; an unknown zone becomes UTC by trigger), created_at, updated_at. Own row only; clients insert and update `enabled` and `timezone`, nothing else (column grants), no delete |
+| `notification_log` | sender only (clients can't read): one row per reminder — user_id, kind (`still_to_buy`), open_count, status (`claimed` → `sent` \| `failed`; never sent = deleted), onesignal_id, error, created_at, sent_at. Its newest row per person is what keeps reminders to one until the list changes; rows go after 90 days |
 | `branch_suggestions` | id, user_id, store_id? (their own in-store shop; SET NULL), region_id, chain, area (plain names, `chain + area ≤ 77`), chain_key, area_key (trigger-set), status (`open` \| `promoted` \| `declined`), promoted_store_id?, decided_at, created_at. Users add (own open in-store shop in a live city, ≤10 waiting; the trigger sets user, city, keys, the shared chain spelling) and withdraw while open; no updates; the nightly job decides |
 | *function* `place_key` | `spendless.place_key(text)`: how shop and area names compare ("DHA Phase VIII" = "dha ph 8"); whole keys only. Mirrored by `placeKey` in `src/lib/compare/areas.ts` |
 | `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`; one row per store per run (counts, status). A store's listings with the exact same name share one product (priced by the in-stock one, the cheaper if both are) |
@@ -445,6 +484,8 @@ post-deploy migration drops them.
 | `src/lib/help.ts`, `src/components/shell/HelpSheet.tsx` | In-app help topics |
 | `src/components/onboarding/` | Where to buy walkthrough (`steps.ts`), `WhatsNewSheet`, and `FirstRun` (lazy, shown by `Shell` while `!settings.setupDone`: a welcome — skipped for accounts older than a day — then the detected city with *Change* (`CityList` from `compareSheets.tsx`); finishing sets `regionId`, currency and `features`: all on in a live city, all off elsewhere; Lists-only devices without the city list leave `regionId` null) |
 | `src/lib/invite.ts`, `src/components/screens/inviteSheet.tsx` | Invite a friend: `captureRef()` (in `src/main.tsx`: `/?ref=<code>` → `spendless-invite-ref` on the device for 30 days, taken out of the address bar), `inviterName()` ("Jawaid invited you" on `AuthScreen`, which then opens on *Create account*), `recordReferral()` (`AppContext`: once, for an account under 7 days old, retried online), `myInvite()` / `setInviteName()` / `joinedCount()`; `InviteSheet` (name with Edit, link with Copy, *Share invite* = `navigator.share` else copy, how many joined) from Profile → Share SpendLess and from the one dismissible card under a plan's savings (`spendless-invite-nudge:<uid>`) |
+| `src/lib/onesignal.ts`, `src/lib/push.ts`, `src/components/screens/pushParts.tsx` (+ `pushHelpers.ts`), `public/onesignal/OneSignalSDKWorker.js` | Still-to-buy reminders: the OneSignal wrapper, the account setting + this device, the Notifications sheet and the Lists card, OneSignal's worker |
+| `scripts/push/reminders.ts` (+ `claim.sql`, `record.sql`) | Hourly still-to-buy reminders (`.github/workflows/push-reminders.yml`, variable `PUSH_REMINDERS_PAUSED`) |
 | `src/lib/geo.ts`, `netlify/edge-functions/geo.ts` | First-run city suggestion: `GET /api/geo` (Netlify Edge Function, `context.geo`, `no-store`, nothing kept) → `detectPlace()` (3 s; falls back to the time zone, `Asia/Karachi` → PK; never the device's location), `matchRegion()` (same country, city name ignoring case/accents/spaces) |
 | `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
 | `docs/roadmap.md` | Where the app is heading (global, simple, retention), the UX review of Oct 2026, the PRs planned from it and what's left for later — start here in a new chat |
@@ -460,7 +501,7 @@ post-deploy migration drops them.
 | `src/lib/backStack.ts`, `src/components/shell/EdgeBack.tsx` | Back like an app: layers (sheets, screens, a tab root) ↔ history entries; the left-edge swipe in the installed iOS app |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
 | `src/lib/install.ts`, `src/components/shell/Install.tsx` | "Install the app" state, sheet, button, banner, sidebar card and mobile pill |
-| `public/_headers` | Netlify cache headers (no-cache HTML/SW/manifest/`share-target-sw.js`, immutable `/assets/*`, `/ocr/*` and `/pdf/*` (+ the pdf.js worker CSP)) |
+| `public/_headers` | Netlify cache headers (no-cache HTML/SW/manifest/`share-target-sw.js`, immutable `/assets/*`, `/ocr/*` and `/pdf/*` (+ the pdf.js worker CSP), `/onesignal/*` revalidated with `Service-Worker-Allowed`) |
 | `src/components/screens/ListsScreen.tsx` | Lists section (+ `listParts.tsx`, `listSheets.tsx` (item details: *How much* box with −/+ by `stepFor(unit)`, typed amounts via `parseQuantity`, both in `src/utils/quickAdd.ts`), `listHelpers.ts`, `listCompare.tsx` for the Where to buy chip, plan banner and store sections, `listDrag.tsx` + `listDragHooks.ts`: in the aisle view, hold an item (touch: 350 ms long press, so swipes still work; mouse: 6 px) and drop it on another aisle → `updateItem(category)`, which `categoryFor` then uses for that name; keyboard users have the Aisle chips) |
 | `src/components/screens/compareHelpers.ts` `splitStoreName` | "Imtiaz · DHA Phase 6" → name + area on its own line (`StoreName`, store sections); names and notes wrap to two lines (`line-clamp-2`) rather than `truncate` |
 | `src/contexts/ListsContext.tsx` | Lists state + offline sync wiring |
@@ -509,11 +550,16 @@ say so and propose a safe alternative.
   cached catalogue (`CompareContext.clearLocalData`), recent searches, the receipt in
   progress (`resetReceipt`), anything shared and not yet read (`clearShared`), the
   remembered receipt lines (`deleteReceiptMemory`), the price checks kept on the
-  device (queued answers and answered items, also in `CompareContext.clearLocalData`)
-  and a kept invite code (`clearRef`).
+  device (queued answers and answered items, also in `CompareContext.clearLocalData`),
+  a kept invite code (`clearRef`) and, first, this browser's OneSignal login (`stopPush`;
+  `App.tsx` runs `clearPushAliasIfStale` whenever no one is signed in, for sign-outs that
+  skip `signOut`).
 - **Privacy**: no PII or user content in analytics events, logs or error messages.
 - **Dependencies**: add packages sparingly from reputable sources; keep the lockfile
   committed; check `npm audit` when adding or upgrading; no scripts from untrusted CDNs.
+  The one exception: OneSignal's Web SDK and its service worker load from
+  `cdn.onesignal.com` (still-to-buy reminders; the owner's choice). They load only after
+  sign-in and only on devices that turn reminders on or already allow them.
 - **CI/CD**: least-privilege `permissions:` in workflows; pin actions to a version
   (third-party ones to a commit SHA); never run untrusted PR code with access to secrets.
 - When reviewing or writing code, flag any security issue you spot (even outside the
@@ -524,7 +570,8 @@ say so and propose a safe alternative.
   guard, build). Pushes to `main` deploy: pre-deploy migrations → expose schema →
   build → Netlify → smoke test (version in the entry bundle; manifest `share_target`,
   `sw.js` importing the share handler, its and the PDF reader's headers, the
-  `/share-receipt` fallback; `/api/geo` answering JSON, a warning only) → post-deploy
+  `/share-receipt` fallback; OneSignal's worker served as JavaScript; `/api/geo` answering
+  JSON, a warning only) → post-deploy
   migrations → tag + GitHub Release. `netlify deploy` also ships the Edge Functions in
   `netlify/edge-functions/` (no `netlify.toml`; each declares its own `config.path`).
 - `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue, picked
@@ -540,6 +587,10 @@ say so and propose a safe alternative.
   `docs/deployment.md`).
 - `.github/workflows/reporter-trust.yml`: nightly (02:53 Karachi) reporter trust
   (`scripts/seed/reporter-trust.ts`); manual runs roll back unless *apply*.
+- `.github/workflows/push-reminders.yml`: hourly (minute 23) still-to-buy reminders
+  (`scripts/push/reminders.ts`, secret `ONESIGNAL_REST_API_KEY`, variable
+  `VITE_ONESIGNAL_APP_ID`); manual runs are dry runs unless *send*; repo variable
+  `PUSH_REMINDERS_PAUSED` = exactly `true` makes the hourly runs dry runs.
 - `.github/workflows/price-import.yml`: daily store price import (03:17 Karachi), also
   manual with *source* / *dry run* / *max pages*; then the safe duplicate-product merges
   (`merge-products.ts --auto`, skipped on dry runs; repo variable `PRODUCT_MERGES_PAUSED`

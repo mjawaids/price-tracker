@@ -52,6 +52,31 @@ On a device with no saved settings (clear site data, then sign up):
       total; *Invite* opens the sheet; × (or inviting) hides it for good on this device.
 - [ ] Signing out forgets a kept invite link.
 
+## Still-to-buy reminders (push)
+
+Needs the deployed site (OneSignal only works on the real domain) and `VITE_ONESIGNAL_APP_ID`.
+- [ ] Profile → Preferences → *Notifications*: one switch, "Still-to-buy reminders", with
+      the rule under it. Turning it on asks the browser once; after *Allow* the sheet says
+      "On for this device" and the Profile row says *On*.
+- [ ] *Block* in the browser's question: the switch stays off with "Notifications are
+      blocked for this site…". With an ad blocker that blocks OneSignal (e.g. Brave
+      Shields): "Something on this device is blocking notifications…".
+- [ ] iPhone/iPad in Safari (not installed): the sheet shows the three Home Screen steps
+      instead of a switch. Installed from the Home Screen: the switch works.
+- [ ] A second device signed in to the same account: the sheet says "On for your other
+      devices…"; a device that already allowed notifications joins by itself.
+- [ ] Lists: once something on the list is over a day old (and this browser was never
+      asked), the card "Want a nudge when things sit unbought?" shows. *Remind me* asks
+      the browser and shows "Reminders on…"; *Not now* hides it for 14 days; × for good.
+- [ ] Actions → *Push reminders* → Run workflow (unticked): a dry run lists how many
+      would get a reminder; nothing is sent.
+- [ ] With an item over 2 days old, between 10:00 and 20:00 your time, a run with *send*
+      ticked (or the next hourly run) delivers "You still have N things to buy. Shopping
+      today?"; tapping it opens the app on Lists. A second run sends nothing until the list
+      changes (add or tick something), and never sooner than 2 days after the last one.
+- [ ] Turning it off (Profile) stops reminders on every device. Signing out stops them on
+      that browser.
+
 ## Back and gestures
 
 On Android (installed app and Chrome), with the back button or gesture:
@@ -484,6 +509,8 @@ Use generic test accounts, on a list with a plan applied (Where to buy → Use t
 - [ ] Sign in, add a list item on one device, see it on another.
 - [ ] Compare data (your stores, products and prices) is still there; an old cart is now
       the "From Compare cart" list.
+- [ ] `https://spendless.ibexoft.com/onesignal/OneSignalSDKWorker.js` is served as
+      JavaScript (the smoke test checks this too).
 
 ## Accessibility & design
 
