@@ -314,13 +314,15 @@ planned list items, closes the private copy. `close-branch.ts` undoes a shop. Ru
   timeout, a late SDK still adopted; `PushState` = unsupported / blocked (content blocker) /
   default / denied / granted-off / granted-on; `isIosNeedsInstall`; `enablePush` /
   `disablePush` / `resubscribeIfPermitted`; `loginPushAlias` / `logoutPush` /
-  `clearPushAliasIfStale` with the `spendless-push-aliased` flag). Its worker is
+  `clearPushAliasIfStale` / `dropOtherAlias`, with the alias this browser is logged in as
+  kept in `spendless-push-aliased`). Its worker is
   `public/onesignal/OneSignalSDKWorker.js`, scope `/onesignal/` (never meets our `sw.js`:
   `globIgnores` + `navigateFallbackDenylist` in `vite.config.ts`, headers in `public/_headers`).
 - `src/lib/push.ts`: a module store (`usePush()`) — the account's `push_settings` row
   (`enabled`, account-wide) + this device's `PushState`. `startPush()` (AppContext, per
   account: a device that already allows notifications logs in to OneSignal as the
-  account's `push_alias` and subscribes by itself), `setReminders(on)` (on: browser
+  account's `push_alias` and subscribes by itself; an alias another account left on this
+  browser, e.g. after another tab switched the session, is logged out first), `setReminders(on)` (on: browser
   permission → opt in → `enabled: true` + this device's time zone; off: this device opts
   out and the account stops; returns the push state or `failed`), `stopPush()` (sign-out).
   OneSignal logs in with the opaque `push_alias`, never the user id (the Web SDK has no

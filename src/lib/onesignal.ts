@@ -48,17 +48,26 @@ function emit(): void {
   listeners.forEach((cb) => cb(s));
 }
 
-/* Marks that this browser has at some point been aliased to a user. Lets us skip
-   loading the SDK on a logged-out visit unless there is actually a stale alias
-   to clear — see clearPushAliasIfStale(). */
+/* The alias this browser is logged in to OneSignal as (none = not logged in). Lets
+   us skip loading the SDK on a signed-out visit unless there is actually a stale
+   alias to clear (clearPushAliasIfStale), and notice an alias another account left
+   behind (dropOtherAlias). */
 const ALIAS_FLAG = 'spendless-push-aliased';
 
-function setAliasFlag(on: boolean): void {
+function setAliasFlag(alias: string | null): void {
   try {
-    if (on) localStorage.setItem(ALIAS_FLAG, '1');
+    if (alias) localStorage.setItem(ALIAS_FLAG, alias);
     else localStorage.removeItem(ALIAS_FLAG);
   } catch {
     /* private mode / quota — the flag is only an optimisation */
+  }
+}
+
+function aliasedTo(): string | null {
+  try {
+    return localStorage.getItem(ALIAS_FLAG) || null;
+  } catch {
+    return null;
   }
 }
 
@@ -216,7 +225,7 @@ export async function loginPushAlias(alias: string): Promise<void> {
   if (!(await initOneSignal()) || !sdk) return;
   try {
     await sdk.login(alias);
-    setAliasFlag(true);
+    setAliasFlag(alias);
   } catch (err) {
     console.error('[onesignal] login failed:', err);
   }
@@ -228,7 +237,7 @@ export async function logoutPush(): Promise<void> {
   if (!sdk) return;
   try {
     await sdk.logout();
-    setAliasFlag(false);
+    setAliasFlag(null);
   } catch (err) {
     console.error('[onesignal] logout failed:', err);
   }
@@ -245,7 +254,7 @@ export async function logoutPush(): Promise<void> {
    then, and their alias must not be undone. */
 export async function clearPushAliasIfStale(isSignedOut: () => Promise<boolean>): Promise<void> {
   try {
-    if (localStorage.getItem(ALIAS_FLAG) !== '1') return;
+    if (!localStorage.getItem(ALIAS_FLAG)) return;
   } catch {
     return;
   }
@@ -253,7 +262,7 @@ export async function clearPushAliasIfStale(isSignedOut: () => Promise<boolean>)
     if (!sdk || !(await isSignedOut())) return;
     try {
       await sdk.logout();
-      setAliasFlag(false);
+      setAliasFlag(null);
     } catch (err) {
       console.error('[onesignal] stale alias cleanup failed:', err);
     }
@@ -265,6 +274,29 @@ export async function clearPushAliasIfStale(isSignedOut: () => Promise<boolean>)
     // cleanup is exactly what must not be skipped on a shared device.
     onSdkReady(() => void clear());
   }
+}
+
+/* Another account's alias left on this browser: the signed-in account changed
+   without a sign-out here (another tab switched the shared session). Logs out of it
+   unless it is `current` (this account's own alias), so the device stops getting the
+   previous account's reminders even when this account never turns reminders on.
+   Loads the SDK only when there is such an alias. `stillCurrent` is asked again
+   before logging out, since the SDK can arrive late. */
+export async function dropOtherAlias(current: string | null, stillCurrent: () => boolean): Promise<void> {
+  const prior = aliasedTo();
+  if (!prior || prior === current) return;
+  const drop = async () => {
+    // Re-checked: this account may have logged in meanwhile, which already replaced it.
+    if (!sdk || !stillCurrent() || aliasedTo() !== prior) return;
+    try {
+      await sdk.logout();
+      setAliasFlag(null);
+    } catch (err) {
+      console.error('[onesignal] dropping the previous account failed:', err);
+    }
+  };
+  if (await initOneSignal()) await drop();
+  else onSdkReady(() => void drop());
 }
 
 /** init → requestPermission → optIn. Returns the resulting state. */

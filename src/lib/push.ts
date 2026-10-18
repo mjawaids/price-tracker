@@ -12,6 +12,7 @@ import { supabase } from './supabase';
 import {
   PushState,
   disablePush,
+  dropOtherAlias,
   enablePush,
   getPushState,
   initOneSignal,
@@ -88,7 +89,10 @@ export async function startPush(): Promise<void> {
     alias = (data?.push_alias as string | undefined) ?? null;
     const enabled = !!data?.enabled;
     set({ status: 'ready', enabled });
-    if (!enabled || !alias) return;
+    // Signed in as someone else than the account this browser last got reminders
+    // for (no sign-out here): stop the previous account's reminders first.
+    await dropOtherAlias(alias, () => gen === generation);
+    if (gen !== generation || !enabled || !alias) return;
     const join = async () => {
       if (gen !== generation || !alias) return;
       await loginPushAlias(alias);

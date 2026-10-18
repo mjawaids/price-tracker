@@ -76,6 +76,9 @@ Needs the deployed site (OneSignal only works on the real domain) and `VITE_ONES
       changes (add or tick something), and never sooner than 2 days after the last one.
 - [ ] Turning it off (Profile) stops reminders on every device. Signing out stops them on
       that browser.
+- [ ] Switching accounts without signing out here (sign in as someone else in another
+      tab): this tab drops the first account's reminders, even if the new account never
+      turns them on.
 
 ## Back and gestures
 
