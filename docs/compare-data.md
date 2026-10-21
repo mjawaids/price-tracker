@@ -132,11 +132,13 @@ database owner, with the importer's lock:
    - a store now lists both as separate items under different names (`store-lists-both`);
    - the listings it moved sell for more than 1.6× (or under 1/1.6) what the product's
      other listings do (`prices-apart`);
-   - enough people said *Not the same product* (`people`).
+   - enough people said *Not the same product*, more than said they're the same
+     (`people`).
 
    The reason is kept in `product_merges.undo_reason`.
 2. **Merge** (`merge-auto.sql`, one transaction). Every rule needs both products public
-   and active, and never a pair whose merge was undone:
+   and active, and never a pair whose merge was undone (except `reported` after a
+   `people` undo, below):
    - `same-name`: the exact same name (case and spaces aside), size and pack, real
      words in the name, both priced, medians within 25%;
    - `import`: a product every store listing has left (the importer re-matched them by
@@ -152,7 +154,8 @@ database owner, with the importer's lock:
      letter changed, added, dropped or swapped, in words of 5+ letters, with the rarer
      word used by at most 3 products ("Greek" / "Green" are both common: two products).
      Medians within 15%;
-   - `reported`: enough people (below) said the two are one product. Same size (±2%),
+   - `reported`: enough people (below) said the two are one product, more than said
+     they aren't. Same size (±2%),
      brand and type (or one unknown), never listed together at one store, no pack
      clash, medians within 25% (or one unpriced).
 
@@ -166,11 +169,26 @@ database owner, with the importer's lock:
 
 **People's reports** (`duplicate_reports`): on a product page, *Same as another
 product?* (`kind = 'same'`) or, under "Also sold as", *Not the same product?* on a
-product merged into it (`kind = 'not_same'`). A report counts when its author's account
-is at least 7 days old and their `reporter_trust` weight isn't below 1. The number of
-people needed is the repository variable `PRODUCT_MERGE_MIN_PEOPLE` (2–50, default 3).
-The app never says the number. One report per person per pair; at most 30 a day; people
-read and withdraw only their own.
+product merged into it (`kind = 'not_same'`). There is no moderator, so the safety nets
+are in the rules (`scripts/seed/duplicate-votes.sql`, shared by the merge and the undo):
+- **Only real contributors count**: an account at least 7 days old, confirmed, not
+  anonymous, banned or deleted; a `reporter_trust` weight not below 1; and accepted
+  prices for at least 3 products in the last 60 days (merge copies and "wrong price"
+  reports aside) — the same bar as suggesting a shared shop. Throwaway accounts can
+  report, but their reports never decide anything.
+- **The majority decides**: per pair, people whose newest report says "same" against
+  those whose newest says "not the same". A merge needs at least
+  `PRODUCT_MERGE_MIN_PEOPLE` (repository variable, 2–50, default 3) saying "same" *and*
+  more than say "not the same"; an undo the other way round. The app never says the
+  number.
+- **A split isn't a lock**: a pair people split stays apart for every automatic rule and
+  the importer, but people can join it again with "same" reports made after the split,
+  by the same majority. A split on store evidence (`store-lists-both`, `prices-apart`) or
+  by the owner is for good.
+- **Even then, nothing that reads as different merges**: a reported pair still needs the
+  same size, brand and type and prices that agree (above).
+- One report per person per pair and kind; at most 30 a day; people read and withdraw
+  only their own.
 
 The repository variable `PRODUCT_MERGES_PAUSED` = `true` makes the whole nightly step a
 dry run. Optional owner tools, never required: *Catalog jobs* → `merge-products` (a list
@@ -192,7 +210,7 @@ What a merge of `from` into `into` does:
 
 An undo puts back what moved where nothing has changed it since, deletes the copied
 prices and keeps the pair apart. The nightly rules skip the pair, and so does the
-importer's key match.
+importer's key match (only people's newer reports can join a pair people split).
 
 Anything still carrying a merged id lands on the product it became: the triggers on
 `list_items`, `item_preferences` and people's `price_reports` call

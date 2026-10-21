@@ -411,13 +411,17 @@ Against a local copy of the schema (all migrations), with generic test data.
       `import`) and moves its pinned list item.
 - [ ] Rules: same key + same name words at two stores, prices within 25% → `same-key`;
       the same key 2× apart → not merged; "Kulfa" / "Kulfi" within 15% → `near-name`;
-      "Shan Ginger Paste" / "Shan Garlic Paste" (same key, different words) → not merged;
-      three people (accounts ≥ 7 days) reporting a pair → `reported`; two people, or one
-      account a day old → not merged.
+      "Shan Ginger Paste" / "Shan Garlic Paste" (same key, different words) → not merged.
+- [ ] People's reports (no moderator): three week-old accounts with no prices say a pair
+      is one → not merged; three contributors (prices for 3 products) → `reported`; three
+      "same" against four "not the same" → not merged. With the merge a day old, four
+      "not the same" against three "same" → undone (`people`); the next night nothing
+      re-merges it; five new "same" reports made after the split → merged again. A pair
+      split for `store-lists-both` stays apart whatever people say.
 - [ ] Undo on evidence: with merges a day old, a store listing both sides under
-      different names → undone (`store-lists-both`); three people saying *Not the same* →
-      undone (`people`). The next `--auto` doesn't merge them again, and an import of the
-      undone product's store keeps it apart.
+      different names → undone (`store-lists-both`); three contributors saying *Not the
+      same* (and none saying same) → undone (`people`). The next `--auto` doesn't merge
+      them again, and an import of the undone product's store keeps it apart.
 - [ ] Product page (375 / 360 / 1024 px): a shared product shows *Same as another
       product?*; the sheet suggests similar products (same type and size, shared name
       words; never on a shared brand alone) and searches by name; *These are the same

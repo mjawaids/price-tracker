@@ -7,9 +7,11 @@
 --                     (one listing the merge moved, one it didn't): it sells two things;
 --   prices-apart      the listings the merge moved sell for more than 1.6× (or under
 --                     1/1.6) what the product's other listings do;
---   people            min_people people (accounts ≥ 7 days old, prices not discounted
---                     by reporter_trust) said they aren't the same product.
+--   people            min_people qualifying people (duplicate-votes.sql: real
+--                     contributors) said they aren't the same product, more than
+--                     said they are.
 \set ON_ERROR_STOP on
+\ir duplicate-votes.sql
 
 WITH m AS (
   SELECT DISTINCT ON (x.from_id) x.id, x.from_id, x.into_id, spendless.canonical_product(x.into_id) AS now_id,
@@ -40,14 +42,8 @@ WITH m AS (
   WHERE moved_med IS NOT NULL AND other_med IS NOT NULL AND greatest(moved_med, other_med) / least(moved_med, other_med) > 1.6
 ), said_apart AS (
   SELECT m.id
-  FROM m JOIN spendless.duplicate_reports r
-    ON r.kind = 'not_same' AND least(r.product_id, r.other_id) = least(m.from_id, m.now_id)
-       AND greatest(r.product_id, r.other_id) = greatest(m.from_id, m.now_id)
-  JOIN auth.users u ON u.id = r.user_id AND u.created_at <= now() - interval '7 days'
-  LEFT JOIN spendless.reporter_trust t ON t.user_id = r.user_id
-  WHERE coalesce(t.weight, 1) >= 1
-  GROUP BY m.id
-  HAVING count(DISTINCT r.user_id) >= :'min_people'::int
+  FROM m JOIN votes v ON v.lo = least(m.from_id, m.now_id) AND v.hi = greatest(m.from_id, m.now_id)
+  WHERE v.not_n >= :'min_people'::int AND v.not_n > v.same_n
 )
 SELECT coalesce(jsonb_agg(jsonb_build_object('product_id', d.from_id, 'reason', d.reason) ORDER BY d.merged_at), '[]'::jsonb)
 FROM (

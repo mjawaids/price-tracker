@@ -20,10 +20,11 @@
 --              pack clash, both priced, medians within max_ratio;
 --   near-name  as same-key but the names differ by a slip or two ("Kulfa" / "Kulfi"),
 --              medians within near_ratio;
---   reported   min_people people (accounts ≥ 7 days old, prices not discounted by
---              reporter_trust) said they're one product; the same size, brand id and
---              type (or one unknown), never listed together, no pack clash, medians
---              within max_ratio (or one unpriced).
+--   reported   min_people qualifying people (duplicate-votes.sql: real contributors)
+--              said they're one product, more than said they aren't; the same size,
+--              brand id and type (or one unknown), never listed together, no pack
+--              clash, medians within max_ratio (or one unpriced). A pair people split
+--              before can be joined this way again, by "same" reports made since.
 -- In each pair the product with the most store listings (then the oldest) stays.
 \set ON_ERROR_STOP on
 \set auto_json `cat auto.json`
@@ -53,11 +54,16 @@ FROM last_import li WHERE li.is_available;
 UPDATE spendless.catalog_products p SET status = 'retired', match_key = ''
 FROM junk j WHERE p.id = j.id;
 
--- Pairs kept apart: an undone merge, either way round.
+-- Pairs kept apart: an undone merge, either way round. `for_good` unless only people
+-- split it (then people's reports may join it again; the rules never do).
 CREATE TEMP TABLE apart ON COMMIT DROP AS
-SELECT from_id AS a, into_id AS b FROM spendless.product_merges WHERE undone_at IS NOT NULL
-UNION
-SELECT into_id, from_id FROM spendless.product_merges WHERE undone_at IS NOT NULL;
+SELECT a, b, bool_or(undo_reason IS DISTINCT FROM 'people') AS for_good
+FROM (
+  SELECT from_id AS a, into_id AS b, undo_reason FROM spendless.product_merges WHERE undone_at IS NOT NULL
+  UNION ALL
+  SELECT into_id, from_id, undo_reason FROM spendless.product_merges WHERE undone_at IS NOT NULL
+) u
+GROUP BY a, b;
 
 CREATE TEMP TABLE pairs (from_id uuid, into_id uuid, rule text) ON COMMIT DROP;
 
@@ -108,18 +114,12 @@ SELECT (e->>'a')::uuid, (e->>'b')::uuid, e->>'rule'
 FROM jsonb_array_elements(:'auto_json'::jsonb) e
 WHERE e->>'rule' IN ('import', 'same-key', 'near-name');
 
--- reported: pairs enough qualifying people called one product.
+-- reported: pairs enough qualifying people called one product, more than said it isn't.
+\ir duplicate-votes.sql
 INSERT INTO cand
-SELECT d.lo, d.hi, 'reported'
-FROM (
-  SELECT least(r.product_id, r.other_id) AS lo, greatest(r.product_id, r.other_id) AS hi, r.user_id
-  FROM spendless.duplicate_reports r
-  JOIN auth.users u ON u.id = r.user_id AND u.created_at <= now() - interval '7 days'
-  LEFT JOIN spendless.reporter_trust t ON t.user_id = r.user_id
-  WHERE r.kind = 'same' AND coalesce(t.weight, 1) >= 1
-) d
-GROUP BY d.lo, d.hi
-HAVING count(DISTINCT d.user_id) >= :'min_people'::int;
+SELECT v.lo, v.hi, 'reported'
+FROM votes v
+WHERE v.same_fresh >= :'min_people'::int AND v.same_fresh > v.not_n;
 
 DELETE FROM cand WHERE a = b OR a IS NULL OR b IS NULL;
 
@@ -146,7 +146,7 @@ FROM (
   JOIN facts fa ON fa.id = c.a
   JOIN facts fb ON fb.id = c.b
 ) c
-WHERE NOT EXISTS (SELECT 1 FROM apart x WHERE x.a = c.a AND x.b = c.b)
+WHERE NOT EXISTS (SELECT 1 FROM apart x WHERE x.a = c.a AND x.b = c.b AND (x.for_good OR c.rule <> 'reported'))
   -- Prices: close enough for the rule.
   AND CASE c.rule
     WHEN 'import' THEN (fa).med IS NULL OR (fb).med IS NULL OR greatest((fa).med, (fb).med) / least((fa).med, (fb).med) <= 3
