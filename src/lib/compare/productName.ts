@@ -60,6 +60,47 @@ const NOT_BRAND = new Set(
 
 const brandKey = (s: string) => s.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9&]+/g, ' ').trim();
 
+/**
+ * One id per brand however a store spells it: "Day Fresh" / "Dayfresh" / "DayFresh" →
+ * "dayfresh", "Johnson's Baby" / "Johnsons Baby" → "johnsonsbaby". Products compare
+ * brands by this, never by the spelling.
+ */
+export const brandId = (s: string) => s.toLowerCase().replace(/[^a-z0-9&]+/g, '');
+
+/**
+ * The spelling to store for a brand: the first of `known` (most used first) with the
+ * same brandId, else the brand as given.
+ */
+export function canonicalBrand(brand: string, known: string[]): string {
+  const id = brandId(brand);
+  return known.find((k) => brandId(k) === id) ?? brand;
+}
+
+// Words in a variant that don't tell two products apart: how a store abbreviates the
+// type ("Flv Milk") and pack details (a tetra pack, a capped bottle). Per type: words
+// that describe every product of that type ("liquid" milk).
+const VARIANT_NOISE = new Set(['flv', 'flavour', 'flavor', 'flavored', 'flavoured', 'tetra', 'capped', 'uncapped']);
+const VARIANT_NOISE_BY_TYPE: Record<string, string[]> = {
+  milk: ['liquid', 'liquidmilk'],
+  'flavoured-milk': ['liquid', 'milk'],
+};
+// Two ways stores write the same thing ("full fat" = "full cream", "lowfat" = "low fat").
+const VARIANT_SPLIT: Record<string, string[]> = { lowfat: ['low', 'fat'], fullcream: ['full', 'cream'], fullfat: ['full', 'cream'] };
+
+/**
+ * A variant's telling words, sorted: what's left once noise and pack words are gone,
+ * with synonyms written one way. Used by the importer's match key and the app's
+ * "same product" grouping, so both see "Lactose Free Tetra" = "Lactose Free".
+ */
+export function variantKey(variant: string | null | undefined, itemType?: string | null): string {
+  const typeNoise = new Set(itemType ? (VARIANT_NOISE_BY_TYPE[itemType] ?? []) : []);
+  const words = tokens(variant ?? '').flatMap((w) => VARIANT_SPLIT[w] ?? [w]);
+  const out = words
+    .map((w, i) => (w === 'fat' && words[i - 1] === 'full' ? 'cream' : w))
+    .filter((w) => !VARIANT_NOISE.has(w) && !PACKAGING.has(w) && !typeNoise.has(w));
+  return [...new Set(out)].sort().join(' ');
+}
+
 /** Brands that start ≥ `min` names: the first word, or first two when those recur together. */
 export function learnBrands(names: string[], min = 3): string[] {
   const one = new Map<string, { label: string; n: number }>();

@@ -128,8 +128,10 @@ Context-based (no Redux). Providers in `src/contexts/`:
   A merged product's id counts as the product it became (`resolve.ts` `aliases`).
   `ItemChoiceSheet` (`compareSheets.tsx`, "Which eggs?") changes it: one row per product
   with no prices or stores (`ProductRow` `plain`); the same product under slightly
-  different names at several stores is one row (`resolve.ts` `sameProductKey`: brand,
-  type, total size, variant words), and *Exactly this one* saves all its ids. With no
+  different names at several stores is one row (`resolve.ts` `sameProductKey`: brand
+  however it's spelled (`productName.ts` `brandId`: "Day Fresh" = "Dayfresh"), type, total
+  size, variant words minus noise like "Flv"/"Tetra" with "full fat" = "full cream"
+  (`variantKey`)), and *Exactly this one* saves all its ids. With no
   products of the item's type it lists names holding every word of the item, minus
   products known to be another type ("eggs" never shows egg noodles).
 - Help: `src/lib/help.ts` topics in a lazy `HelpSheet` (`app.openSheet('help', id)`);

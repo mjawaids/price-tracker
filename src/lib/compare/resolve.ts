@@ -6,7 +6,7 @@
 import { normalizeName } from '../groceryDictionary.ts';
 import { ITEM_TYPE_BY_ID, matchItemType, tokens, typeFamily } from './itemTypes.ts';
 import type { ItemType } from './itemTypes.ts';
-import { KNOWN_BRANDS, parseProductName } from './productName.ts';
+import { KNOWN_BRANDS, brandId, parseProductName, variantKey } from './productName.ts';
 import type { ParsedSize } from './productName.ts';
 import { packsNeeded, productSize, similarSize, totalAmount } from './units.ts';
 import type { LineOption } from './optimizer.ts';
@@ -16,6 +16,7 @@ import type { CatalogProduct, CurrentPrice, ItemPreference, PreferenceMode } fro
 export interface ProductProfile {
   product: CatalogProduct;
   brand: string | null;
+  /** brandId: one id however stores spell the brand ("Day Fresh" = "Dayfresh"). */
   brandKey: string | null;
   itemType: string | null;
   size: ParsedSize | null;
@@ -25,6 +26,7 @@ export interface ProductProfile {
 export interface ResolveContext {
   profiles: Map<string, ProductProfile>;
   byType: Map<string, ProductProfile[]>;
+  /** Brand spellings as words, for finding a brand in typed text. */
   brandKeys: Set<string>;
   /** productId → storeId → price (only stores being considered). */
   prices: Map<string, Map<string, CurrentPrice>>;
@@ -66,10 +68,11 @@ export function profileProduct(p: CatalogProduct): ProductProfile {
   return {
     product: p,
     brand,
-    brandKey: brand ? brandKeyOf(brand) : null,
+    brandKey: brand ? brandId(brand) || null : null,
     itemType: p.itemType ?? parsed?.itemType?.id ?? null,
     size: productSize(p),
-    words: new Set(tokens(`${p.name} ${p.variant ?? ''}`)),
+    // Plus the variant as written one way, so "full cream" also finds "Full Fat".
+    words: new Set([...tokens(`${p.name} ${p.variant ?? ''}`), ...variantKey(p.variant, p.itemType ?? parsed?.itemType?.id).split(' ').filter(Boolean)]),
   };
 }
 
@@ -91,7 +94,7 @@ export function buildContext(input: {
     const prof = profileProduct(p);
     profiles.set(p.id, prof);
     if (prof.itemType) byType.set(prof.itemType, [...(byType.get(prof.itemType) || []), prof]);
-    if (prof.brandKey) brandKeys.add(prof.brandKey);
+    if (prof.brand) brandKeys.add(brandKeyOf(prof.brand));
   }
   const prices = new Map<string, Map<string, CurrentPrice>>();
   for (const cp of input.prices) {
@@ -124,13 +127,15 @@ export function canonicalOf(products: Map<string, CatalogProduct>, id: string): 
 
 /**
  * Products that are the same thing sold under slightly different names at
- * different stores ("Haleeb Asli Milk 1000ml" / "Haleeb Asli Milk 1 Ltr") share
- * this key: brand, type, total size and the words that tell variants apart.
- * Null (never grouped) without a brand, type and size to compare.
+ * different stores ("Haleeb Asli Milk 1000ml" / "Haleeb Asli Milk 1 Ltr",
+ * "Day Fresh Milk Lactose Free 200ml" / "Dayfresh Milk Lactose Free 200ml Tetra")
+ * share this key: brand (however it's spelled), type, total size and the words
+ * that tell variants apart (`variantKey`). Null (never grouped) without a brand,
+ * type and size to compare.
  */
 export function sameProductKey(p: ProductProfile): string | null {
   if (!p.brandKey || !p.itemType || !p.size) return null;
-  const variant = [...new Set(tokens(p.product.variant ?? ''))].sort().join(' ');
+  const variant = variantKey(p.product.variant, p.itemType);
   return `${p.brandKey}|${p.itemType}|${totalAmount(p.size)}${p.size.unit}|${variant}`;
 }
 
@@ -183,8 +188,11 @@ function optionsFor(ctx: ResolveContext, item: ItemInput, acceptable: ProductPro
   return out;
 }
 
-/** Brand named at the start or anywhere in the text ("dawn bread", "bread dawn"). */
-function namedBrand(ctx: ResolveContext, text: string): string | null {
+/**
+ * Brand named at the start or anywhere in the text ("dawn bread", "bread dawn"): the
+ * spelling found (to take out of the text) and its brandId (to compare products by).
+ */
+function namedBrand(ctx: ResolveContext, text: string): { words: string; id: string } | null {
   const t = brandKeyOf(text);
   let best: string | null = null;
   for (const b of ctx.brandKeys) {
@@ -193,7 +201,7 @@ function namedBrand(ctx: ResolveContext, text: string): string | null {
       if (!best || b.length > best.length) best = b;
     }
   }
-  return best;
+  return best && brandId(best) ? { words: best, id: brandId(best) } : null;
 }
 
 export function resolveItem(ctx: ResolveContext, item: ItemInput): ResolvedItem {
@@ -232,8 +240,9 @@ export function resolveItem(ctx: ResolveContext, item: ItemInput): ResolvedItem 
   }
 
   // 3–4. Read the text: item type, brand, extra words.
-  const brandKey = namedBrand(ctx, item.name);
-  const nameNoBrand = brandKey ? brandKeyOf(item.name).replace(brandKey, ' ') : item.name;
+  const named0 = namedBrand(ctx, item.name);
+  const brandKey = named0?.id ?? null;
+  const nameNoBrand = named0 ? brandKeyOf(item.name).replace(named0.words, ' ') : item.name;
   const match = matchItemType(nameNoBrand);
   const type = match?.type ?? null;
 

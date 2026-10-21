@@ -104,7 +104,7 @@ export const ITEM_TYPES: ItemType[] = [
 
   // Dairy & eggs
   t('milk', 'Milk', 'dairy', 'ml', ['milk', 'doodh', 'full cream milk', 'uht milk', 'packet milk', 'fresh milk'], { display: 'L' }),
-  t('flavoured-milk', 'Flavoured milk', 'dairy', 'ml', ['flavoured milk', 'flavored milk', 'chocolate milk', 'milk drink']),
+  t('flavoured-milk', 'Flavoured milk', 'dairy', 'ml', ['flavoured milk', 'flavored milk', 'flavour milk', 'flavor milk', 'flv milk', 'flavoredmilk', 'flavouredmilk', 'chocolate milk', 'milk drink']),
   t('milk-powder', 'Milk powder', 'dairy', 'g', ['milk powder', 'powder milk', 'powdered milk', 'dry milk']),
   t('yogurt', 'Yogurt', 'dairy', 'g', ['yogurt', 'yoghurt', 'dahi', 'curd'], { display: 'kg' }),
   t('butter', 'Butter', 'dairy', 'g', ['butter', 'makhan', 'makkhan', 'maska']),
