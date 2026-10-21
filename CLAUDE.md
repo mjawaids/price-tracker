@@ -34,9 +34,11 @@ Live at https://spendless.ibexoft.com
   — suggested shops become shared (nightly *Shared shops* workflow; without `--apply` it runs and rolls back)
 - `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/close-branch.ts --store-id <id> [--apply]`
   — undo a shared shop: close it, give people their own shop back (*Catalog jobs*, job `close-branch`)
-- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/merge-products.ts --auto | --list | --pairs "<from>><into> …" | --undo <id> [--apply]`
-  — duplicate products: the safe merges + junk names retired (nightly, after the *Price import*), the review list,
-  approved merges (*Catalog jobs*, job `merge-products`), undo one (job `unmerge-product`); merges/undo roll back without `--apply`
+- `SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/merge-products.ts --auto [--min-people N] | --list | --pairs "<from>><into> …" | --undo <id> [--apply]`
+  — duplicate products fix themselves, no one reviews: `--auto` (nightly, after the *Price import*) undoes automatic
+  merges later evidence contradicts, then merges what the rules are sure of and retires junk names; optional tools:
+  the list of what the rules leave alone, merging picked pairs (*Catalog jobs*, job `merge-products`), undo one
+  (job `unmerge-product`); merges/undo roll back without `--apply`
 - `SUPABASE_DB_URL=… ONESIGNAL_REST_API_KEY=… VITE_ONESIGNAL_APP_ID=… node --experimental-strip-types scripts/push/reminders.ts [--send]`
   — still-to-buy reminders (hourly *Push reminders* workflow; without `--send` it counts who's due and rolls back,
   and needs only `SUPABASE_DB_URL`)
@@ -435,7 +437,8 @@ are in `public`). SpendLess data must never mix with theirs:
 | `current_prices` | (store_id, product_id) → weighted-median price, observed_at, n_reports, confidence, disputed (2+ people sent "wrong price" since its newest counted report: Where to buy leaves it out) — written only by the `refresh_current_prices` trigger, which also accepts a `pending` report once someone else reports within 10% of it (±14 days) and multiplies people's report weights by `reporter_trust`; a price with no counted reports left stays as a tombstone (`n_reports = 0`) so delta syncs drop it |
 | *function* `my_contributions` | `spendless.my_contributions(p_month_start)` → jsonb: the user's report counts (total, month, shops; shared / held / private / out_of_stock / disputes / other add up to total; a merge's copies not counted); SECURITY INVOKER (RLS keeps it to their own), EXECUTE for `authenticated` only |
 | *function* `canonical_product` | `spendless.canonical_product(id)`: the product an id stands for now (follows `merged_into`). BEFORE triggers on `list_items`, `item_preferences` and people's `price_reports` use it, so an old id (offline list, queued price check, old app) lands on the product it became |
-| `product_merges` | merge script only (clients can't read): from_id → into_id, rule (`same-name` \| `approved`), moved (what moved, for undo), undone_at (= keep that pair apart). `price_reports.copy_of` marks a merge's copy of a report |
+| `product_merges` | merge script only (clients can't read): from_id → into_id, rule (`same-name` \| `import` \| `same-key` \| `near-name` \| `reported`, nightly; `approved`, the owner's optional pick), moved (what moved, for undo), undone_at (= keep that pair apart, for the rules and the importer), undo_reason (`store-lists-both` \| `prices-apart` \| `people` \| `owner`). `price_reports.copy_of` marks a merge's copy of a report |
+| `duplicate_reports` | id, user_id (default `auth.uid()`, the trigger forces it), kind (`same`: two active shared products are one \| `not_same`: a shared product merged into `other_id` isn't it), product_id, other_id, created_at. One per person per pair and kind (either way round), ≤30 a day (trigger); own rows only: insert, read, delete. The nightly merge counts qualifying people (account ≥7 days, `reporter_trust` ≥ 1) against `PRODUCT_MERGE_MIN_PEOPLE` |
 | *function* `save_receipt` | `spendless.save_receipt(store, observed_at, currency, items jsonb)` — a receipt's new private products (reusing same-named ones) + its price reports in one transaction; SECURITY INVOKER, EXECUTE for `authenticated` only |
 | `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
 | `invite_codes` | user_id (PK), code (8 characters from A–Z minus I/O + 2–9, set by `spendless.new_invite_code()`, never changes), display_name (what invites say they're from: plain, ≤30, no links/emails, at most 2 digits in any script via `spendless.digit_count` (every Unicode Nd range, mirrored by `\p{Nd}` in `cleanInviteName`), so no phone number), created_at, updated_at. Owner only; clients insert `display_name` and update it, nothing else (column grants) |
@@ -446,7 +449,7 @@ are in `public`). SpendLess data must never mix with theirs:
 | `notification_log` | sender only (clients can't read): one row per reminder — user_id, kind (`still_to_buy`), open_count, status (`claimed` → `sent` \| `failed`; never sent = deleted), onesignal_id, error, created_at, sent_at. Its newest row per person is what keeps reminders to one until the list changes; rows go after 90 days |
 | `branch_suggestions` | id, user_id, store_id? (their own in-store shop; SET NULL), region_id, chain, area (plain names, `chain + area ≤ 77`), chain_key, area_key (trigger-set), status (`open` \| `promoted` \| `declined`), promoted_store_id?, decided_at, created_at. Users add (own open in-store shop in a live city, ≤10 waiting; the trigger sets user, city, keys, the shared chain spelling) and withdraw while open; no updates; the nightly job decides |
 | *function* `place_key` | `spendless.place_key(text)`: how shop and area names compare ("DHA Phase VIII" = "dha ph 8"); whole keys only. Mirrored by `placeKey` in `src/lib/compare/areas.ts` |
-| `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`; one row per store per run (counts, status). A store's listings with the exact same name share one product (priced by the in-stock one, the cheaper if both are) |
+| `store_listings`, `import_runs` | importer only (clients can't read): each store's product id → our product, last price, last checked, `included`, `moved_from` (the product a listing last left, for the nightly `import` merge); one row per store per run (counts, status). A store's listings with the exact same name share one product (priced by the in-stock one, the cheaper if both are) |
 | `reporter_trust` | nightly job only (clients can't read): user_id, weight (0.5–1.2; no row = 1), compared, agreed — from how often a person's prices at shared stores agree with others' (`scripts/seed/reporter-trust.ts`) |
 
 **Compare catalogue (v2)**: `catalog_*`, `price_reports` and `current_prices` replace the
@@ -496,10 +499,10 @@ post-deploy migration drops them.
 | `docs/compare-data.md` | Compare data model, price consensus, anti-spam, regions, data sources |
 | `docs/roadmap.md` | Where the app is heading (global, simple, retention), the UX review of Oct 2026, the PRs planned from it and what's left for later — start here in a new chat |
 | `docs/data-sources.md` | Each imported store: robots.txt, terms checked, method, branch, delivery source; stores not imported and why |
-| `scripts/import/` | Daily price import: `run.ts` (CLI), `sources.ts` (stores, delivery rules, caps, `paused`), `adapters/` (Magento GraphQL, Hydri, Imtiaz menu, Blink product pages), `http.ts` (polite client: honest UA, robots.txt, 1 req/s, stop on a block; redirects followed by hand, each target checked for same site + robots.txt before it's requested), `robots.ts`, `aisles.ts` (what we leave out + aisle → category; pharmacy-typed products left out in any aisle, minus cosmetic look-alikes; mixed aisles decided per product name; `RULES_CHANGED_AT` re-reads listings newly included), `normalize.ts` (name → product + `match_key`), `keys.ts` (re-keys public products no listing keys, e.g. Panda Mart's, before the stores run; fills a missing brand/type from the name, keeps stored ones), `write.sql` (one transaction per store; re-checks each listing's product: key changed → re-match or re-key its own product in place (a blank key clears it), price outside ⅓×–3× of other stores' → held apart, a pack clash — pouch/refill vs jar/bottle/tin in the names — never joins), `db.ts` |
+| `scripts/import/` | Daily price import: `run.ts` (CLI), `sources.ts` (stores, delivery rules, caps, `paused`), `adapters/` (Magento GraphQL, Hydri, Imtiaz menu, Blink product pages), `http.ts` (polite client: honest UA, robots.txt, 1 req/s, stop on a block; redirects followed by hand, each target checked for same site + robots.txt before it's requested), `robots.ts`, `aisles.ts` (what we leave out + aisle → category; pharmacy-typed products left out in any aisle, minus cosmetic look-alikes; mixed aisles decided per product name; `RULES_CHANGED_AT` re-reads listings newly included), `normalize.ts` (name → product + `match_key`: `k2|` + brand id + type + variant key + size + pack + other numbers, the brand's most used spelling stored), `keys.ts` (re-keys public products no listing keys, e.g. Panda Mart's, before the stores run; fills a missing brand/type from the name, keeps stored ones), `write.sql` (one transaction per store; re-checks each listing's product: key changed → re-match or re-key its own product in place (a blank key clears it; a pre-`k2` key is re-keyed in place even when shared), a move records `moved_from`, an undone merge's pair is never joined by key, price outside ⅓×–3× of other stores' → held apart, a pack clash — pouch/refill vs jar/bottle/tin in the names — never joins), `db.ts` |
 | `src/pages/Bot.tsx` | `/bot`: what SpendLessBot does and how to opt out (its user agent links here) |
 | `scripts/seed/promote-store.ts` | Make a private store + its products public (with consent); run via `.github/workflows/catalog-jobs.yml` |
-| `scripts/seed/merge-products.ts` (+ `merge-products.sql` the shared step, `merge-auto.sql`, `merge-pairs.sql`, `merge-list.sql`, `unmerge.sql`) | Duplicate public products: nightly safe merges (exact same name + size, prices within 25%) and junk names retired (a step in `price-import.yml`, variable `PRODUCT_MERGES_PAUSED`); the review list and approved merges (`merge-products`) and undo (`unmerge-product`) in `catalog-jobs.yml`. A merge copies prices (`copy_of`), moves listings, list items and usuals, marks the old product `merged`; rules in `docs/compare-data.md` |
+| `scripts/seed/merge-products.ts` (+ `duplicates.ts`, `merge-candidates.sql`, `unmerge-find.sql`, `merge-products.sql` the shared step, `merge-auto.sql`, `merge-pairs.sql`, `merge-list.sql`, `unmerge.sql`) | Duplicate public products fix themselves nightly (a step in `price-import.yml`, variables `PRODUCT_MERGES_PAUSED`, `PRODUCT_MERGE_MIN_PEOPLE`), no one reviews: undo first (`unmerge-find.sql`: a store lists both, prices drifted apart, people said not the same), then merge `same-name`, `import` (listings moved), `same-key` + same name words (`productName.ts` `nameWords`), `near-name` (a slip, `duplicates.ts`), `reported` (enough people). Optional: the list and picked merges (`merge-products`) and undo (`unmerge-product`) in `catalog-jobs.yml`. A merge copies prices (`copy_of`), moves listings, list items and usuals, marks the old product `merged`; rules in `docs/compare-data.md` |
 | `scripts/seed/add-branches.ts` (+ `add-branches-read.sql`, `add-branches-write.sql`, `branches/<city>.json`) | A city's public in-store branches from a reviewed list (fixed ids; validates, dry run, one transaction; never deletes or touches private/online stores); job `add-branches` in `catalog-jobs.yml` |
 | `src/utils/currency.ts` | 50+ currencies, formatting, default currency from the browser locale |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
@@ -582,9 +585,10 @@ say so and propose a safe alternative.
   `netlify/edge-functions/` (no `netlify.toml`; each declares its own `config.path`).
 - `.github/workflows/catalog-jobs.yml`: manual data jobs on the shared catalogue, picked
   by the `job` input (`add-branches`: a city's in-store branches; `promote-store`: a
-  private store to public; `close-branch`: undo a shared shop; `merge-products`: the
-  likely-duplicates list, or merge the `from>into` pairs given; `unmerge-product`: undo
-  a merge); dry run unless "apply" is ticked.
+  private store to public; `close-branch`: undo a shared shop; `merge-products`
+  (optional): the list of duplicates the nightly rules leave alone, or merge the
+  `from>into` pairs given; `unmerge-product` (optional): undo a merge); dry run unless
+  "apply" is ticked.
 - `.github/workflows/shared-branches.yml`: nightly (02:43 Karachi) suggested shops →
   shared shops (`scripts/seed/promote-suggestions.ts`); manual runs roll back unless
   *apply*. Repo variables `SHARED_BRANCHES_MIN_PEOPLE` (people needed, 2–50) and
@@ -598,9 +602,10 @@ say so and propose a safe alternative.
   `VITE_ONESIGNAL_APP_ID`); manual runs are dry runs unless *send*; repo variable
   `PUSH_REMINDERS_PAUSED` = exactly `true` makes the hourly runs dry runs.
 - `.github/workflows/price-import.yml`: daily store price import (03:17 Karachi), also
-  manual with *source* / *dry run* / *max pages*; then the safe duplicate-product merges
+  manual with *source* / *dry run* / *max pages*; then duplicate products fix themselves
   (`merge-products.ts --auto`, skipped on dry runs; repo variable `PRODUCT_MERGES_PAUSED`
-  = exactly `true` makes it a dry run). Scheduled workflows stop after 60 days
+  = exactly `true` makes it a dry run; `PRODUCT_MERGE_MIN_PEOPLE` = people needed, 2–50,
+  default 3). Scheduled workflows stop after 60 days
   without repo activity — re-enable from the Actions tab.
 - Versions are **CalVer `YYYY.M.N`** from git tags (`N` = release count within the
   month, not the day), injected as `VITE_APP_VERSION` / `VITE_APP_COMMIT`

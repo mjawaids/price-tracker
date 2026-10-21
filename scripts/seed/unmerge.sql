@@ -1,6 +1,7 @@
 -- Undo a merge (Catalog jobs → unmerge-product), run by scripts/seed/merge-products.ts
 -- --undo. One transaction; COMMIT with commit=on, else ROLLBACK (a dry run with the same
--- counts). Variables: product_id (the merged product, validated by the script), commit.
+-- counts). Variables: product_id (the merged product, validated by the script), commit,
+-- reason (why: owner from Catalog jobs, else the nightly evidence; see unmerge-find.sql).
 --
 -- Uses the product's latest merge in product_merges: the product is active again (with
 -- its old match key), and what the merge moved comes back where nothing has changed it
@@ -78,7 +79,7 @@ WITH gone AS (
 )
 SELECT count(*) AS n FROM gone \gset copies_
 
-UPDATE spendless.product_merges x SET undone_at = now() FROM m WHERE x.id = m.id;
+UPDATE spendless.product_merges x SET undone_at = now(), undo_reason = :'reason' FROM m WHERE x.id = m.id;
 
 SELECT json_build_object(
   'product', (SELECT p.name FROM spendless.catalog_products p JOIN m ON p.id = m.from_id),

@@ -1,6 +1,6 @@
 // Match keys for public products that no imported listing keys (see refreshMatchKeys).
 // Run by run.ts before the stores, so listings are matched against current keys.
-import { learnBrands, parseProductName } from '../../src/lib/compare/productName.ts';
+import { brandSpellings, learnBrands, parseProductName } from '../../src/lib/compare/productName.ts';
 import { ITEM_TYPE_BY_ID } from '../../src/lib/compare/itemTypes.ts';
 import { lastJson, runFile, runWithJson } from './db.ts';
 import { matchKey, sizeFields } from './normalize.ts';
@@ -32,9 +32,11 @@ export async function refreshMatchKeys(dbUrl: string): Promise<string> {
   const read = lastJson<{ rows: Row[]; brands: string[] }>(await runFile(dbUrl, 'backfill-read.sql'));
   if (!read.rows.length) return '[keys] nothing to refresh';
   const brands = [...read.brands, ...learnBrands(read.rows.map((r) => r.name))];
+  const spelling = brandSpellings(brands);
   const data = read.rows.map((r) => {
     const parsed = parseProductName(r.name, { categoryHint: r.category, brands: r.brand ? [...brands, r.brand] : brands });
-    const brand = (r.brand ?? parsed.brand)?.slice(0, 60) || null;
+    const found = r.brand ?? parsed.brand;
+    const brand = (found ? spelling(found) : null)?.slice(0, 60) || null;
     const itemType = r.item_type ?? parsed.itemType?.id ?? null;
     const category = r.category ?? (itemType ? (ITEM_TYPE_BY_ID.get(itemType)?.category ?? null) : null);
     const confidence = parsed.confidence + (!parsed.brand && brand ? 0.3 : 0);

@@ -71,6 +71,8 @@ SELECT i.external_id, i.match_key,
   p.created_at AS prev_created,
   -- A product merged into another, or retired (a junk "#N/A" a store has since named), isn't kept.
   coalesce(p.status = 'active', false) AS prev_active,
+  -- A key from before the current format (KEY_VERSION in normalize.ts).
+  coalesce(p.match_key <> '' AND p.match_key NOT LIKE 'k2|%', false) AS prev_legacy,
   coalesce(((i.source_name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M' AND p.name ~* '\m(jar|bottle|btl|tin|can|glass)\M') OR (i.source_name ~* '\m(jar|bottle|btl|tin|can|glass)\M' AND p.name ~* '\m(pouch|refill|stand\s*-?\s*up|standing)\M')), false) AS prev_clash,
   l.product_id IS NOT NULL
     AND NOT EXISTS (SELECT 1 FROM spendless.store_listings x
@@ -100,6 +102,12 @@ LEFT JOIN LATERAL (
   WHERE i.match_key <> '' AND m.owner_id IS NULL AND m.status = 'active'
     AND m.match_key IS NOT NULL AND m.match_key <> '' AND m.match_key = i.match_key
     AND m.id IS DISTINCT FROM l.product_id
+    -- A pair whose merge was undone stays apart.
+    AND NOT EXISTS (
+      SELECT 1 FROM spendless.product_merges u
+      WHERE u.undone_at IS NOT NULL
+        AND ((u.from_id = m.id AND u.into_id = l.product_id) OR (u.from_id = l.product_id AND u.into_id = m.id))
+    )
   ORDER BY 3, m.created_at, m.id
   LIMIT 1
 ) q ON true
@@ -119,6 +127,12 @@ WHERE prev_id IS NOT NULL AND prev_active AND prev_sane AND NOT prev_clash AND (
 --    b. Else the public product with this key, if the price is in line and the pack agrees.
 UPDATE cand SET target = key_id
 WHERE target IS NULL AND key_id IS NOT NULL AND key_free AND key_sane AND NOT key_clash;
+--    b2. Else a product whose key predates the current format takes the new key in
+--       place, even when other stores' listings share it: they read the same name the
+--       new way, so they match it next (a) instead of each moving to a product of its own.
+UPDATE cand SET target = prev_id, rekey = true
+WHERE target IS NULL AND prev_id IS NOT NULL AND prev_active AND prev_sane AND NOT prev_clash
+  AND prev_legacy AND match_key <> '' AND key_id IS NULL;
 --    c. Else a product that is this listing's alone stays, and takes the new key
 --       (none when another product of the same pack already has it).
 UPDATE cand SET target = prev_id, rekey = true
@@ -154,7 +168,8 @@ WHERE included AND product_id = new_product_id
 ORDER BY product_id
 ON CONFLICT (id) DO NOTHING;
 
---    A product that is only this listing's follows what we now read from its name.
+--    A product that is only this listing's (or had a key of the old format) follows
+--    what we now read from its name.
 UPDATE spendless.catalog_products p
 SET name = i.name, brand = i.brand, variant = i.variant, item_type = i.item_type, category = i.category,
     size_value = i.size_value, size_unit = i.size_unit, pack_count = i.pack_count,
@@ -262,6 +277,11 @@ SELECT :'store_id', external_id, product_id, url, source_name, source_category, 
 FROM incoming
 WHERE NOT coalesce(gone, false)
 ON CONFLICT (store_id, external_id) DO UPDATE SET
+  -- Moved to another product: remember the one it left, so the nightly merge job
+  -- (scripts/seed/merge-auto.sql, rule "import") merges it into this one once no
+  -- listing is left on it, carrying its people's prices, list items and usuals along.
+  moved_from = CASE WHEN EXCLUDED.product_id IS NOT NULL AND sl.product_id IS NOT NULL
+                     AND EXCLUDED.product_id <> sl.product_id THEN sl.product_id ELSE sl.moved_from END,
   product_id = coalesce(EXCLUDED.product_id, sl.product_id),
   url = coalesce(EXCLUDED.url, sl.url),
   source_name = EXCLUDED.source_name,

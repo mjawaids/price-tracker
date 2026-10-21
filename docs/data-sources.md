@@ -156,10 +156,22 @@ doesn't affect SpendLess. Worth telling Diamond if we're in touch.
      doesn't keep a key its name no longer gives);
    - else a new public product. One priced unlike the others with its key (a carton
      of 12 listed as "1 Ltr") is held apart, with no key.
+   - else, when the old product's key predates the current format (`k2|…`,
+     `KEY_VERSION` in `normalize.ts`) and no product has the new key, it takes the new
+     key in place, even when other stores share it, so a format change never splits
+     products (the other stores' listings then match it by the first rule).
    - A listing that moves to another product leaves one "out of stock" report on the
-     old one. A product every listing has left, with nothing in stock, loses its key.
-   - `match_key` = brand | item type | variant words | size | pack | the name's other
-     numbers (so "BF1" and "BF2", or "Nido 3+", stay apart).
+     old one, and `store_listings.moved_from` records the product it left. A product
+     every listing has left, with nothing in stock, loses its key; the nightly merge
+     then merges it into where its listings went (rule `import`), so people's prices,
+     list items and usuals follow.
+   - A pair whose merge was undone is never joined again by key.
+   - `match_key` = `k2` | brand id | item type | variant key | size | pack | the name's
+     other numbers (so "BF1" and "BF2", or "Nido 3+", stay apart). The brand id ignores
+     spelling ("Day Fresh" = "Dayfresh" = "DayFresh"); the variant key leaves out words
+     that don't tell products apart ("Flv", "Flavour", "Tetra", "Capped", pack words,
+     "liquid" for milk) and writes synonyms one way ("full fat" = "full cream", "lowfat"
+     = "low fat"). Products store the brand's most used spelling.
    - A listing never joins (or stays on) a product whose name says a different pack:
      pouch, refill or stand-up on one side, jar, bottle or tin on the other (a pickle
      pouch isn't the jar). A name that doesn't say is no clash. Of products sharing a
@@ -191,14 +203,12 @@ doesn't affect SpendLess. Worth telling Diamond if we're in touch.
    last price, when checked), which drives the rolling refresh.
 6. **Duplicate products** (after every store, a separate workflow step:
    `scripts/seed/merge-products.ts --auto`, skipped on dry runs). Matching by key can't
-   catch everything: a name without a size has no key, and old runs left the same item
-   split. Public products with the **exact same name** (case and spaces aside) **and
-   size**, real words in the name, both priced, and median prices **within 25%** of
-   each other are merged: the one with the most store listings (then the oldest) stays,
-   the others become it (listings, lists, usuals and prices follow; see
-   `docs/compare-data.md`). Junk-named products are retired. Anything less certain
-   (same name but prices further apart, the same key at different stores) goes to the
-   review list: *Catalog jobs* → `merge-products` (`docs/deployment.md`).
+   catch everything: a name without a size has no key, stores misspell names, and old
+   runs left the same item split. The step fixes itself with no one reviewing it: it
+   undoes automatic merges later evidence contradicts, then merges same-name products,
+   products every listing left, same-key products whose name words agree, names with a
+   one-letter slip, and pairs enough people reported. Rules, thresholds and what moves:
+   `docs/compare-data.md`, "Duplicate products".
 
 A dry run fetches and parses but never touches the database, and prints counts plus a
 short sample. The GitHub Actions log is public: it shows counts and a few store

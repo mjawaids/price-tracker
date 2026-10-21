@@ -1,6 +1,6 @@
 // A store listing → the catalogue product it describes, plus a match key so the
 // same product from two stores becomes one catalogue row.
-import { parseProductName, tidyName, type ParsedSize } from '../../src/lib/compare/productName.ts';
+import { brandId, brandSpellings, parseProductName, tidyName, variantKey, type ParsedSize } from '../../src/lib/compare/productName.ts';
 import { decideAisle, pharmacyLookalike } from './aisles.ts';
 
 /** What every adapter produces. */
@@ -44,7 +44,6 @@ export interface Normalized {
   product: ProductFields | null;
 }
 
-const key = (s: string) => s.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
 // Sizes, pack counts and price points ("900Gm", "1.5 Ltr", "12 x 250ml", "5Pcs", "Rs 50"), which the key already holds.
@@ -57,15 +56,20 @@ export function nameNumbers(name: string): string {
   return (rest.match(/\d+(?:\.\d+)?/g) ?? []).sort().join(',');
 }
 
+/** The key format's version: write.sql re-keys a product whose key predates it in place. */
+export const KEY_VERSION = 'k2';
+
 /**
  * '' unless we're confident: brand, item type and size all read from the name. The
  * parsed variant drops numbers, so the name's other numbers are part of the key too:
  * two products may only share a key when everything we can read says they're the same.
+ * The brand is its brandId ("Day Fresh" = "Dayfresh") and the variant its variantKey
+ * ("Lactose Free Tetra" = "Lactose Free", "Full Fat" = "Full Cream").
  */
 export function matchKey(p: Omit<ProductFields, 'match_key' | 'name' | 'category'>, confidence: number, name: string): string {
-  if (!p.brand || !p.item_type || !p.size_value || !p.size_unit || confidence < 0.7) return '';
-  const variant = key(p.variant ?? '').split(' ').filter(Boolean).sort().join(' ');
-  return [key(p.brand), p.item_type, variant, `${round3(p.size_value)}${p.size_unit}`, `x${p.pack_count}`, nameNumbers(name)]
+  if (!p.brand || !brandId(p.brand) || !p.item_type || !p.size_value || !p.size_unit || confidence < 0.7) return '';
+  const variant = variantKey(p.variant, p.item_type);
+  return [KEY_VERSION, brandId(p.brand), p.item_type, variant, `${round3(p.size_value)}${p.size_unit}`, `x${p.pack_count}`, nameNumbers(name)]
     .join('|')
     .slice(0, 200);
 }
@@ -89,6 +93,13 @@ const httpsOnly = (u: string | null | undefined) => (u && /^https:\/\/[^\s]+$/i.
 export function placeholderName(name: string): boolean {
   return !/\p{L}.*\p{L}/u.test(name) || /^\s*#?\s*(n\s*\/\s*a|na|nil|null|none|undefined|unknown)\s*$/i.test(name);
 }
+
+// The stored spelling per brand, worked out once per brand list (normalize runs per listing).
+let spellings: { brands: string[]; of: (brand: string) => string } | null = null;
+const spellingOf = (brands: string[]) => {
+  if (spellings?.brands !== brands) spellings = { brands, of: brandSpellings(brands) };
+  return spellings.of;
+};
 
 export function normalize(raw: RawListing, brands: string[]): Normalized | null {
   const name = raw.name.replace(/\s+/g, ' ').trim();
@@ -119,7 +130,9 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   };
   if (!decision.include || base.price == null) return { ...base, included: false, product: null };
 
-  const brand = (parsed.brand ?? storeBrand)?.slice(0, 60) || null;
+  // One spelling per brand: the catalogue's most used one (brands come most used first).
+  const read = parsed.brand ?? storeBrand;
+  const brand = (read ? spellingOf(brands)(read) : null)?.slice(0, 60) || null;
   const fields = {
     brand,
     variant: parsed.variant?.slice(0, 80) || null,

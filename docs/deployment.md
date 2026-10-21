@@ -84,8 +84,10 @@ Pick the job with the *job* input:
   so the nightly job never makes that shop again (`scripts/seed/close-branch.ts`).
   Prices copied to the closed shop stay with it, unseen. The dry run (rolled back)
   prints the same counts.
-- **merge-products** — duplicate products the nightly merge leaves alone (rules in
-  `docs/compare-data.md`, "Duplicate products"; `scripts/seed/merge-products.ts`).
+- **merge-products** — optional: duplicate products merge and unmerge themselves
+  nightly (rules in `docs/compare-data.md`, "Duplicate products";
+  `scripts/seed/merge-products.ts`). This job only lists what the rules leave alone, or
+  merges pairs you pick from that list.
   - With *merges* empty: lists the likely duplicates in the run's summary (read only,
     *apply* ignored): why (same name, or same key; "pack differs" flagged), both names,
     their stores and prices, and a `from>into` pair of ids.
@@ -95,7 +97,8 @@ Pick the job with the *job* input:
 - **unmerge-product** — needs *product_id* (the merged product). Undoes its merge: it is
   its own product again, and its listings, list items and usuals come back where nothing
   changed them since; the prices the merge copied are deleted. The two are kept apart
-  from then on, so the nightly merge never joins them again.
+  from then on, so neither the nightly merge nor the importer joins them again. Optional:
+  the nightly job undoes its own wrong merges on evidence.
 
 ## Shared shops (nightly)
 
@@ -197,13 +200,15 @@ Sources, rules and exclusions are in `docs/data-sources.md`.
   If the import stops, open *Actions → Price import* and click *Enable workflow*.
 - **Stop one store:** remove it from `scripts/import/sources.ts` and merge. Its last
   prices fade by recency; to retire them at once, ask for a one-off job.
-- **Duplicate products:** after the stores, a second step merges the safe duplicates
-  and retires junk names (`scripts/seed/merge-products.ts --auto`; skipped on dry
-  runs). Its summary prints the counts. The repository variable
-  `PRODUCT_MERGES_PAUSED` set to exactly `true` (lowercase; same place as the Shared
-  shops variables above) makes it a dry run only. A wrong merge: *Catalog jobs* →
-  `unmerge-product`; the rest of the likely duplicates: *Catalog jobs* →
-  `merge-products`.
+- **Duplicate products:** after the stores, a second step fixes duplicates on its own
+  (`scripts/seed/merge-products.ts --auto`; skipped on dry runs): it undoes automatic
+  merges that later evidence contradicts, then merges what the rules are sure of and
+  retires junk names. Nobody needs to review anything; its summary prints counts per
+  rule and per undo reason. Repository variables (same place as the Shared shops ones
+  above): `PRODUCT_MERGES_PAUSED` set to exactly `true` (lowercase) makes it a dry run
+  only; `PRODUCT_MERGE_MIN_PEOPLE` (2–50, unset = 3) is how many people must report a
+  pair as the same, or a merge as not the same, before the job acts on it. Optional
+  tools: *Catalog jobs* → `unmerge-product` / `merge-products`.
 
 ## One-time setup
 

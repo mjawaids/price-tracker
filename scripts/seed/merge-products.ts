@@ -1,12 +1,15 @@
 // Duplicate public products: merge them, list the likely ones, or undo a merge.
 //
-//   SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/merge-products.ts --auto [--apply]
-//     The safe merges (same name and size, prices within 25%) and junk names retired.
-//     Runs nightly after the price import (.github/workflows/price-import.yml).
+//   SUPABASE_DB_URL=… node --experimental-strip-types scripts/seed/merge-products.ts --auto [--min-people N] [--apply]
+//     Runs nightly after the price import (.github/workflows/price-import.yml), with no
+//     person reviewing anything: first undoes automatic merges later evidence
+//     contradicts (unmerge-find.sql), then every merge the rules are sure of and junk
+//     names retired (merge-auto.sql; name-checked pairs from duplicates.ts). --min-people
+//     (default 3, 2–50): how many people must agree on a "same" / "not the same" report.
 //   … merge-products.ts --list
-//     The review list: likely duplicates the nightly rule leaves alone. Read only.
+//     Optional diagnostics: likely duplicates the nightly rules leave alone. Read only.
 //   … merge-products.ts --pairs "<from id>><into id> …" [--apply]
-//     Merges the owner approved from that list (at most 50).
+//     Optional: merges the owner picked (at most 50).
 //   … merge-products.ts --undo <product id> [--apply]
 //     Undoes that product's merge and keeps the pair apart from then on.
 //
@@ -17,9 +20,12 @@ import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { psql } from '../import/db.ts';
+import { autoPairs } from './duplicates.ts';
 
 /** Prices "close" for a merge without review: the dearer at most this × the cheaper. */
 const MAX_RATIO = 1.25;
+/** Closer still for a name with a slip in it. */
+const NEAR_RATIO = 1.15;
 const MAX_PAIRS = 50;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -72,10 +78,40 @@ const dry = apply ? '' : ' (dry run — rolled back, nothing written)';
 let lines: string[] = [];
 
 if (mode === 'auto') {
-  const r = await run('merge-auto.sql', { commit, max_ratio: String(MAX_RATIO) });
+  const raw = Number(arg('min-people') ?? '3');
+  if (!Number.isInteger(raw)) fail('--min-people must be a whole number');
+  const minPeople = String(Math.min(50, Math.max(2, raw)));
+  // 1. Undo what later evidence contradicts (each in its own transaction).
+  const found = await run('unmerge-find.sql', { min_people: minPeople });
+  const REASONS = new Set(['store-lists-both', 'prices-apart', 'people']);
+  const undo = ((found.rows ?? []) as { product_id: string; reason: string }[]).filter(
+    (u) => UUID.test(u.product_id) && REASONS.has(u.reason),
+  );
+  const undone = new Map<string, number>();
+  for (const u of undo) {
+    await run('unmerge.sql', { commit, product_id: u.product_id, reason: u.reason });
+    undone.set(u.reason, (undone.get(u.reason) ?? 0) + 1);
+  }
+  // 2. Pairs whose names agree (duplicates.ts), then every rule in one transaction.
+  const c = await run('merge-candidates.sql', {});
+  const pairs = autoPairs(
+    (c.products ?? []) as [string, string, string, string | null][],
+    (c.moved ?? []) as [string, string, string, string | null, string, string | null][],
+  );
+  const r = await run(
+    'merge-auto.sql',
+    { commit, max_ratio: String(MAX_RATIO), near_ratio: String(NEAR_RATIO), min_people: minPeople },
+    { name: 'auto.json', data: pairs },
+  );
+  const byRule = (r.by_rule ?? {}) as Record<string, number>;
+  const RULES: [string, string][] = [
+    ['same-name', 'same name'], ['import', 'listings moved'], ['same-key', 'same key'],
+    ['near-name', 'a one-letter slip'], ['reported', 'people said so'],
+  ];
   lines = [
     `Duplicate products${dry}`,
-    `Merged (same name and size, prices within ${Math.round((MAX_RATIO - 1) * 100)}%): ${n(r.merged)} · junk names retired: ${n(r.retired)}`,
+    `Undone first: ${undo.length}${undo.length ? ` (${[...undone].map(([k, v]) => `${k} ${v}`).join(' · ')})` : ''}`,
+    `Merged: ${n(r.merged)} (${RULES.map(([k, label]) => `${label} ${n(byRule[k])}`).join(' · ')}) · junk names retired: ${n(r.retired)}`,
     `Moved: ${n(r.listings)} store listings · ${n(r.items)} list items · ${n(r.preferences)} usuals · prices copied: ${n(r.copies)} · marked out of stock: ${n(r.marked)}`,
   ];
 } else if (mode === 'list') {
@@ -138,7 +174,7 @@ if (mode === 'auto') {
 } else {
   const id = (arg('undo') ?? '').trim().toLowerCase();
   if (!UUID.test(id)) fail('--undo needs the merged product id (uuid)');
-  const r = await run('unmerge.sql', { commit, product_id: id });
+  const r = await run('unmerge.sql', { commit, product_id: id, reason: 'owner' });
   lines = [
     `Undo a merge${dry}`,
     `${r.product} is its own product again (it had been merged into ${r.was_merged_into}); the two are kept apart from now on.`,

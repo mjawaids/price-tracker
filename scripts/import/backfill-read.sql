@@ -24,9 +24,9 @@ SELECT json_build_object(
   ), '[]'::json),
   -- The same brands read.sql gives the importer.
   'brands', (
-    SELECT coalesce(json_agg(b.brand), '[]'::json)
+    SELECT coalesce(json_agg(b.brand ORDER BY b.n DESC, b.brand), '[]'::json)
     FROM (
-      SELECT p.brand
+      SELECT p.brand, count(*) AS n
       FROM spendless.catalog_products p
       WHERE p.owner_id IS NULL AND p.status = 'active' AND p.brand IS NOT NULL AND char_length(p.brand) BETWEEN 2 AND 40
       GROUP BY p.brand

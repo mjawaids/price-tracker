@@ -349,7 +349,7 @@ scripts/
 ├── seed/promote-suggestions.ts # Nightly: suggested shops become shared, people's shops move in ("Shared shops")
 ├── seed/close-branch.ts    # Undo a shared shop: close it, give people their own shop back ("Catalog jobs")
 ├── seed/reporter-trust.ts  # Nightly: each person's price weight from how often they agree with others ("Reporter trust")
-├── seed/merge-products.ts  # Duplicate products: nightly safe merges after the import; review list, approved merges, undo ("Catalog jobs")
+├── seed/merge-products.ts  # Duplicate products: nightly self-correcting merges and undos after the import (+ duplicates.ts); optional list / merge / undo ("Catalog jobs")
 ├── push/reminders.ts       # Hourly: still-to-buy reminders (claim.sql picks who's due, record.sql logs it; "Push reminders")
 └── import/                 # Daily store price import: run.ts, sources.ts, adapters/, polite http + robots.txt, write.sql
 supabase/migrations/        # Pre-deploy (additive) migrations — schema: spendless

@@ -6,7 +6,7 @@
 import { normalizeName } from '../groceryDictionary.ts';
 import { ITEM_TYPE_BY_ID, matchItemType, tokens, typeFamily } from './itemTypes.ts';
 import type { ItemType } from './itemTypes.ts';
-import { KNOWN_BRANDS, brandId, parseProductName, variantKey } from './productName.ts';
+import { KNOWN_BRANDS, brandId, nameWords, parseProductName, variantKey } from './productName.ts';
 import type { ParsedSize } from './productName.ts';
 import { packsNeeded, productSize, similarSize, totalAmount } from './units.ts';
 import type { LineOption } from './optimizer.ts';
@@ -129,14 +129,14 @@ export function canonicalOf(products: Map<string, CatalogProduct>, id: string): 
  * Products that are the same thing sold under slightly different names at
  * different stores ("Haleeb Asli Milk 1000ml" / "Haleeb Asli Milk 1 Ltr",
  * "Day Fresh Milk Lactose Free 200ml" / "Dayfresh Milk Lactose Free 200ml Tetra")
- * share this key: brand (however it's spelled), type, total size and the words
- * that tell variants apart (`variantKey`). Null (never grouped) without a brand,
- * type and size to compare.
+ * share this key: brand (however it's spelled), type, total size and what the name
+ * says (`nameWords`: "Shan Ginger Paste" and "Shan Garlic Paste" stay apart). Null
+ * (never grouped) without a brand, type and size to compare.
  */
 export function sameProductKey(p: ProductProfile): string | null {
   if (!p.brandKey || !p.itemType || !p.size) return null;
-  const variant = variantKey(p.product.variant, p.itemType);
-  return `${p.brandKey}|${p.itemType}|${totalAmount(p.size)}${p.size.unit}|${variant}`;
+  const words = nameWords(p.product.name, [p.brand]).join(' ');
+  return `${p.brandKey}|${p.itemType}|${totalAmount(p.size)}${p.size.unit}|${words}`;
 }
 
 /** A product the item or usual names, following merges. */
