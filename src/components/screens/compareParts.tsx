@@ -78,6 +78,52 @@ export function ProductRow({
   );
 }
 
+/** A product with its cheapest price at any store in the city, and how many stores have it (Prices, search). */
+export function PriceRow({ product, onClick }: { product: CatalogProduct; onClick?: () => void }) {
+  const compare = useCompare();
+  const priced = usePriced();
+  const offers = priced(product.id, true);
+  const best = offers[0];
+  const size = productSizeText(product);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-3 text-left rounded-[16px] bg-surface shadow-[inset_0_0_0_1.5px_var(--line)]"
+      style={{ padding: 12, minHeight: 64 }}
+    >
+      <Thumb product={product} size={44} radius={12} label={false} />
+      <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <span className="font-bold text-[15px] leading-snug line-clamp-2">
+          {product.name}
+          {size && !product.name.toLowerCase().replace(/\s+/g, '').includes(size.toLowerCase().replace(/\s+/g, '')) && (
+            <span className="font-semibold text-ink-soft"> · {size}</span>
+          )}
+        </span>
+        <span className="text-[12.5px] text-ink-soft line-clamp-2">
+          {best ? (
+            <>
+              {offers.length > 1 ? 'Cheapest at ' : 'At '}
+              {splitStoreName(best.store.name).filter(Boolean).join(', ')} · {offers.length} {offers.length === 1 ? 'store' : 'stores'}
+            </>
+          ) : (
+            'No price yet'
+          )}
+        </span>
+      </span>
+      {best && (
+        <span className="shrink-0 flex flex-col items-end gap-1 text-right">
+          <span className="flex flex-col items-end leading-none">
+            {offers.length > 1 && <span className="text-[11px] font-semibold text-ink-soft mb-0.5">from</span>}
+            <span className="font-mono font-bold text-[18px] tracking-[-0.02em] text-ink">{compare.fmt(best.price.price!)}</span>
+          </span>
+          <AgeChip observedAt={best.price.observedAt} />
+        </span>
+      )}
+    </button>
+  );
+}
+
 /**
  * A store's name with its kind dot. A shared shop's area ("Imtiaz · DHA Phase 6") goes
  * on its own line, since the area is what tells branches apart; long names wrap.

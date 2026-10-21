@@ -58,7 +58,8 @@ The app has two sections: **Lists** (the default) and **Compare**.
   branch) as a shared one. When enough people who shop there suggest it, it becomes a
   shared shop overnight and your own copy moves into it, prices included (never with
   your name)
-- **Prices** (search, browse by aisle, your usuals), **Stores** (choose the ones you shop
+- **Prices** (the cheapest price for each product in your city and how many stores
+  have it; search, filter by aisle), **Stores** (choose the ones you shop
   at, branches grouped by chain, add your own) and **Contribute** (add a price, add a
   product, add a receipt)
 - **Add a receipt**: a whole shop's prices in one go from order screenshots, a PDF

@@ -4,52 +4,47 @@ import { useCompare } from '../../contexts/CompareContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { CATEGORIES, resolveCategory } from '../../lib/categories';
 import { Btn, Chip, Icon } from '../ui';
-import { CompareNotice, ProductRow } from './compareParts';
+import { CompareNotice, PriceRow } from './compareParts';
 import { sectionLabel, usePriced } from './compareHelpers';
 import { RegionSheet } from './compareSheets';
 import { SharedShopNotice } from './suggestSheet';
 
-const MAX_AISLE = 60;
+const MAX_SHOWN = 60;
 const aisleOf = (category: string | null) => resolveCategory(category ?? undefined).id;
 
-/** Compare home: savings, search, your usuals, browse by aisle. */
+/** Compare home: what things cost in your city — the cheapest price for each product and how many stores have it. */
 export default function PricesScreen() {
   const app = useApp();
   const compare = useCompare();
   const priced = usePriced();
   const { compact } = useBreakpoint();
+  // null = All aisles.
   const [aisle, setAisle] = useState<string | null>(null);
   const [cityOpen, setCityOpen] = useState(false);
   const pad = compact ? '0 16px' : '0 28px';
+  const city = compare.region?.name;
 
-  // Products priced at your stores (not by a price people say is wrong), per canonical category.
-  const pricedProducts = useMemo(() => {
-    const considered = new Set(compare.consideredStores.map((s) => s.id));
-    return compare.products.filter(
-      (p) => p.status === 'active' && compare.pricesFor(p.id).some((x) => considered.has(x.storeId) && x.isAvailable && x.price && !x.disputed),
-    );
-    // pricesFor reads the latest prices.
+  // Products with a price at any store in the city (not a price people say is wrong),
+  // the ones most stores carry first.
+  const pricedProducts = useMemo(
+    () =>
+      compare.products
+        .filter((p) => p.status === 'active')
+        .map((p) => ({ p, stores: priced(p.id, true).length }))
+        .filter((x) => x.stores > 0)
+        .sort((a, b) => b.stores - a.stores || a.p.name.localeCompare(b.p.name))
+        .map((x) => x.p),
+    // priced reads the latest prices.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compare.products, compare.consideredStores, compare.resolveContext]);
+    [compare.products, compare.resolveContext],
+  );
   const aisles = useMemo(() => {
     const present = new Set(pricedProducts.map((p) => aisleOf(p.category)));
     return CATEGORIES.filter((c) => present.has(c.id));
   }, [pricedProducts]);
-  const inAisle = useMemo(
-    () => (aisle ? pricedProducts.filter((p) => aisleOf(p.category) === aisle).slice(0, MAX_AISLE) : []),
+  const shown = useMemo(
+    () => (aisle ? pricedProducts.filter((p) => aisleOf(p.category) === aisle) : pricedProducts).slice(0, MAX_SHOWN),
     [aisle, pricedProducts],
-  );
-
-  const usuals = useMemo(
-    () =>
-      [...compare.preferences.values()]
-        .map((pref) => (pref.refProductId ? compare.productById(pref.refProductId) : undefined))
-        .filter((p): p is NonNullable<typeof p> => p?.status === 'active')
-        .filter((p, i, all) => all.findIndex((o) => o.id === p.id) === i)
-        .slice(0, 8),
-    // productById reads the latest catalogue.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [compare.preferences, compare.products],
   );
 
   return (
@@ -58,11 +53,12 @@ export default function PricesScreen() {
         <div className="min-w-0">
           <button type="button" onClick={() => setCityOpen(true)} className="inline-flex items-center gap-1 font-mono text-[11px] tracking-[0.14em] uppercase text-ink-soft" style={{ minHeight: 32 }}>
             <Icon name="pin" size={13} stroke={2.2} />
-            {compare.region?.name ?? (compare.regionChosen ? 'Your city' : 'Choose your city')}
+            {city ?? (compare.regionChosen ? 'Your city' : 'Choose your city')}
           </button>
           <h1 className="m-0 font-display font-extrabold tracking-[-0.02em]" style={{ fontSize: compact ? 28 : 32 }}>
             Prices
           </h1>
+          <p className="m-0 mt-1 text-[14px] text-ink-soft">The cheapest price for each product, and how many stores have it.</p>
         </div>
         {compare.refreshing && <span className="text-[12.5px] text-ink-soft font-semibold">Updating…</span>}
       </header>
@@ -73,22 +69,9 @@ export default function PricesScreen() {
         {compare.regionChosen && !compare.isLive && (
           <CompareNotice
             icon="globe"
-            title={`Compare isn’t live in ${compare.region?.name ?? 'your city'} yet`}
+            title={`Compare isn’t live in ${city ?? 'your city'} yet`}
             body="Add the stores you shop at and the prices you see — Where to buy works for you right away, and helps bring shared prices to your city."
           />
-        )}
-
-        {compare.plansThisMonth > 0 && (
-          <div className="bg-ink text-paper rounded-[22px] flex items-center gap-4" style={{ padding: '16px 18px' }}>
-            <div className="flex-1">
-              <div className="font-mono text-[11px] tracking-[0.14em] uppercase opacity-70">Saved this month</div>
-              <div className="font-mono text-[30px] font-bold tracking-[-0.03em] mt-0.5">{compare.fmt(compare.savedThisMonth)}</div>
-              <div className="text-[13px] opacity-75">
-                across {compare.plansThisMonth} {compare.plansThisMonth === 1 ? 'plan' : 'plans'}
-              </div>
-            </div>
-            <Icon name="spark" size={30} stroke={1.8} />
-          </div>
         )}
 
         <button
@@ -112,7 +95,7 @@ export default function PricesScreen() {
             <span className="grid place-items-center bg-accent-wash text-accent-ink mb-2" style={{ width: 72, height: 72, borderRadius: 22 }}>
               <Icon name="tag" size={32} stroke={2} />
             </span>
-            <h2 className="m-0 font-display font-extrabold text-[20px]">No prices at your stores yet</h2>
+            <h2 className="m-0 font-display font-extrabold text-[20px]">{city ? `No prices in ${city} yet` : 'No prices yet'}</h2>
             <p className="m-0 max-w-[300px] text-[14.5px] leading-relaxed text-ink-soft">
               {compare.consideredStores.length
                 ? 'Add a price you’ve seen — it takes a few seconds and makes Where to buy work.'
@@ -123,62 +106,32 @@ export default function PricesScreen() {
             </Btn>
           </div>
         ) : (
-          <>
-            {usuals.length > 0 && (
-              <section className="flex flex-col gap-2" aria-labelledby="usuals">
-                <h2 id="usuals" className={`m-0 ${sectionLabel}`}>
-                  Your usuals, cheapest now
-                </h2>
-                <div className="flex flex-col gap-2">
-                  {usuals.map((p) => {
-                    const offers = priced(p.id);
-                    return (
-                      <ProductRow
-                        key={p.id}
-                        product={p}
-                        onClick={() => app.go('detail', { id: p.id })}
-                        trailing={
-                          offers.length > 1 ? (
-                            <span className="text-[12px] text-ink-soft shrink-0 text-right">
-                              up to
-                              <br />
-                              <span className="font-mono font-bold">{compare.fmt(offers[offers.length - 1].price.price!)}</span>
-                            </span>
-                          ) : undefined
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            <section className="flex flex-col gap-2.5" aria-labelledby="aisles">
-              <h2 id="aisles" className={`m-0 ${sectionLabel}`}>
-                Browse by aisle
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {aisles.map((c) => (
-                  <Chip key={c.id} active={aisle === c.id} onClick={() => setAisle((cur) => (cur === c.id ? null : c.id))}>
-                    {c.name}
-                  </Chip>
-                ))}
-              </div>
-              {aisle && (
-                <div className="flex flex-col gap-2 mt-1">
-                  {inAisle.map((p) => (
-                    <ProductRow key={p.id} product={p} onClick={() => app.go('detail', { id: p.id })} />
-                  ))}
-                  {inAisle.length === MAX_AISLE && <div className="text-[13px] text-ink-soft text-center py-2">Search to find more.</div>}
-                </div>
-              )}
-            </section>
-          </>
+          <section className="flex flex-col gap-2.5" aria-labelledby="price-list">
+            <h2 id="price-list" className={`m-0 ${sectionLabel}`}>
+              {city ? `Prices in ${city}` : 'Prices'}
+            </h2>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by aisle">
+              <Chip active={aisle === null} onClick={() => setAisle(null)}>
+                All
+              </Chip>
+              {aisles.map((c) => (
+                <Chip key={c.id} active={aisle === c.id} onClick={() => setAisle((cur) => (cur === c.id ? null : c.id))}>
+                  {c.name}
+                </Chip>
+              ))}
+            </div>
+            <div className="flex flex-col gap-2 mt-1">
+              {shown.map((p) => (
+                <PriceRow key={p.id} product={p} onClick={() => app.go('detail', { id: p.id })} />
+              ))}
+              {shown.length === MAX_SHOWN && <div className="text-[13px] text-ink-soft text-center py-2">Search to find more.</div>}
+            </div>
+          </section>
         )}
 
         <div className="flex items-center gap-3 rounded-[18px] bg-accent-wash" style={{ padding: 14 }}>
           <span className="flex-1 text-[14px] leading-relaxed">
-            <strong>Spotted a price?</strong> Add it in a few taps{compare.isLive ? ` — it helps everyone in ${compare.region?.name}` : ''}.
+            <strong>Spotted a price?</strong> Add it in a few taps{compare.isLive ? ` — it helps everyone in ${city}` : ''}.
           </span>
           <Btn size="sm" onClick={() => app.tab('contribute')}>
             Add price

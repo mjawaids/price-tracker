@@ -65,7 +65,7 @@ Context-based (no Redux). Providers in `src/contexts/`:
   current prices with the user's own newer reports overlaid; merged and retired products
   are kept but hidden, `productById` / `canonicalId` read a merged id as the product it
   became, and the refresh loads the products merges lead to), "my stores", usuals
-  (`item_preferences`), plans this month; `consideredStores` (what Where to buy and "your
+  (`item_preferences`); `consideredStores` (what Where to buy and "your
   stores" prices use: the picks, else `defaultStoreIds` = active stores minus shared
   in-store branches, i.e. online stores + the user's own; a branch counts once picked,
   or once the user's own shop moved into it);
@@ -476,7 +476,7 @@ post-deploy migration drops them.
 | `public/share-target-sw.js`, `src/components/shell/SharedReceiptSheet.tsx` | Share to SpendLess: the service-worker handler for the manifest's `share_target` (`POST /share-receipt` → Cache Storage inbox → `/?share=receipt`) and the "Read this receipt?" sheet |
 | `src/components/screens/ReceiptScreen.tsx` | Add a receipt (+ `receiptParts.tsx`, `receiptSheets.tsx` for the reader download, paste, date, store, product and line sheets, `receiptHelpers.ts` for the review rows, store guess and save) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
-| `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home, product search, product page (*Add to list* pins the product; *Wrong price?* on shared stores' prices; disputed prices listed last with a warning; your held price "Only you for now") |
+| `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home (prices in the user's city: each product's cheapest price at any store and how many stores have it, `PriceRow` in `compareParts.tsx`; aisle chips with *All*), product search (same rows), product page (*Add to list* pins the product; *Wrong price?* on shared stores' prices; disputed prices listed last with a warning; your held price "Only you for now") |
 | `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Your contributions card and the Add a receipt entry), your own products |
 | `src/components/screens/ContributionsScreen.tsx` (+ `contributionHelpers.ts`) | Your contributions: totals (`my_contributions`, `useContributionStats` also used by Contribute and Profile), recent prices by day and store with status chips, Show older, Remove (asks first); offline / failed: this device's last 30 days |
 | `src/components/screens/priceCheck.tsx`, `priceCheckHelpers.ts`, `src/lib/compare/priceQueue.ts`, `checkState.ts` | Price checks while shopping: "What did it cost?" and "Done at <store>" sheets; which item to ask about and the messages; answers kept offline; answered / *Not now* state |

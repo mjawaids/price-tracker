@@ -228,8 +228,10 @@ service worker.
 
 - [ ] With Compare prices on, the tab bar shows **Lists · Compare · Profile**; Compare has Prices · Stores ·
       Contribute (desktop: sidebar items + a top bar with search and the city).
-- [ ] Prices: search, browse by aisle, your usuals; a product page shows prices at your
-      stores and other stores with unit prices and how old each price is.
+- [ ] Prices opens on a list of products (aisle chip *All* selected, other aisles filter it): each row
+      shows the cheapest price in the city in large figures ("from" when 2+ stores), where, how many
+      stores have it, and how old the price is; search results use the same rows. A product page shows
+      prices at your stores and other stores with unit prices and how old each price is.
 - [ ] Product page → **Add to list** adds it to the active list with that product pinned;
       adding it again bumps the quantity.
 - [ ] Stores: choose your city; *Choose* picks the stores to compare (left as it is = the

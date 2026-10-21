@@ -79,8 +79,6 @@ interface CompareApi {
   resolveContext: ResolveContext;
   planFor: (items: ListItem[]) => PlanResult;
   recordPlan: (p: { listId: string; total: number; baselineTotal: number | null; savings: number; storeCount: number; itemCount: number }) => void;
-  savedThisMonth: number;
-  plansThisMonth: number;
   /** Prices this user added in the last 30 days (a shop's moved prices count once). */
   recentReports: number;
   /** Shops the user suggested as shared ones, newest first. */
@@ -559,8 +557,6 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [resolveContext, consideredStores],
   );
 
-  const savedThisMonth = useMemo(() => snap.plans.reduce((a, p) => a + p.savings, 0), [snap.plans]);
-
   // ── Writes ──────────────────────────────────────────────────────────────────
   const setMyStores = useCallback(
     async (ids: string[]) => {
@@ -999,8 +995,6 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     resolveContext,
     planFor,
     recordPlan,
-    savedThisMonth,
-    plansThisMonth: snap.plans.length,
     // Not at a closed shop (a shop that became shared has its prices there and here),
     // nor on a merged product (its prices were copied onto the one it became).
     recentReports: snap.ownReports.filter((r) => storeMap.get(r.storeId)?.status !== 'closed' && productMap.get(r.productId)?.status !== 'merged').length,
