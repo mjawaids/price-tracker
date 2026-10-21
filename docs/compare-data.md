@@ -212,7 +212,9 @@ What a merge of `from` into `into` does:
 - `from` is marked `merged` with `merged_into`, and `product_merges` records it.
 
 An undo puts back what moved where nothing has changed it since, deletes the copied
-prices and keeps the pair apart. The nightly rules skip the pair, and so does the
+prices and keeps the pair apart. In people's usuals only the merged product goes back
+(into its old place in the list, or added back when the merge had folded it into the
+other), so anything they added or changed since the merge stays. The nightly rules skip the pair, and so does the
 importer's key match (only people's newer reports can join a pair people split).
 
 Anything still carrying a merged id lands on the product it became: the triggers on

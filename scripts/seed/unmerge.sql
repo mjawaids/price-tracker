@@ -1,13 +1,15 @@
--- Undo a merge (Catalog jobs → unmerge-product), run by scripts/seed/merge-products.ts
--- --undo. One transaction; COMMIT with commit=on, else ROLLBACK (a dry run with the same
--- counts). Variables: product_id (the merged product, validated by the script), commit,
--- reason (why: owner from Catalog jobs, else the nightly evidence; see unmerge-find.sql).
+-- Undo a merge, run by scripts/seed/merge-products.ts: --undo (Catalog jobs →
+-- unmerge-product) or, on evidence, the nightly --auto (unmerge-find.sql). One
+-- transaction; COMMIT with commit=on, else ROLLBACK (a dry run with the same counts).
+-- Variables: product_id (the merged product, validated by the script), commit, reason
+-- (why: owner from Catalog jobs, else the nightly evidence; see unmerge-find.sql).
 --
 -- Uses the product's latest merge in product_merges: the product is active again (with
 -- its old match key), and what the merge moved comes back where nothing has changed it
--- since — store listings, list items, usuals, products merged into it before. The
--- prices the merge copied are deleted (people's current prices refresh). The pair is
--- then kept apart: the nightly rule never merges it again.
+-- since — store listings, list items, products merged into it before; in usuals only
+-- the merged product itself goes back, so later edits stay. The prices the merge copied
+-- are deleted (people's current prices refresh). The pair is then kept apart: the
+-- nightly rules and the importer never join it again.
 \set ON_ERROR_STOP on
 BEGIN;
 SELECT pg_advisory_xact_lock(hashtext('spendless-price-import')) \gset lock_
@@ -59,14 +61,29 @@ WITH back AS (
 )
 SELECT count(*) AS n FROM back \gset items_
 
--- Usuals: back to what they were, unless the person changed them since.
-WITH back AS (
+-- Usuals: only the merged product goes back; anything the person changed since stays.
+-- The reference returns to it if it was the reference before and still points at the
+-- product it became. In the list, it takes back the place of the product it became
+-- (only it was there before), or is added back (both were, and the merge left one).
+WITH snap AS (
+  SELECT f.id, m.from_id, m.now_id,
+    nullif(e->>'ref', '')::uuid AS ref_before,
+    ARRAY(SELECT jsonb_array_elements_text(coalesce(e->'ids', '[]'::jsonb))::uuid) AS ids_before
+  FROM m
+  CROSS JOIN LATERAL jsonb_array_elements(m.moved->'prefs') e
+  JOIN spendless.item_preferences f ON f.id = (e->>'id')::uuid
+), back AS (
   UPDATE spendless.item_preferences f
-  SET ref_product_id = nullif(e->>'ref', '')::uuid,
-      product_ids = ARRAY(SELECT jsonb_array_elements_text(coalesce(e->'ids', '[]'::jsonb))::uuid)
-  FROM m, jsonb_array_elements(m.moved->'prefs') e
-  WHERE f.id = (e->>'id')::uuid
-    AND (f.ref_product_id = m.now_id OR m.now_id = ANY (f.product_ids))
+  SET ref_product_id = CASE WHEN f.ref_product_id = s.now_id AND s.ref_before = s.from_id THEN s.from_id ELSE f.ref_product_id END,
+      product_ids = CASE
+        WHEN NOT (s.from_id = ANY (s.ids_before)) OR s.from_id = ANY (f.product_ids) THEN f.product_ids
+        WHEN s.now_id = ANY (s.ids_before) THEN
+          CASE WHEN cardinality(f.product_ids) < 50 THEN f.product_ids || s.from_id ELSE f.product_ids END
+        ELSE array_replace(f.product_ids, s.now_id, s.from_id)
+      END
+  FROM snap s
+  WHERE f.id = s.id
+    AND (f.ref_product_id = s.now_id OR s.now_id = ANY (f.product_ids))
   RETURNING 1
 )
 SELECT count(*) AS n FROM back \gset prefs_

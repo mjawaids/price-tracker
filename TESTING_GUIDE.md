@@ -418,6 +418,9 @@ Against a local copy of the schema (all migrations), with generic test data.
       "not the same" against three "same" → undone (`people`); the next night nothing
       re-merges it; five new "same" reports made after the split → merged again. A pair
       split for `store-lists-both` stays apart whatever people say.
+- [ ] Undo keeps later edits to usuals: a usual with [B, C] (reference B) and one with
+      [B, A]; merge B into A; add D to both; undo → [B, C, D] (reference B) and
+      [A, D, B]. A usual that no longer has A is left as it is.
 - [ ] Undo on evidence: with merges a day old, a store listing both sides under
       different names → undone (`store-lists-both`); three contributors saying *Not the
       same* (and none saying same) → undone (`people`). The next `--auto` doesn't merge
