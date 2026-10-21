@@ -10,7 +10,9 @@
 --    a merge was undone (undo_reason).
 -- 3. duplicate_reports: a person says two shared products are the same ('same') or that
 --    a merged one isn't ('not_same'). Clients add, read and withdraw only their own; the
---    nightly job counts them.
+--    nightly job counts them. Withdrawing marks the row (withdrawn_at) instead of deleting
+--    it, so every submission counts toward the daily cap: withdraw-and-resubmit can't
+--    get around it.
 -- No SECURITY DEFINER: the trigger runs as the signed-in user, under RLS.
 
 -- ── 1. Listings that moved ───────────────────────────────────────────────────
@@ -43,12 +45,16 @@ CREATE TABLE IF NOT EXISTS spendless.duplicate_reports (
   product_id uuid NOT NULL REFERENCES spendless.catalog_products(id) ON DELETE CASCADE,
   other_id uuid NOT NULL REFERENCES spendless.catalog_products(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now(),
+  -- Set when the person takes the report back (Undo). The row stays, and keeps counting
+  -- toward their daily cap; the nightly job ignores it.
+  withdrawn_at timestamptz,
   CONSTRAINT duplicate_reports_two_products CHECK (product_id <> other_id)
 );
 
--- One report per person per pair and kind, whichever way round.
+-- One live report per person per pair and kind, whichever way round.
 CREATE UNIQUE INDEX IF NOT EXISTS duplicate_reports_pair_idx ON spendless.duplicate_reports
-  (user_id, kind, least(product_id, other_id), greatest(product_id, other_id));
+  (user_id, kind, least(product_id, other_id), greatest(product_id, other_id))
+  WHERE withdrawn_at IS NULL;
 CREATE INDEX IF NOT EXISTS duplicate_reports_pair_count_idx ON spendless.duplicate_reports
   (kind, least(product_id, other_id), greatest(product_id, other_id));
 CREATE INDEX IF NOT EXISTS duplicate_reports_user_idx ON spendless.duplicate_reports(user_id, created_at);
@@ -67,7 +73,9 @@ BEGIN
   END IF;
   NEW.user_id := uid;
   NEW.created_at := now();
-  -- One at a time per user, so the daily cap can't be raced.
+  NEW.withdrawn_at := NULL;
+  -- One at a time per user, so the daily cap can't be raced. Every submission in the
+  -- last day counts, withdrawn ones too.
   PERFORM pg_advisory_xact_lock(hashtextextended('spendless.duplicate_reports:' || uid::text, 0));
   IF (SELECT count(*) FROM spendless.duplicate_reports d
       WHERE d.user_id = uid AND d.created_at > now() - interval '1 day') >= 30 THEN
@@ -107,10 +115,19 @@ CREATE POLICY "Report own duplicates"
     )
   );
 
+-- Withdraw = set withdrawn_at on your own live report (the only column clients may
+-- update); never un-withdraw, never delete.
 DROP POLICY IF EXISTS "Withdraw own duplicate reports" ON spendless.duplicate_reports;
 CREATE POLICY "Withdraw own duplicate reports"
-  ON spendless.duplicate_reports FOR DELETE TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+  ON spendless.duplicate_reports FOR UPDATE TO authenticated
+  USING (user_id = (SELECT auth.uid()) AND withdrawn_at IS NULL)
+  WITH CHECK (user_id = (SELECT auth.uid()) AND withdrawn_at IS NOT NULL);
 
-GRANT ALL ON spendless.duplicate_reports TO anon, authenticated, service_role;
+-- Clients: read; add (kind and the pair; the rest is defaults and the trigger); set
+-- withdrawn_at. No delete.
+REVOKE ALL ON spendless.duplicate_reports FROM anon, authenticated;
+GRANT SELECT ON spendless.duplicate_reports TO authenticated;
+GRANT INSERT (kind, product_id, other_id) ON spendless.duplicate_reports TO authenticated;
+GRANT UPDATE (withdrawn_at) ON spendless.duplicate_reports TO authenticated;
+GRANT ALL ON spendless.duplicate_reports TO service_role;
 REVOKE ALL ON FUNCTION spendless.duplicate_reports_before_insert() FROM PUBLIC, anon, authenticated;

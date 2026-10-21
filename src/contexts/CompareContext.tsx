@@ -889,7 +889,7 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const withdrawDuplicate = useCallback<CompareApi['withdrawDuplicate']>(async (id) => {
-    const deleted = await guard('Withdrawing a duplicate report', () => api.deleteDuplicateReport(id));
+    const deleted = await guard('Withdrawing a duplicate report', () => api.withdrawDuplicateReport(id));
     if (deleted) track('duplicate_withdrawn');
     return !!deleted;
   }, []);

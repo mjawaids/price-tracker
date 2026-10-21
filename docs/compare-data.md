@@ -30,7 +30,7 @@ from people's own entries, and from receipts. Shared prices are live in
 | `import_runs` | One row per store per import run: counts and a short status code | Importer only; clients can't read it |
 | `reporter_trust` | How much each person's prices count: `weight` 0.5–1.2 (no row = 1), `compared`, `agreed` (see "Reporter trust") | The nightly job only; clients can't read it |
 | `product_merges` | One row per product merge: `from_id` → `into_id`, `rule` (`same-name`, `import`, `same-key`, `near-name`, `reported` nightly; `approved` by the owner), `moved` (what moved, for undo), `undone_at` (an undone merge keeps that pair apart), `undo_reason` (`store-lists-both`, `prices-apart`, `people`, `owner`) | The merge script only; clients can't read it |
-| `duplicate_reports` | A person says two shared products are one (`kind = 'same'`) or that a merged one isn't (`'not_same'`): `user_id`, `product_id`, `other_id`; one per person per pair and kind | Owner adds (30 a day), reads and withdraws their own; the nightly job counts them |
+| `duplicate_reports` | A person says two shared products are one (`kind = 'same'`) or that a merged one isn't (`'not_same'`): `user_id`, `product_id`, `other_id`, `withdrawn_at`; one live report per person per pair and kind | Owner adds (30 submissions a day, withdrawn ones included), reads, and withdraws their own (marks `withdrawn_at`; no delete); the nightly job counts live ones |
 | `list_items` (+cols) | `plan_store_id`, `plan_product_id`, `plan_price`; `product_id` = product pinned on the item | Owner (synced offline like the rest of the list) |
 
 Everything a user creates is **private** unless it's explicitly promoted to public —
@@ -187,8 +187,11 @@ are in the rules (`scripts/seed/duplicate-votes.sql`, shared by the merge and th
   by the owner is for good.
 - **Even then, nothing that reads as different merges**: a reported pair still needs the
   same size, brand and type and prices that agree (above).
-- One report per person per pair and kind; at most 30 a day; people read and withdraw
-  only their own.
+- One live report per person per pair and kind; at most 30 submissions a day, and a
+  withdrawn report still counts toward that (*Undo* marks it `withdrawn_at`, never deletes
+  it), so withdrawing and resubmitting can't get around the cap. People read and withdraw
+  only their own; a withdrawn report can't be brought back or changed, and the nightly
+  job ignores it.
 
 The repository variable `PRODUCT_MERGES_PAUSED` = `true` makes the whole nightly step a
 dry run. Optional owner tools, never required: *Catalog jobs* → `merge-products` (a list

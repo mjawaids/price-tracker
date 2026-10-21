@@ -673,11 +673,11 @@ const DUPLICATE_COLS = 'id,kind,product_id,other_id';
 type DuplicateRow = { id: string; kind: DuplicateReport['kind']; product_id: string; other_id: string };
 const toDuplicate = (r: DuplicateRow): DuplicateReport => ({ id: r.id, kind: r.kind, productId: r.product_id, otherId: r.other_id });
 
-/** The user's own reports naming this product (RLS keeps it to their own). */
+/** The user's own live reports naming this product (RLS keeps it to their own). */
 export async function fetchDuplicateReports(productId: string): Promise<DuplicateReport[]> {
   const [a, b] = await Promise.all([
-    supabase.from('duplicate_reports').select(DUPLICATE_COLS).eq('product_id', productId),
-    supabase.from('duplicate_reports').select(DUPLICATE_COLS).eq('other_id', productId),
+    supabase.from('duplicate_reports').select(DUPLICATE_COLS).eq('product_id', productId).is('withdrawn_at', null),
+    supabase.from('duplicate_reports').select(DUPLICATE_COLS).eq('other_id', productId).is('withdrawn_at', null),
   ]);
   const rows = [...(check(a) as DuplicateRow[]), ...(check(b) as DuplicateRow[])];
   return [...new Map(rows.map((r) => [r.id, toDuplicate(r)])).values()];
@@ -685,7 +685,8 @@ export async function fetchDuplicateReports(productId: string): Promise<Duplicat
 
 /**
  * Report a pair. Refusals carry Postgres codes: the same pair again (23505), the
- * daily limit (54000), a product that isn't a shared one any more (42501).
+ * daily limit (54000, withdrawn reports count too), a product that isn't a shared
+ * one any more (42501).
  */
 export async function insertDuplicateReport(kind: DuplicateReport['kind'], productId: string, otherId: string): Promise<DuplicateReport> {
   const row = check(
@@ -694,8 +695,11 @@ export async function insertDuplicateReport(kind: DuplicateReport['kind'], produ
   return toDuplicate(row);
 }
 
-export async function deleteDuplicateReport(id: string): Promise<boolean> {
-  const rows = check(await supabase.from('duplicate_reports').delete().eq('id', id).select('id')) as { id: string }[];
+/** Take a report back: it's marked withdrawn (never deleted, so it still counts toward the daily cap). */
+export async function withdrawDuplicateReport(id: string): Promise<boolean> {
+  const rows = check(
+    await supabase.from('duplicate_reports').update({ withdrawn_at: new Date().toISOString() }).eq('id', id).is('withdrawn_at', null).select('id'),
+  ) as { id: string }[];
   return rows.length > 0;
 }
 

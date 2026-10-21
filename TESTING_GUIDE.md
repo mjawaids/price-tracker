@@ -430,7 +430,9 @@ Against a local copy of the schema (all migrations), with generic test data.
       with *Undo*). Offline, the buttons are disabled. Your own products show none of it.
 - [ ] `duplicate_reports` as a signed-in user: only your own rows are visible; `user_id`
       is always you; `not_same` only for a merged product; the same pair twice (either way
-      round) is refused; the 31st report in a day is refused.
+      round) is refused while the first is live; withdrawing (setting `withdrawn_at`) works
+      once and can't be undone, and nothing can be deleted or edited otherwise; report,
+      withdraw and resubmit 30 times in a day — the 31st submission is refused.
 - [ ] After a merge: the old product's listings, everyone's pinned and planned list items
       and usuals point at the one it became; each store's latest price is copied
       (`copy_of`); the old one is out of stock where it was imported; Your contributions

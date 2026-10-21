@@ -12,13 +12,13 @@
 -- prices not discounted by reporter_trust (weight ≥ 1, no row = 1); and accepted prices
 -- for at least 3 products in the last 60 days (merge copies and "wrong price" reports
 -- aside) — the bar for suggesting a shared shop too (promote-suggestions.sql). A person
--- who sent both kinds on a pair counts once, for the newer.
+-- who sent both kinds on a pair counts once, for the newer. Withdrawn reports don't count.
 
 CREATE TEMP TABLE voters AS
 SELECT u.id
 FROM auth.users u
 LEFT JOIN spendless.reporter_trust t ON t.user_id = u.id
-WHERE u.id IN (SELECT DISTINCT user_id FROM spendless.duplicate_reports)
+WHERE u.id IN (SELECT DISTINCT user_id FROM spendless.duplicate_reports WHERE withdrawn_at IS NULL)
   AND u.created_at <= now() - interval '7 days'
   AND u.email_confirmed_at IS NOT NULL AND NOT coalesce(u.is_anonymous, false)
   AND (u.banned_until IS NULL OR u.banned_until < now()) AND u.deleted_at IS NULL
@@ -35,6 +35,7 @@ WITH latest AS (
     r.user_id, least(r.product_id, r.other_id) AS lo, greatest(r.product_id, r.other_id) AS hi, r.kind, r.created_at
   FROM spendless.duplicate_reports r
   JOIN voters v ON v.id = r.user_id
+  WHERE r.withdrawn_at IS NULL
   ORDER BY r.user_id, least(r.product_id, r.other_id), greatest(r.product_id, r.other_id), r.created_at DESC
 ), split AS (
   SELECT least(from_id, into_id) AS lo, greatest(from_id, into_id) AS hi, max(undone_at) AS at
