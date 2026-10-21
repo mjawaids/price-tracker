@@ -1,6 +1,7 @@
 -- Read side of scripts/import/run.ts. Variables: store_id.
 -- One JSON document: what we know about this store's listings (for the rolling
--- refresh) and the brands in the public catalogue (to read product names).
+-- refresh) and the brands in the public catalogue, most used first (to read product
+-- names, and so normalize.ts stores each brand's most used spelling).
 SELECT json_build_object(
   'listings', (
     SELECT coalesce(json_agg(json_build_object(
@@ -11,9 +12,9 @@ SELECT json_build_object(
     WHERE l.store_id = :'store_id'
   ),
   'brands', (
-    SELECT coalesce(json_agg(b.brand), '[]'::json)
+    SELECT coalesce(json_agg(b.brand ORDER BY b.n DESC, b.brand), '[]'::json)
     FROM (
-      SELECT p.brand
+      SELECT p.brand, count(*) AS n
       FROM spendless.catalog_products p
       WHERE p.owner_id IS NULL AND p.status = 'active' AND p.brand IS NOT NULL AND char_length(p.brand) BETWEEN 2 AND 40
       GROUP BY p.brand

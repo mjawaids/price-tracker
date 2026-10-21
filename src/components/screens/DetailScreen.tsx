@@ -11,6 +11,7 @@ import { AgeChip, Btn, EmptyState, Icon, Thumb, Toast } from '../ui';
 import { StoreName } from './compareParts';
 import { productSizeText, sectionLabel, unitPriceText, usePriced } from './compareHelpers';
 import { PriceSheet, WrongPriceSheet } from './compareSheets';
+import { SameProductSection } from './sameProduct';
 
 const OTHERS_SHOWN = 6;
 const OUT_SHOWN = 3;
@@ -189,6 +190,7 @@ export default function DetailScreen() {
             {outNames.length > OUT_SHOWN && ` +${outNames.length - OUT_SHOWN} more`}.
           </p>
         )}
+        <SameProductSection product={p} onToast={setToast} />
         <p className="text-[12.5px] text-ink-soft mt-4 leading-relaxed">
           Add it to a list and tap <strong className="text-ink">Where to buy</strong> — we’ll find the cheapest split for the whole list, delivery included.
         </p>

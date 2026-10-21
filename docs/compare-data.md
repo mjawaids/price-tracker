@@ -26,10 +26,11 @@ from people's own entries, and from receipts. Shared prices are live in
 | `branch_suggestions` | A user's own in-store shop suggested as a shared one: `store_id` (theirs; NULL once deleted), `region_id`, `chain` + `area` (the shared name, plain text only), `chain_key` / `area_key` (`spendless.place_key`, set by the insert trigger), `status` `open` → `promoted` (`promoted_store_id`) or `declined`, `decided_at` | Owner adds (their own open in-store shop in a live city; at most 10 waiting) and withdraws while `open`; nobody updates; the decision is the nightly job's |
 | `item_preferences` | A user's "usual" per list item name: `mode` (`exact` / `brand_size` / `any_size`), `product_ids`, `ref_product_id` | Owner |
 | `plans` | Plans applied to a list (totals, savings) — powers "saved this month" | Owner |
-| `store_listings` | The importer's memory: each store's own product id → our product, last price, when checked, `included` (false = an aisle we leave out) | Importer only; clients can't read it |
+| `store_listings` | The importer's memory: each store's own product id → our product, last price, when checked, `included` (false = an aisle we leave out), `moved_from` (the product the listing last left) | Importer only; clients can't read it |
 | `import_runs` | One row per store per import run: counts and a short status code | Importer only; clients can't read it |
 | `reporter_trust` | How much each person's prices count: `weight` 0.5–1.2 (no row = 1), `compared`, `agreed` (see "Reporter trust") | The nightly job only; clients can't read it |
-| `product_merges` | One row per product merge: `from_id` → `into_id`, `rule` (`same-name` nightly, `approved` by the owner), `moved` (what moved, for undo), `undone_at` (an undone merge keeps that pair apart) | The merge script only; clients can't read it |
+| `product_merges` | One row per product merge: `from_id` → `into_id`, `rule` (`same-name`, `import`, `same-key`, `near-name`, `reported` nightly; `approved` by the owner), `moved` (what moved, for undo), `undone_at` (an undone merge keeps that pair apart), `undo_reason` (`store-lists-both`, `prices-apart`, `people`, `owner`) | The merge script only; clients can't read it |
+| `duplicate_reports` | A person says two shared products are one (`kind = 'same'`) or that a merged one isn't (`'not_same'`): `user_id`, `product_id`, `other_id`, `withdrawn_at`; one live report per person per pair and kind | Owner adds (30 submissions a day, withdrawn ones included), reads, and withdraws their own (marks `withdrawn_at`; no delete); the nightly job counts live ones |
 | `list_items` (+cols) | `plan_store_id`, `plan_product_id`, `plan_price`; `product_id` = product pinned on the item | Owner (synced offline like the rest of the list) |
 
 Everything a user creates is **private** unless it's explicitly promoted to public —
@@ -110,23 +111,92 @@ touches reports. Weights are never shown, and no client can read the table.
 
 ## Duplicate products
 
-The importer joins the same product from two stores by `match_key`
-(`docs/data-sources.md`), but some duplicates slip through: a name without a size has no
-key, a store lists one item twice, older runs left items split. They're merged by
-`scripts/seed/merge-products.ts` (+ `merge-*.sql`, `unmerge.sql`), as the database
-owner, in one transaction with the importer's lock:
+Stores name the same product differently ("Dayfresh Milk Lactose Free 200ml Tetra",
+"Day Fresh Milk Lactose Free 200Ml (Dayfresh)"). The catalogue fixes this **on its own:
+no person reviews merges**. Rules merge only what they're sure of, people's reports add
+evidence, and an automatic merge that later evidence contradicts is undone.
 
-- **Nightly, on its own** (a step after the price import): public products with the
-  exact same name (case and spaces aside) and size, real words in the name, both priced,
-  median prices within 25%. The one with the most store listings (then the oldest)
-  stays. Junk names ("#N/A", "null", no letters) are retired. The repository variable
-  `PRODUCT_MERGES_PAUSED` = `true` makes this step a dry run.
-- **Approved by the owner** (*Catalog jobs* → `merge-products`): without pairs it lists
-  likely duplicates the nightly rule leaves alone (same name but prices further apart,
-  or the same key at different stores, a different pack flagged), with `from>into` ids
-  to paste back to merge them.
-- **Undo** (*Catalog jobs* → `unmerge-product`): the product comes back with what moved,
-  the merge's copied prices go, and the pair is kept apart from then on.
+**At import**, listings from different stores join one product when their `match_key`
+agrees (`docs/data-sources.md`). The key compares brands by `brandId` ("Day Fresh" =
+"Dayfresh") and variants by `variantKey` ("Flv", "Tetra", "Capped" left out; "full fat"
+= "full cream"). Keys carry a version (`k2|…`). A product whose key predates the current
+format is re-keyed in place, so a format change never splits or strands products. A
+listing that moves to another product records the one it left
+(`store_listings.moved_from`).
+
+**Nightly**, after the import, `scripts/seed/merge-products.ts --auto` runs as the
+database owner, with the importer's lock:
+1. **Undo first** (`unmerge-find.sql`, at most 50 a night). An automatic merge
+   (`same-name`, `import`, `same-key`, `near-name`, `reported`) at least a day old is
+   undone when:
+   - a store now lists both as separate items under different names (`store-lists-both`);
+   - the listings it moved sell for more than 1.6× (or under 1/1.6) what the product's
+     other listings do (`prices-apart`);
+   - enough people said *Not the same product*, more than said they're the same
+     (`people`).
+
+   The reason is kept in `product_merges.undo_reason`.
+2. **Merge** (`merge-auto.sql`, one transaction). Every rule needs both products public
+   and active, and never a pair whose merge was undone (except `reported` after a
+   `people` undo, below):
+   - `same-name`: the exact same name (case and spaces aside), size and pack, real
+     words in the name, both priced, medians within 25%;
+   - `import`: a product every store listing has left (the importer re-matched them by
+     key) merges into where they went, when the names agree (as below) and prices are
+     within 3×;
+   - `same-key`: the same `match_key` **and the same name words**. That's
+     `productName.ts` `nameWords`: brand, sizes, counts, pack and filler words aside,
+     in any order. "Shan Ginger Paste" and "Shan Garlic Paste" share a key but not
+     their words. Also required: never listed together at one store, no pack clash,
+     both priced, medians within 25%;
+   - `near-name`: the same key but for the variant, and name words that differ only by
+     a slip or two ("Malai Kulfa" / "Kulfi", "Danerdar" / "Danedar"). A slip is one
+     letter changed, added, dropped or swapped, in words of 5+ letters, with the rarer
+     word used by at most 3 products ("Greek" / "Green" are both common: two products).
+     Medians within 15%;
+   - `reported`: enough people (below) said the two are one product, more than said
+     they aren't. Same size (±2%),
+     brand and type (or one unknown), never listed together at one store, no pack
+     clash, medians within 25% (or one unpriced).
+
+   The candidates for `import`, `same-key` and `near-name` are found in TypeScript
+   (`scripts/seed/duplicates.ts`) and checked again in SQL. In each pair the product
+   with the most store listings (then the oldest) stays. For `import`, the product the
+   listings went to stays.
+   A **pack clash** is pouch / refill / stand-up against jar / bottle / tin / can / glass,
+   or pouch against tetra (fresh milk isn't UHT). Junk names ("#N/A", "null", no
+   letters) are retired.
+
+**People's reports** (`duplicate_reports`): on a product page, *Same as another
+product?* (`kind = 'same'`) or, under "Also sold as", *Not the same product?* on a
+product merged into it (`kind = 'not_same'`). There is no moderator, so the safety nets
+are in the rules (`scripts/seed/duplicate-votes.sql`, shared by the merge and the undo):
+- **Only real contributors count**: an account at least 7 days old, confirmed, not
+  anonymous, banned or deleted; a `reporter_trust` weight not below 1; and accepted
+  prices for at least 3 products in the last 60 days (merge copies and "wrong price"
+  reports aside) — the same bar as suggesting a shared shop. Throwaway accounts can
+  report, but their reports never decide anything.
+- **The majority decides**: per pair, people whose newest report says "same" against
+  those whose newest says "not the same". A merge needs at least
+  `PRODUCT_MERGE_MIN_PEOPLE` (repository variable, 2–50, default 3) saying "same" *and*
+  more than say "not the same"; an undo the other way round. The app never says the
+  number.
+- **A split isn't a lock**: a pair people split stays apart for every automatic rule and
+  the importer, but people can join it again with "same" reports made after the split,
+  by the same majority. A split on store evidence (`store-lists-both`, `prices-apart`) or
+  by the owner is for good.
+- **Even then, nothing that reads as different merges**: a reported pair still needs the
+  same size, brand and type and prices that agree (above).
+- One live report per person per pair and kind; at most 30 submissions a day, and a
+  withdrawn report still counts toward that (*Undo* marks it `withdrawn_at`, never deletes
+  it), so withdrawing and resubmitting can't get around the cap. People read and withdraw
+  only their own; a withdrawn report can't be brought back or changed, and the nightly
+  job ignores it.
+
+The repository variable `PRODUCT_MERGES_PAUSED` = `true` makes the whole nightly step a
+dry run. Optional owner tools, never required: *Catalog jobs* → `merge-products` (a list
+of likely duplicates the rules leave alone, and merging pairs from it) and
+`unmerge-product` (undo one; reason `owner`).
 
 What a merge of `from` into `into` does:
 - its store listings move to `into` (the importer prices them there; listings of one
@@ -141,6 +211,12 @@ What a merge of `from` into `into` does:
 - everyone's list items (pinned and planned) and usuals move to `into`;
 - `from` is marked `merged` with `merged_into`, and `product_merges` records it.
 
+An undo puts back what moved where nothing has changed it since, deletes the copied
+prices and keeps the pair apart. In people's usuals only the merged product goes back
+(into its old place in the list, or added back when the merge had folded it into the
+other), so anything they added or changed since the merge stays. The nightly rules skip the pair, and so does the
+importer's key match (only people's newer reports can join a pair people split).
+
 Anything still carrying a merged id lands on the product it became: the triggers on
 `list_items`, `item_preferences` and people's `price_reports` call
 `spendless.canonical_product()` (an offline list, a queued price check, an old app). The
@@ -154,7 +230,7 @@ plans, remembered receipt lines, product pages) and loads the products merges le
 | `itemTypes.ts` | Curated item types ("milk", "masoor-daal") with English + romanized-Urdu keywords, a price display unit, an optional parent type, whether brand swaps are suggested by default (off for personal care, baby, pharmacy), and an optional `minUnits` (eggs: 6; a name like "Egg Pudding 78g" or "Surprise Egg 1 Unit" is then read as another type or none); `modifierWords()` keeps the words that tell products of a type apart ("shami" in "shami kabab") |
 | `productName.ts` | Name → brand, item type, variant, size, pack ("Olper's Milk Full Cream 1Ltr x 12" → Olper's · milk · Full Cream · 12 × 1000 ml; "Shan Shami Kabab Masala 50g+50g" → Shan · kebab · Shami Masala · 2 × 50 g; "Omega 3 Eggs 12 Pieces" → 12 eggs, not 3); `learnBrands()` for imports |
 | `units.ts` | Size labels, unit prices (per 100 g / kg / L / piece / dozen), "similar size" (±15%), packs needed for "atta 10 kg" |
-| `resolve.ts` | `sameProductKey()`: brand + type + total size + variant words, the key the item choice sheet groups one product's copies at different stores by. List item → acceptable products + priced options. Order: pinned product → the user's usual → brand/words named in the text → item type with an *assumed* default (last bought, else the product most of your stores carry) → not compared |
+| `resolve.ts` | `sameProductKey()`: brand id + type + total size + variant key, the key the item choice sheet groups one product's copies at different stores by. Brands compare by `brandId()` everywhere ("Day Fresh" = "Dayfresh" = "DayFresh"), so a brand typed or picked in one spelling also finds the others; `variantKey()` drops words that don't tell products apart ("Flv", "Flavour", "Tetra", "Capped", pack words; "liquid" for milk) and writes synonyms one way ("full fat" = "full cream", "lowfat" = "low fat"). List item → acceptable products + priced options. Order: pinned product → the user's usual → brand/words named in the text → item type with an *assumed* default (last bought, else the product most of your stores carry) → not compared |
 | `optimizer.ts` | Tries every set of 1–4 stores (best 12 candidates), assigns each item to its cheapest store in the set, then moves items while it lowers the total (crossing "free over X", meeting minimum orders). Returns *cheapest*, *fewer stops* (2+ stores, fewer than cheapest), *one stop*, *delivered* (online stores only; hidden when it's the same stores as another choice), and a "buy it all at X" baseline for savings (the best single store other than the cheapest plan's only store) |
 | `describe.ts` | Wording for the app: how an item was matched, how old a price is, delivery rules and notes |
 

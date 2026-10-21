@@ -94,6 +94,13 @@ interface CompareApi {
   suggestBranch: (storeId: string, chain: string, area: string, knownChain: boolean) => Promise<SuggestResult>;
   /** Withdraw a suggestion still waiting ('decided': it was decided meanwhile; refreshed). */
   withdrawSuggestion: (id: string) => Promise<'ok' | 'decided' | 'error'>;
+  /**
+   * Say two shared products are one ('same'), or that a product merged into another
+   * isn't it ('not_same'). The nightly job acts once enough people agree.
+   */
+  reportDuplicate: (kind: api.DuplicateReport['kind'], productId: string, otherId: string) => Promise<DuplicateResult>;
+  /** Take back one of the user's own reports. */
+  withdrawDuplicate: (id: string) => Promise<boolean>;
   addStore: (s: api.StoreInput) => Promise<CatalogStore | null>;
   updateStore: (id: string, s: api.StoreInput) => Promise<CatalogStore | null>;
   deleteStore: (id: string) => Promise<boolean>;
@@ -159,6 +166,9 @@ export interface CheckResult {
 
 /** ok · offline · limit (too many waiting) · taken (already suggested) · denied (not a shop that can be shared) · invalid (the name) · error */
 export type SuggestResult = 'ok' | 'offline' | 'limit' | 'taken' | 'denied' | 'invalid' | 'error';
+
+/** `already`: the user reported that pair before · `gone`: a product isn't a shared, active one any more. */
+export type DuplicateResult = { ok: api.DuplicateReport } | 'already' | 'limit' | 'gone' | 'offline' | 'error';
 
 export type ReceiptSaveResult =
   /** `productIds`: the product each row was saved to, in order (given, reused or new). */
@@ -861,6 +871,29 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [commit],
   );
 
+  // ── Duplicate products ──────────────────────────────────────────────────────
+  const reportDuplicate = useCallback<CompareApi['reportDuplicate']>(async (kind, productId, otherId) => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return 'offline';
+    try {
+      const row = await api.insertDuplicateReport(kind, productId, otherId);
+      track('duplicate_reported', { kind });
+      return { ok: row };
+    } catch (error) {
+      const code = error instanceof api.ApiError ? error.code : null;
+      console.error('Reporting a duplicate failed:', code ?? (error instanceof Error ? error.message : error));
+      if (code === '23505') return 'already';
+      if (code === '54000') return 'limit';
+      if (code === '42501') return 'gone';
+      return typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error';
+    }
+  }, []);
+
+  const withdrawDuplicate = useCallback<CompareApi['withdrawDuplicate']>(async (id) => {
+    const deleted = await guard('Withdrawing a duplicate report', () => api.withdrawDuplicateReport(id));
+    if (deleted) track('duplicate_withdrawn');
+    return !!deleted;
+  }, []);
+
   // ── Price checks while shopping ─────────────────────────────────────────────
   /** The user's new reports on top (held ones marked), and those prices read again per store. */
   const settleChecks = useCallback(
@@ -1003,6 +1036,8 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
     movedTo: (id) => moved.get(id) ?? null,
     suggestBranch,
     withdrawSuggestion,
+    reportDuplicate,
+    withdrawDuplicate,
     addStore,
     updateStore,
     deleteStore,

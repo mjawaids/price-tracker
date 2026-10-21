@@ -403,9 +403,39 @@ Against a local copy of the schema (all migrations), with generic test data.
       their own. A listing named "#N/A" is left out.
 - [ ] `merge-products.ts --auto` (dry run, then `--apply`): the same name and size at two
       stores, prices within 25%, become one (the one with more listings, then the older,
-      stays); 1.4× apart they don't, and show in `--list` instead, with the same key at
-      different stores ("pack differs" flagged). "#N/A" is retired. A second run merges
-      nothing.
+      stays); 1.4× apart they don't. "#N/A" is retired. A second run merges nothing.
+- [ ] Key change: a product with an old-format key shared by two stores, and a "Day
+      Fresh" twin at a third store. Import the three stores: the first re-keys the shared
+      product in place (`k2|dayfresh|…`), the second matches it, the third moves to it
+      with `moved_from` set. `--auto --apply` then merges the left-behind product (rule
+      `import`) and moves its pinned list item.
+- [ ] Rules: same key + same name words at two stores, prices within 25% → `same-key`;
+      the same key 2× apart → not merged; "Kulfa" / "Kulfi" within 15% → `near-name`;
+      "Shan Ginger Paste" / "Shan Garlic Paste" (same key, different words) → not merged.
+- [ ] People's reports (no moderator): three week-old accounts with no prices say a pair
+      is one → not merged; three contributors (prices for 3 products) → `reported`; three
+      "same" against four "not the same" → not merged. With the merge a day old, four
+      "not the same" against three "same" → undone (`people`); the next night nothing
+      re-merges it; five new "same" reports made after the split → merged again. A pair
+      split for `store-lists-both` stays apart whatever people say.
+- [ ] Undo keeps later edits to usuals: a usual with [B, C] (reference B) and one with
+      [B, A]; merge B into A; add D to both; undo → [B, C, D] (reference B) and
+      [A, D, B]. A usual that no longer has A is left as it is.
+- [ ] Undo on evidence: with merges a day old, a store listing both sides under
+      different names → undone (`store-lists-both`); three contributors saying *Not the
+      same* (and none saying same) → undone (`people`). The next `--auto` doesn't merge
+      them again, and an import of the undone product's store keeps it apart.
+- [ ] Product page (375 / 360 / 1024 px): a shared product shows *Same as another
+      product?*; the sheet suggests similar products (same type and size, shared name
+      words; never on a shared brand alone) and searches by name; *These are the same
+      product* → toast, the report listed with *Undo*. A product with merged names shows
+      "Also sold as" with *Not the same?* (sheet → toast, then "You said they're different"
+      with *Undo*). Offline, the buttons are disabled. Your own products show none of it.
+- [ ] `duplicate_reports` as a signed-in user: only your own rows are visible; `user_id`
+      is always you; `not_same` only for a merged product; the same pair twice (either way
+      round) is refused while the first is live; withdrawing (setting `withdrawn_at`) works
+      once and can't be undone, and nothing can be deleted or edited otherwise; report,
+      withdraw and resubmit 30 times in a day — the 31st submission is refused.
 - [ ] After a merge: the old product's listings, everyone's pinned and planned list items
       and usuals point at the one it became; each store's latest price is copied
       (`copy_of`); the old one is out of stock where it was imported; Your contributions

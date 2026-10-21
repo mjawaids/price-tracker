@@ -146,7 +146,7 @@ The feature needs:
 
 ### Automatic duplicate merges
 
-The nightly job merges only exact same name + size within 25%; other pairs need approval in *Catalog jobs* → `merge-products`. `resolve.ts` `sameProductKey()` (brand + type + total size + variant words) is a candidate signal for merging more pairs automatically, with the same price-agreement check.
+Done (Oct 2026): duplicates fix themselves with no one reviewing. Brands compare however they're spelled, keys ignore variant noise, the nightly job merges same-key products whose name words agree, one-letter slips and pairs people report, and undoes its own merges on evidence (`docs/compare-data.md`, "Duplicate products"). Next, if needed: watch the nightly counts per rule and undo reason; receipt matching (`src/lib/receipt/match.ts`) still compares brands by spelling.
 
 ### Parked from before
 
