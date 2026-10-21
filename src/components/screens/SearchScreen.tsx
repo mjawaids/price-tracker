@@ -4,7 +4,7 @@ import { useCompare } from '../../contexts/CompareContext';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { tokens } from '../../lib/compare/itemTypes';
 import { Icon, Chip } from '../ui';
-import { ProductRow } from './compareParts';
+import { PriceRow } from './compareParts';
 import { usePriced } from './compareHelpers';
 
 // Starting points shown before there are recent searches.
@@ -65,7 +65,8 @@ export default function SearchScreen() {
       const have = [...p.words, ...(p.itemType ? tokens(p.itemType) : [])];
       return words.every((w) => have.some((x) => x.startsWith(w)));
     });
-    const best = (id: string) => priced(id)[0]?.price.price ?? Infinity;
+    // Cheapest at any store in the city, as on Prices.
+    const best = (id: string) => priced(id, true)[0]?.price.price ?? Infinity;
     return hits
       .map((p) => ({ p, best: best(p.product.id) }))
       .sort((a, b) => a.best - b.best)
@@ -161,7 +162,7 @@ export default function SearchScreen() {
         {results.length > 0 && (
           <div className="flex flex-col gap-2">
             {results.map((p) => (
-              <ProductRow
+              <PriceRow
                 key={p.id}
                 product={p}
                 onClick={() => {
