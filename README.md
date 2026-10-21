@@ -79,6 +79,10 @@ The app has two sections: **Lists** (the default) and **Compare**.
   or just say it's wrong — once two people say so, Where to buy leaves it out until a
   newer price comes in. Prices from people whose prices often disagree with others'
   quietly count for less
+- **Same product, different names** fix themselves: brands match however stores spell
+  them, and the nightly job joins products whose names and prices agree, catches spelling
+  slips, and undoes its own mistakes. On a product page: *Same as another product?*, or
+  *Not the same?* under "Also sold as" — once enough people agree, they're joined or split
 - Use as much as you like: Profile → **Compare prices** turns Compare on or off (Where to
   buy, the Compare tab, and under it price checks and receipts). It starts on in a city
   with shared prices and off everywhere else, where SpendLess is a shopping list

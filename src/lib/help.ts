@@ -50,6 +50,18 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
   },
   {
+    id: 'same-product',
+    title: 'Same product, different names',
+    icon: 'list',
+    summary: 'How one product’s prices from every store come together',
+    body: [
+      'Stores often name the same product differently — “Dayfresh Milk 1L”, “Day Fresh Milk 1 Ltr”. We join them into one product, so Where to buy compares every store that sells it.',
+      'Most are joined automatically: the same brand (however it’s spelled), size and words in the name, at prices that agree. We also catch small spelling slips.',
+      'Spotted two that are the same? On a product’s page, tap Same as another product? and pick it. Once enough people agree, they become one product, and your lists and usual picks follow.',
+      'Joined two that aren’t the same? Under Also sold as, tap Not the same? Once enough people agree — or a store turns out to sell both — we split them again, and each keeps its own prices.',
+    ],
+  },
+  {
     id: 'prices',
     title: 'Where prices come from',
     icon: 'history',

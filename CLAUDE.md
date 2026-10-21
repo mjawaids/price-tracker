@@ -88,6 +88,9 @@ Context-based (no Redux). Providers in `src/contexts/`:
   `movedTo(storeId)` (a shop that became shared → the shared one), `suggestBranch`
   (sets the shop's city first when it has none; maps refusals to a reason),
   `withdrawSuggestion`. A closed store (a moved private copy) shows no prices.
+  Duplicate products: `reportDuplicate(kind, productId, otherId)` (`same` / `not_same`
+  into `duplicate_reports`; maps refusals to `already` / `limit` / `gone` / `offline`),
+  `withdrawDuplicate(id)`.
   Cached per user in IndexedDB (`src/lib/compare/cache.ts`) so plans work offline
 - `AppContext` — navigation stack, section, screen enum, app-level sheets
   (`currency`, `region`, `help` + topic), sign-out
@@ -481,7 +484,7 @@ post-deploy migration drops them.
 | `public/share-target-sw.js`, `src/components/shell/SharedReceiptSheet.tsx` | Share to SpendLess: the service-worker handler for the manifest's `share_target` (`POST /share-receipt` → Cache Storage inbox → `/?share=receipt`) and the "Read this receipt?" sheet |
 | `src/components/screens/ReceiptScreen.tsx` | Add a receipt (+ `receiptParts.tsx`, `receiptSheets.tsx` for the reader download, paste, date, store, product and line sheets, `receiptHelpers.ts` for the review rows, store guess and save) |
 | `src/components/screens/PlanScreen.tsx` | Where to buy for a list |
-| `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home (prices in the user's city: each product's cheapest price at any store and how many stores have it, `PriceRow` in `compareParts.tsx`; aisle chips with *All*), product search (same rows), product page (*Add to list* pins the product; *Wrong price?* on shared stores' prices; disputed prices listed last with a warning; your held price "Only you for now") |
+| `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home (prices in the user's city: each product's cheapest price at any store and how many stores have it, `PriceRow` in `compareParts.tsx`; aisle chips with *All*), product search (same rows), product page (*Add to list* pins the product; *Wrong price?* on shared stores' prices; disputed prices listed last with a warning; your held price "Only you for now"; `sameProduct.tsx`: "Also sold as" (products merged into it, fetched on demand) with *Not the same?*, the user's own reports with *Undo*, and *Same as another product?* → `SameProductSheet` (similar shared products of the type and size, by name words, plus a search); copy never says how many people are needed) |
 | `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Your contributions card and the Add a receipt entry), your own products |
 | `src/components/screens/ContributionsScreen.tsx` (+ `contributionHelpers.ts`) | Your contributions: totals (`my_contributions`, `useContributionStats` also used by Contribute and Profile), recent prices by day and store with status chips, Show older, Remove (asks first); offline / failed: this device's last 30 days |
 | `src/components/screens/priceCheck.tsx`, `priceCheckHelpers.ts`, `src/lib/compare/priceQueue.ts`, `checkState.ts` | Price checks while shopping: "What did it cost?" and "Done at <store>" sheets; which item to ask about and the messages; answers kept offline; answered / *Not now* state |

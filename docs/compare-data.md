@@ -127,7 +127,8 @@ listing that moves to another product records the one it left
 **Nightly**, after the import, `scripts/seed/merge-products.ts --auto` runs as the
 database owner, with the importer's lock:
 1. **Undo first** (`unmerge-find.sql`, at most 50 a night). An automatic merge
-   (`import`, `same-key`, `near-name`, `reported`) at least a day old is undone when:
+   (`same-name`, `import`, `same-key`, `near-name`, `reported`) at least a day old is
+   undone when:
    - a store now lists both as separate items under different names (`store-lists-both`);
    - the listings it moved sell for more than 1.6× (or under 1/1.6) what the product's
      other listings do (`prices-apart`);

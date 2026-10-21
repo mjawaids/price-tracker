@@ -418,6 +418,12 @@ Against a local copy of the schema (all migrations), with generic test data.
       different names → undone (`store-lists-both`); three people saying *Not the same* →
       undone (`people`). The next `--auto` doesn't merge them again, and an import of the
       undone product's store keeps it apart.
+- [ ] Product page (375 / 360 / 1024 px): a shared product shows *Same as another
+      product?*; the sheet suggests similar products (same type and size, shared name
+      words; never on a shared brand alone) and searches by name; *These are the same
+      product* → toast, the report listed with *Undo*. A product with merged names shows
+      "Also sold as" with *Not the same?* (sheet → toast, then "You said they're different"
+      with *Undo*). Offline, the buttons are disabled. Your own products show none of it.
 - [ ] `duplicate_reports` as a signed-in user: only your own rows are visible; `user_id`
       is always you; `not_same` only for a merged product; the same pair twice (either way
       round) is refused; the 31st report in a day is refused.

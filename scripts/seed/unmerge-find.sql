@@ -1,7 +1,7 @@
 -- Automatic merges that later evidence says were wrong (scripts/seed/merge-products.ts
 -- --auto runs unmerge.sql for each, before the night's merges). Read only. Prints one
 -- JSON line: [{ product_id, reason }], at most 50. Variable: min_people.
--- Only rules no person checked (import, same-key, near-name, reported), merged at least
+-- Only rules no person checked (same-name, import, same-key, near-name, reported), merged at least
 -- a day ago and not undone. Reasons, in this order:
 --   store-lists-both  a store now lists both as separate items under different names
 --                     (one listing the merge moved, one it didn't): it sells two things;
@@ -16,7 +16,7 @@ WITH m AS (
     x.moved, x.merged_at
   FROM spendless.product_merges x
   JOIN spendless.catalog_products p ON p.id = x.from_id AND p.status = 'merged'
-  WHERE x.undone_at IS NULL AND x.rule IN ('import', 'same-key', 'near-name', 'reported')
+  WHERE x.undone_at IS NULL AND x.rule IN ('same-name', 'import', 'same-key', 'near-name', 'reported')
     AND x.merged_at <= now() - interval '1 day'
   ORDER BY x.from_id, x.merged_at DESC, x.id DESC
 ), moved AS (

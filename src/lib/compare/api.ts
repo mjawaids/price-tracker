@@ -660,6 +660,53 @@ export async function deleteSuggestion(id: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+// ── Duplicate products (docs/compare-data.md, "Duplicate products") ──────────
+
+/** A person's report: two shared products are one ('same'), or a merged one isn't ('not_same'). */
+export interface DuplicateReport {
+  id: string;
+  kind: 'same' | 'not_same';
+  productId: string;
+  otherId: string;
+}
+const DUPLICATE_COLS = 'id,kind,product_id,other_id';
+type DuplicateRow = { id: string; kind: DuplicateReport['kind']; product_id: string; other_id: string };
+const toDuplicate = (r: DuplicateRow): DuplicateReport => ({ id: r.id, kind: r.kind, productId: r.product_id, otherId: r.other_id });
+
+/** The user's own reports naming this product (RLS keeps it to their own). */
+export async function fetchDuplicateReports(productId: string): Promise<DuplicateReport[]> {
+  const [a, b] = await Promise.all([
+    supabase.from('duplicate_reports').select(DUPLICATE_COLS).eq('product_id', productId),
+    supabase.from('duplicate_reports').select(DUPLICATE_COLS).eq('other_id', productId),
+  ]);
+  const rows = [...(check(a) as DuplicateRow[]), ...(check(b) as DuplicateRow[])];
+  return [...new Map(rows.map((r) => [r.id, toDuplicate(r)])).values()];
+}
+
+/**
+ * Report a pair. Refusals carry Postgres codes: the same pair again (23505), the
+ * daily limit (54000), a product that isn't a shared one any more (42501).
+ */
+export async function insertDuplicateReport(kind: DuplicateReport['kind'], productId: string, otherId: string): Promise<DuplicateReport> {
+  const row = check(
+    await supabase.from('duplicate_reports').insert({ kind, product_id: productId, other_id: otherId }).select(DUPLICATE_COLS).single(),
+  ) as DuplicateRow;
+  return toDuplicate(row);
+}
+
+export async function deleteDuplicateReport(id: string): Promise<boolean> {
+  const rows = check(await supabase.from('duplicate_reports').delete().eq('id', id).select('id')) as { id: string }[];
+  return rows.length > 0;
+}
+
+/** Shared products merged into this one ("Also sold as"). */
+export async function fetchMergedInto(productId: string): Promise<CatalogProduct[]> {
+  const rows = check(
+    await supabase.from('catalog_products').select(PRODUCT_COLS).eq('merged_into', productId).is('owner_id', null).eq('status', 'merged').order('name').limit(20),
+  ) as ProductRow[];
+  return rows.map(toProduct);
+}
+
 export async function insertPlan(p: {
   listId: string | null;
   regionId: string | null;
