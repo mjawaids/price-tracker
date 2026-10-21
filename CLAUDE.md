@@ -308,7 +308,8 @@ planned list items, closes the private copy. `close-branch.ts` undoes a shop. Ru
 ### Still-to-buy reminders (push, OneSignal — ported from DailyWins)
 - One push when items have waited on someone's lists 2+ days, only 10:00–20:00 in their
   time zone, then nothing until their list changes and never within 2 days of the last:
-  "You still have N things to buy. Shopping today?" (a count; never item or list names).
+  "You still have N things to buy. Shopping today?" (a count across all their lists, plus
+  "on 2 lists" when they're spread over several; never item or list names).
   Tapping it opens the app.
 - `src/lib/onesignal.ts`: the Web SDK wrapper (`react-onesignal`, imported lazily; 10 s init
   timeout, a late SDK still adopted; `PushState` = unsupported / blocked (content blocker) /

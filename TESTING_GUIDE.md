@@ -72,7 +72,8 @@ Needs the deployed site (OneSignal only works on the real domain) and `VITE_ONES
       would get a reminder; nothing is sent.
 - [ ] With an item over 2 days old, between 10:00 and 20:00 your time, a run with *send*
       ticked (or the next hourly run) delivers "You still have N things to buy. Shopping
-      today?"; tapping it opens the app on Lists. A second run sends nothing until the list
+      today?" (N across all lists; "… to buy on 2 lists." when open items are on more than
+      one); tapping it opens the app on Lists. A second run sends nothing until the list
       changes (add or tick something), and never sooner than 2 days after the last one.
 - [ ] Turning it off (Profile) stops reminders on every device. Signing out stops them on
       that browser.
