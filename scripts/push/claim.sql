@@ -1,6 +1,6 @@
 -- Still-to-buy reminders: who is due now. The SQL side of scripts/push/reminders.ts.
 -- One transaction; claims a notification_log row per person due, prints one JSON line
--- ({"checked", "due": [{log_id, push_alias, open_count}]}), then COMMITs (commit=on)
+-- ({"checked", "due": [{log_id, push_alias, open_count, list_count}]}), then COMMITs (commit=on)
 -- or ROLLs BACK (commit=off, a dry run). Rows are committed BEFORE anything is sent,
 -- so a crash or a re-run can never send twice.
 -- Variables (validated by the script): commit, min_age_hours, gap_hours, hour_from,
@@ -13,6 +13,8 @@
 -- gap_hours ago (ticking one thing doesn't bring another reminder that evening).
 -- An item's age uses the earlier of created_at (the device's clock) and updated_at
 -- (the server's), so a device with its clock ahead can't hold reminders back.
+-- open_count is across all their lists; list_count says how many lists that is, so the
+-- message can say "on 2 lists" rather than look like one list's count.
 \set ON_ERROR_STOP on
 BEGIN;
 SELECT pg_advisory_xact_lock(hashtextextended('spendless.push_reminders', 0)) \gset lock_
@@ -29,6 +31,7 @@ CREATE TEMP TABLE due ON COMMIT DROP AS
 WITH items AS (
   SELECT i.user_id,
          count(*) FILTER (WHERE open) AS open_count,
+         count(DISTINCT i.list_id) FILTER (WHERE open) AS list_count,
          min(least(i.created_at, i.updated_at)) FILTER (WHERE open) AS oldest_open,
          max(i.updated_at) AS last_change
   FROM spendless.list_items i
@@ -45,7 +48,7 @@ last_nudge AS (
   WHERE n.user_id IN (SELECT user_id FROM awake) AND n.kind = 'still_to_buy'
   GROUP BY n.user_id
 )
-SELECT a.user_id, a.push_alias, it.open_count::int AS open_count
+SELECT a.user_id, a.push_alias, it.open_count::int AS open_count, it.list_count::int AS list_count
 FROM awake a
 JOIN items it ON it.user_id = a.user_id
 LEFT JOIN last_nudge ln ON ln.user_id = a.user_id
@@ -64,12 +67,12 @@ WITH ins AS (
   SELECT d.user_id, 'still_to_buy', d.open_count, 'claimed' FROM due d
   RETURNING id, user_id, open_count
 )
-SELECT ins.id AS log_id, d.push_alias, ins.open_count
+SELECT ins.id AS log_id, d.push_alias, ins.open_count, d.list_count
 FROM ins JOIN due d ON d.user_id = ins.user_id;
 
 SELECT json_build_object(
   'checked', (SELECT count(*) FROM awake),
-  'due', coalesce((SELECT json_agg(json_build_object('log_id', log_id, 'push_alias', push_alias, 'open_count', open_count) ORDER BY log_id) FROM claimed), '[]'::json)
+  'due', coalesce((SELECT json_agg(json_build_object('log_id', log_id, 'push_alias', push_alias, 'open_count', open_count, 'list_count', list_count) ORDER BY log_id) FROM claimed), '[]'::json)
 );
 
 \if :commit

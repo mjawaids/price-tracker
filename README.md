@@ -20,7 +20,7 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Long names wrap instead of being cut off
 - Friendly one-at-a-time tips that teach the app as you use it
 - **Still-to-buy reminders** (optional): when things have waited on your lists for 2 days,
-  one push between 10 am and 8 pm your time ("You still have 5 things to buy"), then
+  one push between 10 am and 8 pm your time ("You still have 5 things to buy", or "… on 2 lists"), then
   nothing until the list changes. Turn on from the card on Lists or Profile → Notifications;
   on iPhone/iPad the app must be on the Home Screen first. The message never names items or lists
 

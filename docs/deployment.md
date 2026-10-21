@@ -154,8 +154,9 @@ It never changes a report: a new weight applies the next time a price is worked 
 waited 2+ days, and for whom it's 10:00–20:00 in their time zone (`claim.sql`: once,
 then nothing until their list changes, and never within 2 days of the last one), claims
 a `spendless.notification_log` row for each (committed before sending, so nothing goes
-out twice), sends one OneSignal push per group with the same count ("You still have N
-things to buy. Shopping today?"), and records the outcome (`record.sql`; log rows older
+out twice), sends one OneSignal push per group with the same message ("You still have N
+things to buy. Shopping today?", N across all their lists, with "on 2 lists" when open
+items are on more than one), and records the outcome (`record.sql`; log rows older
 than 90 days are deleted). The log (public) prints counts and HTTP statuses only.
 
 - **Run by hand:** *Actions → Push reminders → Run workflow*. Unticked *send* (the

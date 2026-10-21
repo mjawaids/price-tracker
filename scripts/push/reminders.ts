@@ -2,7 +2,8 @@
 // waited 2+ days, between 10:00 and 20:00 their time, and then nothing until their
 // list changes. Who is due, and the claim that stops a second send, are in claim.sql;
 // this file hands the claimed reminders to OneSignal and records what happened
-// (record.sql). The message says only how many things are left.
+// (record.sql). The message says only how many things are left, and on how many lists
+// when it's more than one.
 //
 //   SUPABASE_DB_URL=… ONESIGNAL_REST_API_KEY=… VITE_ONESIGNAL_APP_ID=… \
 //     node --experimental-strip-types scripts/push/reminders.ts [--send]
@@ -36,6 +37,7 @@ interface Due {
   log_id: number;
   push_alias: string;
   open_count: number;
+  list_count: number;
 }
 type Outcome = 'sent' | 'failed' | 'release' | 'ambiguous';
 interface Result {
@@ -62,19 +64,20 @@ const apiUrl = process.env.ONESIGNAL_API_URL || 'https://api.onesignal.com/notif
 if (!dbUrl) fail('SUPABASE_DB_URL must be set');
 if (send && (!appId || !apiKey)) fail('VITE_ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY must be set to send');
 
-const message = (n: number) => `You still have ${n} ${n === 1 ? 'thing' : 'things'} to buy. Shopping today?`;
+const message = (n: number, lists: number) =>
+  `You still have ${n} ${n === 1 ? 'thing' : 'things'} to buy${lists > 1 ? ` on ${lists} lists` : ''}. Shopping today?`;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const backoff = (attempt: number) => Math.min(2000 * 2 ** attempt, 8000);
 
-async function post(aliases: string[], count: number, deadline: number): Promise<Sent> {
+async function post(aliases: string[], text: string, deadline: number): Promise<Sent> {
   // The same key on every retry of this request, so a retry can't send it twice.
   const body = JSON.stringify({
     app_id: appId,
     target_channel: 'push',
     include_aliases: { external_id: aliases },
     headings: { en: 'SpendLess' },
-    contents: { en: message(count) },
+    contents: { en: text },
     url: SITE_URL,
     // A newer reminder replaces an older one instead of stacking.
     web_push_topic: 'still_to_buy',
@@ -145,13 +148,16 @@ if (!send) {
   const deadline = Date.now() + DEADLINE_MS;
   const results: Result[] = [];
   const statuses = new Map<string, number>();
-  // One message per count, so people with the same count share a request.
-  const byCount = new Map<number, Due[]>();
-  for (const d of claim.due) byCount.set(d.open_count, [...(byCount.get(d.open_count) ?? []), d]);
-  for (const [count, people] of byCount) {
+  // One message per text, so people with the same counts share a request.
+  const byText = new Map<string, Due[]>();
+  for (const d of claim.due) {
+    const text = message(d.open_count, d.list_count);
+    byText.set(text, [...(byText.get(text) ?? []), d]);
+  }
+  for (const [text, people] of byText) {
     for (let i = 0; i < people.length; i += CHUNK) {
       const batch = people.slice(i, i + CHUNK);
-      const r = Date.now() > deadline ? ({ kind: 'release', error: 'out of time' } as const) : await post(batch.map((p) => p.push_alias), count, deadline);
+      const r = Date.now() > deadline ? ({ kind: 'release', error: 'out of time' } as const) : await post(batch.map((p) => p.push_alias), text, deadline);
       const label = r.kind === 'sent' ? 'sent' : `${r.kind} (${r.error.split(':')[0]})`;
       statuses.set(label, (statuses.get(label) ?? 0) + batch.length);
       for (const p of batch)
