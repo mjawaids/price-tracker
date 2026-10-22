@@ -67,14 +67,17 @@ export function profileProduct(p: CatalogProduct): ProductProfile {
   const needsParse = !p.itemType || !p.sizeUnit || !p.brand;
   const parsed = needsParse ? parseProductName(p.name, { categoryHint: p.category }) : null;
   const brand = p.brand ?? parsed?.brand ?? null;
+  // A type read from the name only when it fits the product's category: the importer
+  // leaves "Cocomo Biscuit Milk" (a biscuit aisle) untyped on purpose, so it isn't milk here.
+  const itemType = p.itemType ?? (parsed?.typeConfident ? parsed.itemType?.id : null) ?? null;
   return {
     product: p,
     brand,
     brandKey: brand ? brandId(brand) || null : null,
-    itemType: p.itemType ?? parsed?.itemType?.id ?? null,
+    itemType,
     size: productSize(p),
     // Plus the variant as written one way, so "full cream" also finds "Full Fat".
-    words: new Set([...tokens(`${p.name} ${p.variant ?? ''}`), ...variantKey(p.variant, p.itemType ?? parsed?.itemType?.id).split(' ').filter(Boolean)]),
+    words: new Set([...tokens(`${p.name} ${p.variant ?? ''}`), ...variantKey(p.variant, itemType).split(' ').filter(Boolean)]),
   };
 }
 

@@ -103,7 +103,7 @@ export const ITEM_TYPES: ItemType[] = [
   t('prawns', 'Prawns', 'meat', 'g', ['prawn', 'prawns', 'shrimp', 'shrimps', 'jhinga'], { display: 'kg' }),
 
   // Dairy & eggs
-  t('milk', 'Milk', 'dairy', 'ml', ['milk', 'doodh', 'full cream milk', 'uht milk', 'packet milk', 'fresh milk'], { display: 'L' }),
+  t('milk', 'Milk', 'dairy', 'ml', ['milk', 'doodh', 'full cream milk', 'uht milk', 'packet milk', 'fresh milk', 'liquid milk'], { display: 'L' }),
   t('flavoured-milk', 'Flavoured milk', 'dairy', 'ml', ['flavoured milk', 'flavored milk', 'flavour milk', 'flavor milk', 'flv milk', 'flavoredmilk', 'flavouredmilk', 'chocolate milk', 'milk drink']),
   t('milk-powder', 'Milk powder', 'dairy', 'g', ['milk powder', 'powder milk', 'powdered milk', 'dry milk']),
   t('yogurt', 'Yogurt', 'dairy', 'g', ['yogurt', 'yoghurt', 'dahi', 'curd'], { display: 'kg' }),
@@ -185,7 +185,7 @@ export const ITEM_TYPES: ItemType[] = [
   t('canned', 'Canned food', 'pantry', 'g', ['canned', 'baked beans', 'fruit cocktail', 'pineapple slice', 'pineapple slices', 'tuna', 'sweet corn kernels']),
 
   // Frozen
-  t('nuggets', 'Nuggets', 'frozen', 'g', ['nugget', 'nuggets', 'tender pops', 'chicken pops', 'bites']),
+  t('nuggets', 'Nuggets', 'frozen', 'g', ['nugget', 'nuggets', 'potato nuggets', 'tender pops', 'chicken pops', 'bites']),
   t('kebab', 'Kebabs', 'frozen', 'g', ['kabab', 'kababs', 'kebab', 'kebabs', 'seekh kabab', 'chapli kabab', 'shami kabab', 'kofta']),
   t('samosa', 'Samosas', 'frozen', 'g', ['samosa', 'samosas', 'spring roll', 'spring rolls', 'roll patti', 'samosa patti', 'pastry patti']),
   t('fries', 'Fries', 'frozen', 'g', ['fries', 'french fries', 'potato wedges', 'potato bites', 'hash brown']),
@@ -193,9 +193,9 @@ export const ITEM_TYPES: ItemType[] = [
 
   // Snacks & biscuits
   t('biscuits', 'Biscuits', 'snacks', 'g', ['biscuit', 'biscuits', 'cookie', 'cookies', 'crackers', 'wafer', 'wafers', 'nan khatai', 'nankhatai', 'gala egg']),
-  t('chips', 'Chips', 'snacks', 'g', ['chips', 'crisps', 'nachos', 'potato sticks', 'puffs', 'cheese balls', 'chipsticks']),
+  t('chips', 'Chips', 'snacks', 'g', ['chips', 'crisps', 'nachos', 'potato sticks', 'puffs', 'cheese balls', 'chipsticks', 'potato chips', 'potato crisps', 'potato slims', 'potato stix', 'potato grills', 'potato snacks', 'potato munchies']),
   t('nimko', 'Nimko', 'snacks', 'g', ['nimko', 'nimco', 'namkeen', 'namkin', 'bhel puri', 'papdi', 'chewara', 'daal moong', 'dal moong']),
-  t('chocolate', 'Chocolate', 'snacks', 'g', ['chocolate', 'chocolates', 'dairy milk', 'chocolate bar', 'kitkat', 'snickers', 'surprise egg', 'chocolate egg', 'choco egg']),
+  t('chocolate', 'Chocolate', 'snacks', 'g', ['chocolate', 'chocolates', 'dairy milk', 'chocolate bar', 'kitkat', 'snickers', 'surprise egg', 'chocolate egg', 'choco egg', 'hershey kisses', "hershey's kisses"]),
   t('candy', 'Sweets & candy', 'snacks', 'g', ['candy', 'candies', 'toffee', 'toffees', 'lollipop', 'jelly', 'jellies', 'gummy', 'gummies', 'bubble gum', 'chewing gum', 'marshmallow', 'mints']),
   t('nuts', 'Nuts', 'snacks', 'g', ['nuts', 'mixed nuts', 'almond', 'almonds', 'badam', 'pistachio', 'pistachios', 'pista', 'cashew', 'cashews', 'kaju', 'walnut', 'walnuts', 'akhrot', 'peanuts', 'moongphali'], { display: 'kg' }),
   t('dry-fruit', 'Dry fruit', 'snacks', 'g', ['dry fruit', 'dry fruits', 'raisins', 'kishmish', 'apricots', 'khubani', 'figs', 'anjeer'], { display: 'kg' }),
@@ -348,7 +348,26 @@ export function modifierWords(typeId: string, words: string[]): string[] {
 }
 
 /** Phrases that look like an item but describe something else ("sugar free", "full cream milk"). */
-const NOT_ITEMS = [['sugar', 'free'], ['fat', 'free'], ['gluten', 'free'], ['full', 'cream']];
+const NOT_ITEMS = [
+  ['sugar', 'free'], ['fat', 'free'], ['gluten', 'free'], ['full', 'cream'],
+  // Cookies and muffins, not chips; pastry, not cheese puffs; a chocolate's flavour, not cookies.
+  ['chocolate', 'chip'], ['choco', 'chip'], ['choc', 'chip'], ['puff', 'pastry'],
+  ...['cookie', 'cooky'].flatMap((c) => [
+    [c, 'and', 'cream'], [c, 'and', 'creme'], [c, 'n', 'cream'], [c, 'n'], [c, 'dough'],
+  ]),
+];
+
+/**
+ * Types that, named after one of these, are its flavour: "Prince Biscuit Chocolate",
+ * "Torku Biscuits with Orange Jelly", "Century Chocolate Bar Choco Nuts". Named first
+ * they're the thing itself ("Galaxy Chocolate Minis Cookie Crumble" is chocolate).
+ */
+const FLAVOUR_OF: Record<string, string[]> = {
+  chocolate: ['biscuits', 'cake'],
+  nuts: ['biscuits', 'cake', 'chocolate'],
+  candy: ['biscuits', 'cake'],
+  honey: ['chocolate', 'biscuits', 'cake', 'cereal'],
+};
 
 export interface TypeMatch {
   type: ItemType;
@@ -358,16 +377,28 @@ export interface TypeMatch {
   specificity: number;
   /** Token index where the phrase ends (later = more likely the head noun). */
   end: number;
+  /**
+   * The phrase comes after the pack size, where store names put the flavour:
+   * "Oreo Cookies 110.4gm Chocolate Creme", "Safari Potato Grills 60gm Salt".
+   */
+  afterSize: boolean;
 }
+
+// A weight or volume token ("60gm", "1", "litre" after it): where the name proper ends.
+const SIZE_TOKEN = /^\d+(kgs?|kilo|grams?|grm|gms?|gr|g|mls?|ltrs?|litres?|liters?|lt|l)$/;
+const UNIT_TOKEN = /^(kgs?|kilo|grams?|grm|gms?|gr|g|mls?|ltrs?|litres?|liters?|lt|l)$/;
+const sizeIndex = (w: string[]) =>
+  w.findIndex((t, i) => SIZE_TOKEN.test(t) || (/^\d+$/.test(t) && UNIT_TOKEN.test(w[i + 1] ?? '')));
 
 /** Every item-type phrase found in `text`, ignoring phrases inside the first `skipTokens` tokens. */
 export function findTypes(text: string, skipTokens = 0): TypeMatch[] {
   const w = tokens(text);
   const skip = new Set<number>();
   for (let i = 0; i < w.length - 1; i++) {
-    for (const p of NOT_ITEMS) if (w[i] === p[0] && w[i + 1] === p[1]) skip.add(i).add(i + 1);
+    for (const p of NOT_ITEMS) if (p.every((x, j) => w[i + j] === x)) p.forEach((_, j) => skip.add(i + j));
   }
   const found: TypeMatch[] = [];
+  const size = sizeIndex(w);
   for (let i = 0; i < w.length; i++) {
     if (skip.has(i)) continue;
     for (const k of BY_FIRST_WORD.get(w[i]) || []) {
@@ -375,7 +406,7 @@ export function findTypes(text: string, skipTokens = 0): TypeMatch[] {
       // A phrase wholly inside the brand ("Lemon Max") says nothing about the item.
       if (end < skipTokens) continue;
       if (k.words.every((word, j) => w[i + j] === word && !skip.has(i + j))) {
-        found.push({ type: k.type, words: k.words, specificity: k.words.length, end });
+        found.push({ type: k.type, words: k.words, specificity: k.words.length, end, afterSize: size >= 0 && i > size });
       }
     }
   }
@@ -383,24 +414,37 @@ export function findTypes(text: string, skipTokens = 0): TypeMatch[] {
 }
 
 /**
- * The item type a name is most likely about. `categoryHint` (a canonical
- * category id) breaks ties and flags doubtful matches; `skipTokens` is the
- * number of leading tokens that are the brand; `accept` drops types the caller
- * knows don't fit (a size too small for eggs), so the next best one wins.
+ * Where a product sits, as canonical category ids: one, or several for a store aisle
+ * that names more than one ("Biscuits & Cakes" → bakery and snacks).
+ */
+export type CategoryHint = string | readonly string[] | null | undefined;
+
+/**
+ * The item type a name is most likely about. `categoryHint` breaks ties and flags
+ * doubtful matches (a type outside every hinted category, read from one word);
+ * `skipTokens` is the number of leading tokens that are the brand; `accept` drops
+ * types the caller knows don't fit (a size too small for eggs), so the next best one wins.
  */
 export function matchItemType(
   text: string,
-  categoryHint?: string | null,
+  categoryHint?: CategoryHint,
   skipTokens = 0,
   accept?: (type: ItemType) => boolean,
 ): { type: ItemType; words: string[]; confident: boolean } | null {
-  const found = findTypes(text, skipTokens).filter((m) => !accept || accept(m.type));
+  const all = findTypes(text, skipTokens).filter((m) => !accept || accept(m.type));
+  const start = (m: TypeMatch) => m.end - m.specificity + 1;
+  const found = all.filter((m) => !(FLAVOUR_OF[m.type.id] ?? []).some((id) => all.some((o) => o.type.id === id && o.end < start(m))));
   if (!found.length) return null;
+  const hints: readonly string[] = !categoryHint ? [] : typeof categoryHint === 'string' ? [categoryHint] : categoryHint;
+  const hinted = (t: ItemType) => hints.includes(t.category);
+  // A flavour after the size loses to the name's own type word; one that fits the
+  // store's aisle still beats a type word from elsewhere ("Milk Powder … 400gm Infant
+  // Formula" in a baby aisle is formula).
   const score = (m: TypeMatch) =>
-    m.specificity * 100 + m.end + (categoryHint && m.type.category === categoryHint ? 50 : 0);
+    m.specificity * 100 + m.end + (hinted(m.type) ? 50 : 0) - (m.afterSize ? (hinted(m.type) ? 25 : 75) : 0);
   found.sort((a, b) => score(b) - score(a));
   const best = found[0];
-  const confident = !categoryHint || best.type.category === categoryHint || best.specificity > 1;
+  const confident = !hints.length || hinted(best.type) || best.specificity > 1;
   return { type: best.type, words: best.words, confident };
 }
 
