@@ -118,9 +118,11 @@ export function ItemChoiceSheet({
         if (!p.brandKey || !p.brand) continue;
         if (p.brandKey !== refBrand && !allowedBrands.has(p.brandKey) && !similarSize(p.size, ref.size)) continue;
         const at = priced(p.product.id);
-        const price = at[0]?.price.price ?? Infinity;
+        const near = similarSize(p.size, ref.size);
+        // Only a size the plan would take orders the brand (a cheap 250 ml doesn't count for 1 L).
+        const price = near ? (at[0]?.price.price ?? Infinity) : Infinity;
         const cur = byBrand.get(p.brandKey);
-        const fits = p.brandKey === refBrand ? p === ref : similarSize(p.size, ref.size);
+        const fits = p.brandKey === refBrand ? p === ref : near;
         const curFits = cur ? (cur.key === refBrand ? cur.rep === ref : similarSize(cur.rep.size, ref.size)) : false;
         if (!cur || (fits && !curFits) || (fits === curFits && at.length > cur.stores)) {
           byBrand.set(p.brandKey, { key: p.brandKey, name: cur?.name ?? p.brand, rep: p, stores: at.length, price: Math.min(price, cur?.price ?? Infinity) });
