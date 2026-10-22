@@ -46,7 +46,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     body: [
       'When an item names a brand or kind (“Dawn bread”, “brown bread”), we stick to it. When it doesn’t, we pick the one you bought last, or else the one most of your stores carry — and say so in the plan.',
       'For most groceries we also let other brands of a similar size (within about 15%) compete on price. For personal care, baby and pharmacy items we keep to the exact product, since people tend to stick with theirs.',
-      'Tap an item in the plan (or Compare prices on an item) to choose: Exactly this one, This brand in a similar size, or Any brand in a similar size. Use it Just this time, or Save as my usual for every list.',
+      'Tap an item in the plan (or Compare prices on an item) to choose: Exactly this one, This brand in a similar size, or Any brand in a similar size. Happy with a few brands? Pick the brand choice and tick each brand you’d buy — we’ll take the cheapest of them. Use it Just this time, or Save as my usual for every list.',
     ],
   },
   {

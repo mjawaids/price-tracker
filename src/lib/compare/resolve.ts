@@ -55,6 +55,8 @@ export interface ResolvedItem {
   mode: PreferenceMode;
   reference: ProductProfile | null;
   acceptable: ProductProfile[];
+  /** `brand_size`: the brands allowed (the reference's, plus a usual's other brands). */
+  brands: { key: string; name: string }[];
   options: LineOption[];
 }
 
@@ -161,20 +163,37 @@ function mostCarried(ctx: ResolveContext, list: ProductProfile[]): ProductProfil
   return best;
 }
 
-/** Products acceptable for a reference product under a mode. */
-export function expand(ctx: ResolveContext, ref: ProductProfile, mode: PreferenceMode): ProductProfile[] {
+/**
+ * Products acceptable for a reference product under a mode. `brand_size` allows the
+ * reference's brand, or any of `brands` when given (a usual with several brands).
+ */
+export function expand(ctx: ResolveContext, ref: ProductProfile, mode: PreferenceMode, brands?: Set<string>): ProductProfile[] {
   if (mode === 'exact' || !ref.itemType) return [ref];
   const pool = ctx.byType.get(ref.itemType) || [];
+  const allowed = brands ?? new Set(ref.brandKey ? [ref.brandKey] : []);
   const out = pool.filter(
     (p) =>
       p.product.id === ref.product.id ||
-      (similarSize(p.size, ref.size) && (mode === 'any_size' || (!!ref.brandKey && p.brandKey === ref.brandKey))),
+      (similarSize(p.size, ref.size) && (mode === 'any_size' || (!!p.brandKey && allowed.has(p.brandKey)))),
   );
   if (!out.some((p) => p.product.id === ref.product.id)) out.unshift(ref);
   // Keep the list manageable: priced ones first.
   return out
     .sort((a, b) => pricedAt(ctx, b.product.id).length - pricedAt(ctx, a.product.id).length)
     .slice(0, MAX_ACCEPTABLE);
+}
+
+/**
+ * The brands a `brand_size` usual allows: the reference's plus those of its other
+ * products (one per extra brand picked in "Which milk?"). Older usuals list only the
+ * reference, so they keep to its brand.
+ */
+export function usualBrands(ctx: ResolveContext, ref: ProductProfile, productIds: string[]): { key: string; name: string }[] {
+  const out = new Map<string, string>();
+  for (const p of [ref, ...productIds.map((id) => profileFor(ctx, id))]) {
+    if (p?.brandKey && p.brand && !out.has(p.brandKey)) out.set(p.brandKey, p.brand);
+  }
+  return [...out].map(([key, name]) => ({ key, name }));
 }
 
 function optionsFor(ctx: ResolveContext, item: ItemInput, acceptable: ProductProfile[]): LineOption[] {
@@ -213,9 +232,10 @@ export function resolveItem(ctx: ResolveContext, item: ItemInput): ResolvedItem 
     mode: PreferenceMode,
     reference: ProductProfile | null,
     acceptable: ProductProfile[],
+    brands: { key: string; name: string }[] = reference?.brandKey && reference.brand ? [{ key: reference.brandKey, name: reference.brand }] : [],
   ): ResolvedItem => {
     const options = optionsFor(ctx, item, acceptable);
-    return { ...base, status: options.length || status === 'unknown' ? status : 'unpriced', itemType, mode, reference, acceptable, options };
+    return { ...base, status: options.length || status === 'unknown' ? status : 'unpriced', itemType, mode, reference, acceptable, brands, options };
   };
   const typeOf = (p: ProductProfile | null) => (p?.itemType ? ITEM_TYPE_BY_ID.get(p.itemType) ?? null : null);
 
@@ -231,11 +251,12 @@ export function resolveItem(ctx: ResolveContext, item: ItemInput): ResolvedItem 
   if (pref) {
     const ref = profileFor(ctx, pref.refProductId) || profileFor(ctx, pref.productIds[0]);
     if (ref) {
+      const brands = usualBrands(ctx, ref, pref.productIds);
       const acceptable =
         pref.mode === 'exact'
           ? [...new Set(pref.productIds.map((id) => profileFor(ctx, id)).filter((p): p is ProductProfile => !!p))]
-          : expand(ctx, ref, pref.mode);
-      return finish('usual', typeOf(ref), pref.mode, ref, acceptable.length ? acceptable : [ref]);
+          : expand(ctx, ref, pref.mode, pref.mode === 'brand_size' ? new Set(brands.map((b) => b.key)) : undefined);
+      return finish('usual', typeOf(ref), pref.mode, ref, acceptable.length ? acceptable : [ref], brands);
     }
   }
 

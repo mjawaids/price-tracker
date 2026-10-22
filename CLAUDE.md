@@ -136,7 +136,12 @@ Context-based (no Redux). Providers in `src/contexts/`:
   different names at several stores is one row (`resolve.ts` `sameProductKey`: brand
   however it's spelled (`productName.ts` `brandId`: "Day Fresh" = "Dayfresh"), type, total
   size, variant words minus noise like "Flv"/"Tetra" with "full fat" = "full cream"
-  (`variantKey`)), and *Exactly this one* saves all its ids. With no
+  (`variantKey`)), and *Exactly this one* saves all its ids. *<Brand>, similar size*
+  offers chips of the brands with a product around that size ("Brands you're happy
+  with": Olper's, Dayfresh, Pakola): the usual keeps one product per extra brand in
+  `product_ids` (`resolve.ts` `usualBrands`, `expand(…, brands)`), no new mode, so an
+  older app reads it as the first brand only; the plan says "Olper's, Dayfresh or
+  Pakola, about 1 L" (`describe.ts` `brandList`). With no
   products of the item's type it lists names holding every word of the item, minus
   products known to be another type ("eggs" never shows egg noodles).
 - Help: `src/lib/help.ts` topics in a lazy `HelpSheet` (`app.openSheet('help', id)`);
@@ -443,7 +448,7 @@ are in `public`). SpendLess data must never mix with theirs:
 | `product_merges` | merge script only (clients can't read): from_id → into_id, rule (`same-name` \| `import` \| `same-key` \| `near-name` \| `reported`, nightly; `approved`, the owner's optional pick), moved (what moved, for undo), undone_at (= keep that pair apart, for the rules and the importer), undo_reason (`store-lists-both` \| `prices-apart` \| `people` \| `owner`). `price_reports.copy_of` marks a merge's copy of a report |
 | `duplicate_reports` | id, user_id (default `auth.uid()`, the trigger forces it), kind (`same`: two active shared products are one \| `not_same`: a shared product merged into `other_id` isn't it), product_id, other_id, created_at, withdrawn_at (Undo marks it; rows are never deleted). One live report per person per pair and kind (either way round); ≤30 submissions a day, withdrawn ones included (trigger), so withdraw-and-resubmit can't get around the cap; own rows only: read, insert (kind + pair, column grants), set `withdrawn_at` once (no un-withdraw, no delete). No moderator: the nightly job counts only qualifying people (`scripts/seed/duplicate-votes.sql`: account ≥7 days, confirmed, not banned; `reporter_trust` ≥ 1; accepted prices for ≥3 products in 60 days) by their newest report per pair, and the majority decides: merge = "same" ≥ `PRODUCT_MERGE_MIN_PEOPLE` and > "not the same"; undo the other way round. A pair people split can be joined again by "same" reports made since; other undos are for good |
 | *function* `save_receipt` | `spendless.save_receipt(store, observed_at, currency, items jsonb)` — a receipt's new private products (reusing same-named ones) + its price reports in one transaction; SECURITY INVOKER, EXECUTE for `authenticated` only |
-| `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name, applied plans (savings) |
+| `user_stores`, `item_preferences`, `plans` | "my stores", a user's usual product per list item name (`brand_size`: the brands of `ref_product_id` and every product in `product_ids`), applied plans (savings) |
 | `invite_codes` | user_id (PK), code (8 characters from A–Z minus I/O + 2–9, set by `spendless.new_invite_code()`, never changes), display_name (what invites say they're from: plain, ≤30, no links/emails, at most 2 digits in any script via `spendless.digit_count` (every Unicode Nd range, mirrored by `\p{Nd}` in `cleanInviteName`), so no phone number), created_at, updated_at. Owner only; clients insert `display_name` and update it, nothing else (column grants) |
 | `referrals` | user_id (PK = who joined, once ever), code (→ `invite_codes`), created_at. The person who joined inserts their own row (never their own code, and only from an account under 7 days old: `spendless.my_account_is_new()` in the insert policy); the inviter can read `code` and `created_at` for their code only (column grants), so the app shows a count, never who |
 | *function* `invite_from` | `spendless.invite_from(code)` → the display name for one exact code, for the sign-up page while signed out. SECURITY DEFINER (pinned `search_path`, checks the code's format, returns only the name), because a policy letting `anon` read `invite_codes` would let anyone list every code and name; EXECUTE for `anon`/`authenticated` |
