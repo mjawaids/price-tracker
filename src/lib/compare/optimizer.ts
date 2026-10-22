@@ -178,11 +178,17 @@ function evaluateSet(storeIds: string[], lines: PlanLineInput[], rules: Map<stri
 }
 
 function toPlan(ev: Evaluated, lines: PlanLineInput[], rules: Map<string, StoreDeliveryRule>, coverable: Set<string>): Plan {
+  const planned = [...ev.assign].map(([i, option]) => ({ key: lines[i].key, option }));
+  return planFromLines(planned, rules, coverable);
+}
+
+/** A plan from lines already placed: per-store subtotals, delivery and totals. */
+function planFromLines(planned: PlannedLine[], rules: Map<string, StoreDeliveryRule>, coverable: Set<string>): Plan {
   const byStore = new Map<string, PlannedLine[]>();
-  for (const [i, option] of ev.assign) {
-    const list = byStore.get(option.storeId) || [];
-    list.push({ key: lines[i].key, option });
-    byStore.set(option.storeId, list);
+  for (const l of planned) {
+    const list = byStore.get(l.option.storeId) || [];
+    list.push(l);
+    byStore.set(l.option.storeId, list);
   }
   const stores: StorePlan[] = [...byStore.entries()]
     .map(([storeId, ls]) => {
@@ -191,7 +197,7 @@ function toPlan(ev: Evaluated, lines: PlanLineInput[], rules: Map<string, StoreD
       return { storeId, lines: ls, subtotal, delivery, total: round(subtotal + delivery) };
     })
     .sort((a, b) => b.total - a.total);
-  const covered = new Set([...ev.assign.keys()].map((i) => lines[i].key));
+  const covered = new Set(planned.map((l) => l.key));
   const itemsTotal = round(stores.reduce((a, s) => a + s.subtotal, 0));
   const deliveryTotal = round(stores.reduce((a, s) => a + s.delivery, 0));
   return {
@@ -202,6 +208,34 @@ function toPlan(ev: Evaluated, lines: PlanLineInput[], rules: Map<string, StoreD
     covered: [...covered],
     uncovered: [...coverable].filter((k) => !covered.has(k)),
   };
+}
+
+/**
+ * A plan with the person's own picks: each moved line goes to its cheapest option at
+ * the chosen store (ignored when that store has no option for it), `anywhere` takes it
+ * out of the plan (not counted as uncovered). Nothing else moves; delivery is redone.
+ */
+export function applyMoves(plan: Plan, lines: PlanLineInput[], moves: Record<string, string>, stores: OptStore[]): Plan {
+  const rules = new Map(stores.map((s) => [s.id, s.rule]));
+  const byKey = new Map(lines.map((l) => [l.key, l]));
+  const placed = new Map(plan.stores.flatMap((s) => s.lines).map((l) => [l.key, l.option]));
+  for (const [key, to] of Object.entries(moves)) {
+    if (to === 'anywhere') {
+      placed.delete(key);
+      continue;
+    }
+    const best = byKey
+      .get(key)
+      ?.options.filter((o) => o.storeId === to && rules.has(o.storeId) && o.total > 0)
+      .sort((a, b) => a.total - b.total)[0];
+    if (best) placed.set(key, best);
+  }
+  const coverable = new Set([...plan.covered, ...plan.uncovered].filter((k) => moves[k] !== 'anywhere'));
+  return planFromLines(
+    [...placed].map(([key, option]) => ({ key, option })),
+    rules,
+    coverable,
+  );
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;

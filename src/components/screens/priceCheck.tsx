@@ -1,12 +1,19 @@
-// Price checks while shopping (lazy, from the list): "What did it cost?" after
-// "Different" on the tick toast, and "Done at <store>" when a store's part of a planned
-// list is all ticked. Answers go through CompareContext.checkPrices (kept on this
-// device when offline).
+// Price checks while shopping (lazy, from the list): "What did you pay?" after "No" on
+// the tick toast (a different price, another store, or they didn't have it), and "Done
+// at <store>" when a store's part of a planned list is all ticked. Answers go through
+// CompareContext.checkPrices (kept on this device when offline).
 import { useEffect, useState } from 'react';
 import { PriceCheck, useCompare } from '../../contexts/CompareContext';
-import { AgeChip, Btn, ConfirmSheet, Icon, Sheet, ToggleTrack } from '../ui';
+import { trackUserAction } from '../../utils/analytics';
+import { AgeChip, Btn, ConfirmSheet, Icon, Sheet, StoreDot, ToggleTrack } from '../ui';
+import { splitStoreName } from './compareHelpers';
 import { Field, NumIn } from './manageParts';
 import { checkMessage, PriceAsk } from './priceCheckHelpers';
+import { StorePickerSheet } from './storePicker';
+
+const track = (action: string, details?: Record<string, unknown>) => {
+  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') trackUserAction(action, details);
+};
 
 const validPrice = (v: number) => v > 0 && v < 10_000_000;
 
@@ -19,101 +26,186 @@ function PrivacyLine({ shared }: { shared: boolean }) {
   );
 }
 
-// ── "What did it cost?" ──────────────────────────────────────────────────────
+// ── "What did you pay?" ──────────────────────────────────────────────────────
+/** Where an item was bought instead of its planned store: its plan moves there. */
+export interface MovedTo {
+  storeId: string;
+  productId: string;
+  /** Line total (packs × the price paid). */
+  price: number;
+}
+
 export function PriceCheckSheet({
   ask,
+  packs = 1,
   onClose,
   onDone,
 }: {
   ask: PriceAsk | null;
+  /** Packs the plan has for this item ("2 milk"), for the line total when it moves. */
+  packs?: number;
   onClose: () => void;
-  /** Called with the toast to show; `answered` when it was saved (or kept to send later). */
-  onDone: (message: string, answered: boolean) => void;
+  /**
+   * Called with the toast to show; `answered` when it was saved (or kept to send later);
+   * `moved` when it was bought at another store.
+   */
+  onDone: (message: string, answered: boolean, moved?: MovedTo) => void;
 }) {
   const compare = useCompare();
   const [price, setPrice] = useState('');
   const [gone, setGone] = useState(false);
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
     setPrice('');
     setGone(false);
+    setStoreId(null);
+    setChoosing(false);
     setSaving(false);
     setError('');
   }, [ask?.itemId]);
   if (!ask) return null;
 
+  const planned = compare.storeById(ask.storeId);
+  const where = (storeId && compare.storeById(storeId)) || planned;
+  // Bought somewhere else: the price goes there, never to the planned store.
+  const elsewhere = !!where && where.id !== ask.storeId;
+  const [plannedTitle, plannedArea] = splitStoreName(ask.storeName);
+  const [whereTitle, whereArea] = splitStoreName(where?.name ?? ask.storeName);
+
   const save = async () => {
     const value = parseFloat(price);
-    if (!gone && !validPrice(value)) {
+    if ((elsewhere || !gone) && !validPrice(value)) {
       setError('Enter the price you paid for one pack.');
       return;
     }
     setSaving(true);
     setError('');
-    const r = await compare.checkPrices(
-      [{ storeId: ask.storeId, productId: ask.productId, price: gone ? null : value, isAvailable: !gone, source: 'trip' }],
-      'tick',
-    );
+    const rows: PriceCheck[] = elsewhere
+      ? [
+          { storeId: where!.id, productId: ask.productId, price: value, isAvailable: true, source: 'trip' },
+          // The planned store only when they say it didn't have it.
+          ...(gone ? [{ storeId: ask.storeId, productId: ask.productId, price: null, isAvailable: false, source: 'trip' as const }] : []),
+        ]
+      : [{ storeId: ask.storeId, productId: ask.productId, price: gone ? null : value, isAvailable: !gone, source: 'trip' }];
+    const r = await compare.checkPrices(rows, 'tick');
     setSaving(false);
     if (!r) {
       setError('Couldn’t save — check your connection and try again.');
       return;
     }
-    onDone(checkMessage(r, ask, gone ? 'gone' : 'changed', compare.fmt), true);
+    if (elsewhere) {
+      track('price_check_elsewhere', { out_of_stock: gone, from: 'tick', count: 1 });
+      onDone(checkMessage(r, { ...ask, storeName: where!.name, shared: !where!.ownerId, price: value }, 'elsewhere', compare.fmt), true, {
+        storeId: where!.id,
+        productId: ask.productId,
+        price: value * Math.max(1, packs),
+      });
+    } else onDone(checkMessage(r, ask, gone ? 'gone' : 'changed', compare.fmt), true);
   };
 
   return (
-    <Sheet
-      open
-      onClose={onClose}
-      title="What did it cost?"
-      footer={
-        <Btn full size="lg" onClick={() => void save()} disabled={saving}>
-          {saving ? 'Saving…' : 'Save price'}
-        </Btn>
-      }
-    >
-      <div className="flex flex-col gap-1 mb-4">
-        <div className="font-bold text-[16px]">{ask.productName}</div>
-        <div className="flex items-center gap-1.5 flex-wrap text-[13px] text-ink-soft">
-          <span>
-            {ask.storeName} · we had <span className="font-mono font-bold text-ink">{compare.fmt(ask.price)}</span>
-          </span>
-          <AgeChip observedAt={ask.observedAt} />
-        </div>
-      </div>
-      {!gone && (
-        <Field label="Price for one pack">
-          <NumIn currency={compare.currency} value={price} onChange={(e) => setPrice(e.target.value)} placeholder={String(ask.price)} autoFocus />
-        </Field>
-      )}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={gone}
-        onClick={() => setGone((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 text-left mb-3"
-        style={{ minHeight: 52 }}
+    <>
+      <Sheet
+        open={!choosing}
+        onClose={onClose}
+        title="What did you pay?"
+        footer={
+          <Btn full size="lg" onClick={() => void save()} disabled={saving}>
+            {saving ? 'Saving…' : 'Save price'}
+          </Btn>
+        }
       >
-        <span>
-          <span className="block font-semibold text-[15px]">They didn’t have it</span>
-          <span className="block text-[12.5px] text-ink-soft">Marks it out of stock there</span>
-        </span>
-        <ToggleTrack on={gone} />
-      </button>
-      {error && (
-        <div role="alert" className="text-[13px] mb-2 text-danger">
-          {error}
+        <div className="flex flex-col gap-1 mb-4">
+          <div className="font-bold text-[16px] break-words">{ask.productName}</div>
+          <div className="flex items-center gap-1.5 flex-wrap text-[13px] text-ink-soft">
+            <span>
+              {elsewhere ? `Planned at ${plannedTitle}` : plannedTitle} · we had <span className="font-mono font-bold text-ink">{compare.fmt(ask.price)}</span>
+            </span>
+            <AgeChip observedAt={ask.observedAt} />
+          </div>
         </div>
-      )}
-      <PrivacyLine shared={ask.shared} />
-    </Sheet>
+        <Field label="Where you bought it" group>
+          <button
+            type="button"
+            onClick={() => setChoosing(true)}
+            className="w-full flex items-center gap-3 text-left rounded-btn bg-surface shadow-[inset_0_0_0_1.5px_var(--line)]"
+            style={{ minHeight: 56, padding: '8px 8px 8px 14px' }}
+          >
+            {where && <StoreDot store={where} size={12} />}
+            <span className="flex-1 min-w-0">
+              <span className="block font-bold text-[15.5px] leading-snug break-words">{whereTitle}</span>
+              {(whereArea || elsewhere) && (
+                <span className="block text-[13px] text-ink-soft leading-snug break-words">
+                  {[whereArea, elsewhere ? 'not the planned store' : null].filter(Boolean).join(' · ')}
+                </span>
+              )}
+            </span>
+            <span className="shrink-0 font-extrabold text-[13.5px] text-accent-ink" style={{ padding: '0 6px' }}>
+              Change
+            </span>
+          </button>
+        </Field>
+        {(elsewhere || !gone) && (
+          <Field label="Price for one pack">
+            <NumIn currency={compare.currency} value={price} onChange={(e) => setPrice(e.target.value)} placeholder={String(ask.price)} autoFocus />
+          </Field>
+        )}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={gone}
+          onClick={() => setGone((v) => !v)}
+          className="w-full flex items-center justify-between gap-3 text-left mb-3"
+          style={{ minHeight: 52 }}
+        >
+          <span>
+            <span className="block font-semibold text-[15px]">{elsewhere ? `${plannedTitle} didn’t have it` : 'They didn’t have it'}</span>
+            <span className="block text-[12.5px] text-ink-soft">
+              {elsewhere ? `Optional · marks it out of stock at ${plannedArea ? `${plannedTitle}, ${plannedArea}` : plannedTitle}` : 'Marks it out of stock there'}
+            </span>
+          </span>
+          <ToggleTrack on={gone} />
+        </button>
+        {elsewhere && (
+          <div className="flex gap-2.5 items-start rounded-[14px] bg-[var(--backdrop)] text-[13px] leading-snug mb-3" style={{ padding: '10px 12px' }}>
+            <Icon name="arrowR" size={16} stroke={2.3} className="shrink-0 mt-px" />
+            <span>
+              {ask.itemName} moves to <strong>{whereTitle}</strong> on your list,{' '}
+              {gone ? `and ${plannedTitle} is marked as out of stock.` : `and nothing is saved for ${plannedTitle}.`}
+            </span>
+          </div>
+        )}
+        {error && (
+          <div role="alert" className="text-[13px] mb-2 text-danger">
+            {error}
+          </div>
+        )}
+        <PrivacyLine shared={elsewhere ? !where!.ownerId : ask.shared} />
+      </Sheet>
+      <StorePickerSheet
+        open={choosing}
+        title="Where did you buy it?"
+        confirmLabel="Use this store"
+        current={where ?? null}
+        initialKind={where?.kind ?? 'physical'}
+        onClose={() => setChoosing(false)}
+        onPick={(st) => {
+          setStoreId(st.id);
+          setGone(false);
+          setError('');
+          setChoosing(false);
+        }}
+      />
+    </>
   );
 }
 
 // ── "Done at <store>" ────────────────────────────────────────────────────────
-type Answer = { state: 'right' } | { state: 'changed'; value: string } | { state: 'gone' };
+/** `elsewhere`: bought at another store, so nothing is saved for this one. */
+type Answer = { state: 'right' } | { state: 'changed'; value: string } | { state: 'gone' } | { state: 'elsewhere' };
 
 export function StoreDoneSheet({
   storeName,
@@ -147,8 +239,10 @@ export function StoreDoneSheet({
     setError('');
   };
   const dirty = asks.some((a) => answerOf(a.itemId).state !== 'right');
-  const n = asks.length;
+  // Answers that save something (a "bought elsewhere" row saves nothing).
+  const n = asks.filter((a) => answerOf(a.itemId).state !== 'elsewhere').length;
   const shared = asks.some((a) => a.shared);
+  const storeTitle = splitStoreName(storeName)[0];
 
   const leave = () => (dirty ? setDiscard(true) : onNotNow());
 
@@ -161,7 +255,9 @@ export function StoreDoneSheet({
       setError(`Enter the price for ${bad.itemName}, or tap Undo.`);
       return;
     }
-    const rows: PriceCheck[] = asks.map((a) => {
+    const elsewhere = asks.length - n;
+    if (elsewhere) track('price_check_elsewhere', { out_of_stock: false, from: 'summary', count: elsewhere });
+    const rows: PriceCheck[] = asks.filter((a) => answerOf(a.itemId).state !== 'elsewhere').map((a) => {
       const x = answerOf(a.itemId);
       if (x.state === 'changed') return { storeId: a.storeId, productId: a.productId, price: parseFloat(x.value), isAvailable: true, source: 'trip' };
       if (x.state === 'gone') return { storeId: a.storeId, productId: a.productId, price: null, isAvailable: false, source: 'trip' };
@@ -193,7 +289,7 @@ export function StoreDoneSheet({
     );
   }
 
-  const label = dirty ? `Save ${n} ${n === 1 ? 'answer' : 'answers'}` : n === 1 ? 'It was right' : `All ${n} were right`;
+  const label = !n ? 'Done' : dirty ? `Save ${n} ${n === 1 ? 'answer' : 'answers'}` : n === 1 ? 'It was right' : `All ${n} were right`;
 
   return (
     <Sheet
@@ -217,7 +313,7 @@ export function StoreDoneSheet({
             <Icon name="check" size={15} stroke={2.6} />
             All {ticked} in your cart
           </span>
-          <p className="m-0 mt-1 text-[14px] leading-snug text-ink-soft">Were these the prices? Change any that weren’t.</p>
+          <p className="m-0 mt-1 text-[14px] leading-snug text-ink-soft">Were these the prices? Change any that weren’t, or say you got it somewhere else.</p>
         </div>
         {!compare.online && (
           <div role="status" className="flex gap-2.5 items-start rounded-[14px] bg-warn-wash text-warn-ink text-[13px] leading-snug" style={{ padding: '10px 12px' }}>
@@ -243,12 +339,12 @@ export function StoreDoneSheet({
                   }`}
                   style={{ width: 28, height: 28 }}
                 >
-                  <Icon name={x.state === 'right' ? 'check' : x.state === 'changed' ? 'edit' : 'x'} size={14} stroke={2.6} />
+                  <Icon name={x.state === 'right' ? 'check' : x.state === 'changed' ? 'edit' : x.state === 'elsewhere' ? 'arrowR' : 'x'} size={14} stroke={2.6} />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className={`block font-bold text-[15px] ${x.state === 'gone' ? 'text-ink-soft' : ''}`}>{a.itemName}</span>
+                  <span className={`block font-bold text-[15px] ${x.state === 'gone' || x.state === 'elsewhere' ? 'text-ink-soft' : ''}`}>{a.itemName}</span>
                   <span className="block text-[12.5px] text-ink-soft leading-snug line-clamp-2">
-                    {a.productName}
+                    {x.state === 'elsewhere' ? `Bought elsewhere · nothing saved for ${storeTitle}` : a.productName}
                     {x.state === 'gone' ? ' · wasn’t there' : ''}
                   </span>
                   {x.state === 'changed' && (
@@ -281,7 +377,7 @@ export function StoreDoneSheet({
                   <button
                     type="button"
                     onClick={() => set(a.itemId, { state: 'right' })}
-                    aria-label={`Undo: ${a.itemName} was ${compare.fmt(a.price)}`}
+                    aria-label={x.state === 'elsewhere' ? `Undo: ${a.itemName} was bought here` : `Undo: ${a.itemName} was ${compare.fmt(a.price)}`}
                     className="shrink-0 font-extrabold text-[13.5px] text-accent-ink"
                     style={{ minHeight: 44, padding: '0 6px' }}
                   >
@@ -289,25 +385,33 @@ export function StoreDoneSheet({
                   </button>
                 )}
                 {x.state === 'changed' && (
-                  <span className="basis-full flex gap-2" style={{ paddingLeft: 40 }}>
-                    <span className="flex-1 min-w-0">
-                      <NumIn
-                        currency={compare.currency}
-                        value={x.value}
-                        onChange={(e) => set(a.itemId, { state: 'changed', value: e.target.value })}
-                        placeholder={String(a.price)}
-                        aria-label={`Price of ${a.itemName}`}
-                        autoFocus
-                      />
+                  <span className="basis-full flex flex-col gap-2" style={{ paddingLeft: 40 }}>
+                    <NumIn
+                      currency={compare.currency}
+                      value={x.value}
+                      onChange={(e) => set(a.itemId, { state: 'changed', value: e.target.value })}
+                      placeholder={String(a.price)}
+                      aria-label={`Price of ${a.itemName}`}
+                      autoFocus
+                    />
+                    <span className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => set(a.itemId, { state: 'gone' })}
+                        className="flex-1 rounded-[14px] bg-surface font-extrabold text-[13.5px] shadow-[inset_0_0_0_1.5px_var(--line)]"
+                        style={{ minHeight: 44, padding: '0 10px' }}
+                      >
+                        Wasn’t there
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => set(a.itemId, { state: 'elsewhere' })}
+                        className="flex-1 rounded-[14px] bg-surface font-extrabold text-[13.5px] shadow-[inset_0_0_0_1.5px_var(--line)]"
+                        style={{ minHeight: 44, padding: '0 10px' }}
+                      >
+                        Bought elsewhere
+                      </button>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => set(a.itemId, { state: 'gone' })}
-                      className="shrink-0 rounded-[14px] bg-surface font-extrabold text-[13.5px] shadow-[inset_0_0_0_1.5px_var(--line)]"
-                      style={{ minHeight: 48, padding: '0 12px' }}
-                    >
-                      Wasn’t there
-                    </button>
                   </span>
                 )}
               </li>

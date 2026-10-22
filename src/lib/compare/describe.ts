@@ -99,6 +99,13 @@ export function deliveryLabel(rule: StoreDeliveryRule, fmt: (n: number) => strin
 }
 
 /** What a plan's subtotal means for a store's delivery fee. */
+/** A store below its minimum order (only an edited plan can get there): how far short. */
+export function minOrderNote(rule: StoreDeliveryRule, subtotal: number, fmt: (n: number) => string): string | null {
+  const min = rule.minOrder ?? 0;
+  if (!min || subtotal <= 0 || subtotal >= min) return null;
+  return `${fmt(min - subtotal)} short of the ${fmt(min)} minimum order — they may not take it. Move an item here, or tap one to send it elsewhere.`;
+}
+
 export function deliveryNote(rule: StoreDeliveryRule, subtotal: number, fmt: (n: number) => string): { text: string; good: boolean } | null {
   if (rule.type === 'over') {
     return subtotal >= rule.threshold

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useLists } from '../../contexts/ListsContext';
 import { useCompare } from '../../contexts/CompareContext';
@@ -8,14 +8,15 @@ import { trackUserAction } from '../../utils/analytics';
 import { useAuth } from '../../contexts/AuthContext';
 import { InviteSheet } from './inviteSheet';
 import { useHint } from '../../hooks/useHint';
-import { Plan } from '../../lib/compare/optimizer';
+import { applyMoves, OptStore, Plan, PlanLineInput } from '../../lib/compare/optimizer';
 import { ResolvedItem } from '../../lib/compare/resolve';
-import { choiceLabel, deliveryLabel, deliveryNote } from '../../lib/compare/describe';
+import { choiceLabel, deliveryLabel, deliveryNote, minOrderNote } from '../../lib/compare/describe';
 import { storeLink } from '../../lib/links';
 import { AgeChip, Btn, CoachMark, EmptyState, Icon, Toast } from '../ui';
 import { ItemChoiceSheet, StoreFormSheet, StoresSheet } from './compareSheets';
 import { CompareNotice, FreshnessNote, StoreName } from './compareParts';
-import { productSizeText, sectionLabel } from './compareHelpers';
+import { productSizeText, sectionLabel, splitStoreName } from './compareHelpers';
+import { PlanLineSheet } from './planStoreSheet';
 
 type OptionId = 'cheapest' | 'oneStop' | 'delivered' | 'fewerStops';
 
@@ -46,6 +47,10 @@ export default function PlanScreen() {
 
   const [option, setOption] = useState<OptionId>('cheapest');
   const [choiceFor, setChoiceFor] = useState<string | null>(null);
+  // The person's own picks on this plan (item id → store id or 'anywhere'): only those
+  // lines move (applyMoves). Kept while the screen is open, across the option tabs.
+  const [moves, setMoves] = useState<Record<string, string>>({});
+  const [lineFor, setLineFor] = useState<string | null>(null);
   const [storesOpen, setStoresOpen] = useState(false);
   const [storeForm, setStoreForm] = useState<'new' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -93,6 +98,21 @@ export default function PlanScreen() {
   const result = useMemo(() => planFor(items), [planFor, items]);
   const { set, resolved } = result;
   const byId = useMemo(() => new Map(resolved.map((r) => [r.item.id, r])), [resolved]);
+  const { storeById } = compare;
+  const planStores = useMemo(
+    () =>
+      result.storeIds
+        .map((id) => storeById(id))
+        .filter((st): st is NonNullable<typeof st> => !!st)
+        .map((st): OptStore => ({ id: st.id, rule: st.deliveryRule, kind: st.kind })),
+    [result.storeIds, storeById],
+  );
+  const lines = useMemo<PlanLineInput[]>(() => {
+    const ids = new Set(result.storeIds);
+    return resolved.map((r) => ({ key: r.item.id, options: r.options.filter((o) => ids.has(o.storeId)) }));
+  }, [resolved, result.storeIds]);
+  const edited = Object.keys(moves).length > 0;
+  const edit = useCallback((p: Plan) => (edited ? applyMoves(p, lines, moves, planStores) : p), [edited, lines, moves, planStores]);
 
   const options = (
     [
@@ -102,7 +122,10 @@ export default function PlanScreen() {
       ['fewerStops', set.fewerStops],
     ] as [OptionId, Plan | null][]
   ).filter((o): o is [OptionId, Plan] => !!o[1]);
-  const current = options.find(([id]) => id === option)?.[1] ?? set.cheapest;
+  // Our pick for the chosen option, and the plan with the person's own picks on top.
+  const picked = options.find(([id]) => id === option)?.[1] ?? set.cheapest;
+  const current = picked ? edit(picked) : null;
+  const editedCheapest = set.cheapest ? edit(set.cheapest) : null;
 
   const assumed = resolved.filter((r) => r.status === 'assumed' && current?.covered.includes(r.item.id));
   const notCompared = resolved.filter((r) => r.status === 'unknown' || r.status === 'unpriced');
@@ -114,7 +137,14 @@ export default function PlanScreen() {
   // The baseline prices everything the cheapest plan covers, so it only compares
   // fairly with a plan that covers as much.
   const fullCover = (p: Plan | null) => !!p && !!set.cheapest && p.covered.length >= set.cheapest.covered.length;
-  const savings = current && set.baseline && fullCover(current) ? Math.max(0, set.baseline.total - current.total) : 0;
+  // Edited to cost more than our pick: say so, instead of the savings line.
+  const overPick = edited && current && picked ? current.total - picked.total : 0;
+  const savings = overPick <= 0.5 && current && set.baseline && fullCover(current) ? Math.max(0, set.baseline.total - current.total) : 0;
+  const anywhere = Object.entries(moves)
+    .filter(([key, to]) => to === 'anywhere' && byId.has(key))
+    .map(([key]) => byId.get(key)!.item.name);
+  // Where our pick put each line (for "Rs 15 more than Naheed").
+  const pickedAt = new Map(picked ? picked.stores.flatMap((sp) => sp.lines.map((l) => [l.key, l.option] as const)) : []);
   const dates = current
     ? current.stores.flatMap((s) => s.lines.map((l) => compare.priceAt(s.storeId, l.option.productId)?.observedAt ?? '')).filter(Boolean)
     : [];
@@ -134,6 +164,7 @@ export default function PlanScreen() {
       storeCount: current.stores.length,
       itemCount: current.covered.length,
     });
+    if (edited) track('plan_edited_applied', { moves: Object.keys(moves).length });
     back();
   };
 
@@ -141,10 +172,33 @@ export default function PlanScreen() {
     const n = p.stores.length;
     const first = compare.storeById(p.stores[0]?.storeId ?? '')?.name ?? '';
     const where = n === 1 ? first : `${n} stores`;
-    // A choice that leaves items out says so first: its total isn't comparable.
-    const sub = fullCover(p) ? where : `${p.covered.length} of ${p.covered.length + p.uncovered.length} items`;
+    // A choice that leaves items out says so first: its total isn't comparable. (Items
+    // the person sent to Anywhere don't count: every choice leaves them out.)
+    const full = !!editedCheapest && p.covered.length >= editedCheapest.covered.length;
+    const sub = full ? where : `${p.covered.length} of ${p.covered.length + p.uncovered.length} items`;
     const label = id === 'cheapest' ? 'Cheapest' : id === 'oneStop' ? 'One stop' : id === 'delivered' ? 'Delivered' : 'Fewer stops';
-    return { label, sub, partial: !fullCover(p) };
+    return { label, sub, partial: !full };
+  };
+  const track = (action: string, details?: Record<string, unknown>) => {
+    if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') trackUserAction(action, details);
+  };
+  /** A line to another store, or out of the plan; back to our pick's store drops the edit. */
+  const moveLine = (key: string, to: string) => {
+    const pick = pickedAt.get(key)?.storeId;
+    const next = { ...moves };
+    if (to === pick) delete next[key];
+    else next[key] = to;
+    setMoves(next);
+    track('plan_item_moved', { from: 'plan', to: to === 'anywhere' ? 'anywhere' : 'store' });
+    setLineFor(null);
+    // The totals are at the top, often scrolled away: say the new one.
+    const name = byId.get(key)?.item.name ?? 'It';
+    const newTotal = picked ? compare.fmt(applyMoves(picked, lines, next, planStores).total) : '';
+    setToast(
+      to === 'anywhere'
+        ? `${name} is out of this plan · total ${newTotal}`
+        : `${name} moves to ${splitStoreName(compare.storeById(to)?.name ?? '')[0]} · total ${newTotal}`,
+    );
   };
 
   const header = (
@@ -171,6 +225,22 @@ export default function PlanScreen() {
   const sheets = (
     <>
       <ItemChoiceSheet item={choiceFor ? items.find((i) => i.id === choiceFor) ?? null : null} onClose={() => setChoiceFor(null)} onDone={setToast} />
+      {lineFor && current && (
+        <PlanLineSheet
+          item={items.find((i) => i.id === lineFor) ?? null}
+          options={lines.find((l) => l.key === lineFor)?.options ?? []}
+          current={moves[lineFor] === 'anywhere' ? 'anywhere' : current.stores.find((sp) => sp.lines.some((l) => l.key === lineFor))?.storeId ?? null}
+          ourPick={pickedAt.get(lineFor)?.storeId ?? null}
+          inPlan={new Set(current.stores.map((sp) => sp.storeId))}
+          onClose={() => setLineFor(null)}
+          onPick={(storeId) => moveLine(lineFor, storeId)}
+          onAnywhere={() => moveLine(lineFor, 'anywhere')}
+          onChangeProduct={() => {
+            setChoiceFor(lineFor);
+            setLineFor(null);
+          }}
+        />
+      )}
       <StoresSheet open={storesOpen} onClose={() => setStoresOpen(false)} onAddStore={() => setStoreForm('new')} />
       <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} from="plan" />
       <StoreFormSheet target={storeForm} onClose={() => setStoreForm(null)} />
@@ -222,12 +292,30 @@ export default function PlanScreen() {
       <div className="flex flex-col gap-4" style={{ padding: compact ? '6px 16px 24px' : '6px 28px 32px' }}>
         {!compare.online && <CompareNotice icon="wifiOff" title="You’re offline" body="This plan uses the prices saved on this device." />}
 
+        {edited && (
+          <div className="flex items-center gap-2.5 rounded-[14px] bg-[var(--backdrop)]" style={{ padding: '4px 4px 4px 14px' }}>
+            <Icon name="edit" size={16} stroke={2.3} />
+            <span className="flex-1 min-w-0 text-[13.5px] font-semibold" role="status">
+              Edited · {Object.keys(moves).length} {Object.keys(moves).length === 1 ? 'change' : 'changes'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setMoves({})}
+              className="shrink-0 rounded-[10px] font-extrabold text-[13.5px] text-accent-ink"
+              style={{ minHeight: 40, padding: '0 10px' }}
+            >
+              Back to our pick
+            </button>
+          </div>
+        )}
+
         {options.length > 1 && (
           <div role="radiogroup" aria-label="Plan options" className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(options.length, compact ? 3 : 4)}, minmax(0, 1fr))` }}>
-            {options.map(([id, p]) => {
-              const on = current === p;
+            {options.map(([id, raw]) => {
+              const on = picked === raw;
+              const p = edit(raw);
               const t = optionText(id, p);
-              const extra = set.cheapest && p !== set.cheapest && !t.partial ? p.total - set.cheapest.total : 0;
+              const extra = editedCheapest && raw !== set.cheapest && !t.partial ? p.total - editedCheapest.total : 0;
               return (
                 <button
                   key={id}
@@ -265,6 +353,14 @@ export default function PlanScreen() {
                 {current.deliveryTotal > 0 ? `+ ${compare.fmt(current.deliveryTotal)} delivery` : 'No delivery fees'}
               </div>
             </div>
+            {overPick > 0.5 && (
+              <div className="flex items-center gap-2 mt-3.5 text-[14px] font-semibold">
+                <span className="grid place-items-center rounded-full bg-[var(--coach-chip)] shrink-0" style={{ width: 22, height: 22 }}>
+                  <Icon name="plus" size={13} stroke={3} />
+                </span>
+                {compare.fmt(overPick)} more than our pick
+              </div>
+            )}
             {savings > 0.5 && baselineStore && (
               <div className="flex items-center gap-2 mt-3.5 text-[14px] font-semibold">
                 <span className="grid place-items-center rounded-full bg-accent text-accent-on shrink-0" style={{ width: 22, height: 22 }}>
@@ -348,6 +444,8 @@ export default function PlanScreen() {
               const store = compare.storeById(sp.storeId);
               if (!store) return null;
               const note = deliveryNote(store.deliveryRule, sp.subtotal, compare.fmt);
+              // Only an edited plan can fall short of a minimum order: warn, don't block.
+              const short = minOrderNote(store.deliveryRule, sp.subtotal, compare.fmt);
               const link = store.kind === 'online' ? storeLink(store.website) : null;
               return (
                 <article key={sp.storeId} className="bg-surface rounded-[20px] shadow-card overflow-hidden flex flex-col">
@@ -374,14 +472,35 @@ export default function PlanScreen() {
                       const product = compare.productById(l.option.productId);
                       const size = product ? productSizeText(product) : '';
                       const seen = compare.priceAt(sp.storeId, l.option.productId)?.observedAt;
+                      // Moved here by the person: "Rs 15 more than Naheed".
+                      const was = moves[l.key] ? pickedAt.get(l.key) : undefined;
+                      const wasName = was ? splitStoreName(compare.storeById(was.storeId)?.name ?? '')[0] : '';
+                      const diff = was ? l.option.total - was.total : 0;
                       return (
                         <li key={l.key} className="flex items-start justify-between gap-3" style={{ padding: '8px 0' }}>
-                          <button type="button" onClick={() => setChoiceFor(l.key)} className="flex-1 min-w-0 text-left">
-                            <span className="block text-[14.5px] font-semibold">{r?.item.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setLineFor(l.key)}
+                            aria-label={`${r?.item.name ?? 'Item'}: change where to buy it`}
+                            className="flex-1 min-w-0 text-left"
+                          >
+                            <span className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[14.5px] font-semibold">{r?.item.name}</span>
+                              {moves[l.key] && (
+                                <span className="rounded-full bg-accent-wash text-accent-ink text-[11px] font-extrabold" style={{ padding: '2px 7px' }}>
+                                  Your pick
+                                </span>
+                              )}
+                            </span>
                             <span className="block text-[12.5px] text-ink-soft line-clamp-2 break-words">
                               {product?.name}
-                              {size && product && !product.name.toLowerCase().includes(size.toLowerCase().replace(' ', '')) ? ` · ${size}` : ''}
+                              {size && product && !product.name.toLowerCase().replace(/\s+/g, '').includes(size.toLowerCase().replace(/\s+/g, '')) ? ` · ${size}` : ''}
                               {l.option.packs > 1 ? ` · ${l.option.packs} × ${compare.fmt(l.option.unitPrice)}` : ''}
+                              {was && wasName
+                                ? Math.abs(diff) < 0.5
+                                  ? ` · same as ${wasName}`
+                                  : ` · ${compare.fmt(Math.abs(diff))} ${diff > 0 ? 'more' : 'less'} than ${wasName}`
+                                : ''}
                             </span>
                           </button>
                           <span className="shrink-0 flex flex-col items-end gap-[3px]">
@@ -401,6 +520,16 @@ export default function PlanScreen() {
                       {note.text}
                     </div>
                   )}
+                  {short && (
+                    <div
+                      role="note"
+                      className={`mx-4 flex gap-2.5 items-start rounded-[12px] bg-danger-wash text-danger text-[13px] font-bold leading-snug ${note ? 'mt-2' : ''}`}
+                      style={{ padding: '9px 12px' }}
+                    >
+                      <Icon name="alert" size={16} stroke={2.3} className="shrink-0 mt-px" />
+                      <span>{short}</span>
+                    </div>
+                  )}
                   <footer className="flex justify-between border-t border-dashed border-line mt-2.5 font-extrabold" style={{ padding: '12px 16px 14px' }}>
                     <span>Store total</span>
                     <span className="font-mono">{compare.fmt(sp.total)}</span>
@@ -414,6 +543,11 @@ export default function PlanScreen() {
         {missingHere.length > 0 && (
           <div className="rounded-btn bg-warn-wash text-warn-ink text-[13.5px] leading-snug" style={{ padding: '12px 14px' }}>
             <strong>Not at these stores:</strong> {missingHere.map((r) => r.item.name).join(', ')} — they stay on your list to buy anywhere.
+          </div>
+        )}
+        {anywhere.length > 0 && (
+          <div className="rounded-btn bg-surface shadow-[inset_0_0_0_1.5px_var(--line)] text-[13.5px] leading-snug text-ink-soft" style={{ padding: '12px 14px' }}>
+            <strong className="text-ink">You’ll buy anywhere:</strong> {anywhere.join(', ')} — {anywhere.length === 1 ? 'it stays' : 'they stay'} on your list, outside the plan.
           </div>
         )}
         {notCompared.length > 0 && (

@@ -62,7 +62,8 @@ VITE_ONESIGNAL_APP_ID=    # optional (public): still-to-buy reminders; empty = n
 ### State Management
 Context-based (no Redux). Providers in `src/contexts/`:
 - `AuthContext` — session, login/logout; caches the last identity so the app opens offline
-- `ListsContext` — Lists section: lists/items, quick add, suggestions, sync status (offline-first)
+- `ListsContext` — Lists section: lists/items, quick add, suggestions, sync status (offline-first);
+  `applyPlan` / `clearPlan` / `setItemPlan` (one item's store, or out of the plan)
 - `CompareContext` — the catalogue for the user's city (regions, stores, products,
   current prices with the user's own newer reports overlaid; merged and retired products
   are kept but hidden, `productById` / `canonicalId` read a merged id as the product it
@@ -118,16 +119,38 @@ Context-based (no Redux). Providers in `src/contexts/`:
   savings vs the best single store, "We picked these" (assumed products), per-store
   cards. *Use this plan* → `ListsContext.applyPlan` writes `plan_*` on each item and
   `recordPlan` stores the savings.
+- Editing a plan before using it: tapping a line in a store card opens `PlanLineSheet`
+  (`planStoreSheet.tsx`: the line's price at the plan's stores — "our pick" / "in this
+  plan" / "adds a stop" — or *Anywhere*, plus *Change the product* → `ItemChoiceSheet`).
+  `PlanScreen` keeps `moves` (item → store or `'anywhere'`, while the screen is open,
+  across the option tabs) and shows every option through `optimizer.applyMoves`: only
+  the moved lines change, delivery is redone, Anywhere lines leave the plan (not
+  "not at these stores"). "Edited · N changes" with *Back to our pick*, a *Your pick* tag
+  ("Rs 15 more than Naheed"), a toast with the new total, "Rs X more than our pick" in
+  place of the savings line, "You'll buy anywhere", and a warning (never a block) on a
+  store below its `minOrder` (`describe.minOrderNote`). *Use this plan* applies the
+  edited plan.
 - With a plan applied the list gets a Stores/Aisles switch, store sections
   (`listCompare.tsx`, `groupByStore`), *Shop here* focus and an *Open* link for online
-  stores (`storeLink()`, http(s) only). Each planned price has an age chip.
+  stores (`storeLink()`, http(s) only). Each planned price has an age chip. Store
+  headers count the items ticked there this trip ("3 of 4 done · ~Rs 990 left").
+- One item at a time (`ListsContext.setItemPlan`): the item's details show "Buying at
+  <store> · Change" → `PlanStoreSheet` (`planStoreSheet.tsx`, lazy): its price at each
+  considered store, cheapest first (from `planFor([item])`), or *Anywhere* (out of the
+  plan, the "Anywhere" section). Nothing else moves. Once something is ticked the
+  `PlanBanner` reads "· K left" with a filled **Re-plan** (Where to buy plans only
+  what's left; `applyPlan` touches only open items).
 - Price checks while shopping (`features.askPrices`, Profile → *Ask for prices while I
-  shop*): ticking a planned item shows "Was it Rs 210?" under the tick toast
-  (`PriceCheckToast` in `listCompare.tsx`; Yes = `confirm`, Different → `PriceCheckSheet`
-  = `trip`); the last tick at a store with 2+ unanswered items opens "Done at <store>"
-  (`StoreDoneSheet`) instead. Both in `priceCheck.tsx` (lazy); which item to ask about
-  and the messages in `priceCheckHelpers.ts`; answered items and *Not now* per list in
-  `spendless-price-checks:<uid>` (`src/lib/compare/checkState.ts`, 12 hours).
+  shop*): ticking a planned item shows "Was it Rs 210 at <store>?" under the tick toast
+  (`PriceCheckToast` in `listCompare.tsx`; Yes = `confirm`, No → `PriceCheckSheet`,
+  "What did you pay?" = `trip`). Its *Where you bought it* row (`StorePickerSheet`)
+  defaults to the planned store; another store gets the price (the planned store only
+  an out-of-stock report, and only when "<store> didn't have it" is on) and the item's
+  plan moves there. The last tick at a store with 2+ unanswered items opens "Done at
+  <store>" (`StoreDoneSheet`) instead; a row's *Change* offers *Wasn't there* and
+  *Bought elsewhere* (no report). Both in `priceCheck.tsx` (lazy); which item to ask
+  about and the messages in `priceCheckHelpers.ts`; answered items and *Not now* per
+  list in `spendless-price-checks:<uid>` (`src/lib/compare/checkState.ts`, 12 hours).
 - An item's product: pinned (`list_items.product_id`, "Just this time") → usual
   (`item_preferences`) → named in the text → assumed (last bought, else most carried).
   A merged product's id counts as the product it became (`resolve.ts` `aliases`).
@@ -483,7 +506,7 @@ post-deploy migration drops them.
 | `src/lib/supabaseClient.ts` | Supabase client, pinned to the `spendless` schema |
 | `src/lib/storage.ts` | Storage bucket names + `storagePathFromUrl()` |
 | `src/lib/links.ts` | Outbound links with UTM tags: `supportUrl(placement)` → ibexoft.com/contact |
-| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2; "Omega 3" / "Vitamin D3" aren't counts; a type's `minUnits` (eggs: 6) rules it out for a smaller size, e.g. "Egg Pudding 78g"), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes; `fetchPrices` asks for `STORE_CHUNK` stores per request), `cache.ts` (IndexedDB snapshot) |
+| `src/lib/compare/` | Compare v2 logic, plain TS shared with scripts: `itemTypes.ts` (item vocabulary), `productName.ts` (name → brand/type/variant/size; "50g+50g" = pack of 2; "Omega 3" / "Vitamin D3" aren't counts; a type's `minUnits` (eggs: 6) rules it out for a smaller size, e.g. "Egg Pudding 78g"), `units.ts` (unit prices, packs needed), `resolve.ts` (list item → products + priced options), `optimizer.ts` (1–4 store sets, delivery thresholds, min orders → cheapest / fewer stops / one stop / delivered + savings baseline; `applyMoves`: a plan with the person's own picks, only those lines moved), `describe.ts` (plan and price wording), `types.ts`; app-only: `api.ts` (Supabase reads/writes; `fetchPrices` asks for `STORE_CHUNK` stores per request), `cache.ts` (IndexedDB snapshot) |
 | `src/contexts/CompareContext.tsx` | Compare state, sync, `planFor`, writes, receipt saves, cart conversion |
 | `src/lib/receipt/` | Receipt import, plain TS: `text.ts` (lines, money), `dates.ts`, `parse.ts`, `stores.ts`, `medicine.ts`, `abbrev.ts` (till shorthand), `match.ts`, `review.ts`, `layout.ts` (reader rows and PDF text runs → lines); app-only: `image.ts`, `ocr.ts` (self-hosted tesseract.js), `pdf.ts` (self-hosted pdf.js: a PDF's text, or its pages for the reader), `flow.ts` (read → parse → session; `readShared`), `session.ts` (the receipt in progress, memory only), `memory.ts` (remembered line choices + last store per chain, IndexedDB), `inbox.ts` (what was shared to SpendLess, main bundle) |
 | `public/share-target-sw.js`, `src/components/shell/SharedReceiptSheet.tsx` | Share to SpendLess: the service-worker handler for the manifest's `share_target` (`POST /share-receipt` → Cache Storage inbox → `/?share=receipt`) and the "Read this receipt?" sheet |
@@ -492,7 +515,8 @@ post-deploy migration drops them.
 | `src/components/screens/PricesScreen.tsx`, `SearchScreen.tsx`, `DetailScreen.tsx` | Compare home (prices in the user's city: each product's cheapest price at any store and how many stores have it, `PriceRow` in `compareParts.tsx`; aisle chips with *All*), product search (same rows), product page (*Add to list* pins the product; *Wrong price?* on shared stores' prices; disputed prices listed last with a warning; your held price "Only you for now"; `sameProduct.tsx`: "Also sold as" (products merged into it, fetched on demand) with *Not the same?*, the user's own reports with *Undo*, and *Same as another product?* → `SameProductSheet` (similar shared products of the type and size, by name words, plus a search); copy never says how many people are needed) |
 | `src/components/screens/StoresScreen.tsx`, `ContributeScreen.tsx`, `ManageScreens.tsx` | Stores (online, your own, branches grouped by chain with a search), add a price (and the Your contributions card and the Add a receipt entry), your own products |
 | `src/components/screens/ContributionsScreen.tsx` (+ `contributionHelpers.ts`) | Your contributions: totals (`my_contributions`, `useContributionStats` also used by Contribute and Profile), recent prices by day and store with status chips, Show older, Remove (asks first); offline / failed: this device's last 30 days |
-| `src/components/screens/priceCheck.tsx`, `priceCheckHelpers.ts`, `src/lib/compare/priceQueue.ts`, `checkState.ts` | Price checks while shopping: "What did it cost?" and "Done at <store>" sheets; which item to ask about and the messages; answers kept offline; answered / *Not now* state |
+| `src/components/screens/priceCheck.tsx`, `priceCheckHelpers.ts`, `src/lib/compare/priceQueue.ts`, `checkState.ts` | Price checks while shopping: "What did you pay?" (where you bought it) and "Done at <store>" sheets; which item to ask about and the messages; answers kept offline; answered / *Not now* state |
+| `src/components/screens/planStoreSheet.tsx` | "Where to buy <item>": one item to another store, or *Anywhere* — on a list with a plan (`PlanStoreSheet`) and on Where to buy before the plan is used (`PlanLineSheet`); both share `StoreChoice` |
 | `src/components/screens/compareSheets.tsx`, `productSheet.tsx` | Item choice, city, My stores (`StoresSheet`: online, your shops, branches by chain), store form (a branch: address, phone, *Add to My stores*), add a price (*Another store…*), `WrongPriceSheet` (the right price / not sold any more / just wrong = a `dispute` report); product form |
 | `src/components/screens/suggestSheet.tsx`, `src/lib/compare/areas.ts` | Share this shop (suggest a shop as a shared one), its row in the shop sheet, "Your shop is now shared"; a city's areas, `placeKey`, name checks |
 | `scripts/seed/reporter-trust.ts` (+ `.sql`) | Nightly reporter trust (`.github/workflows/reporter-trust.yml`): each person's weight from how often their prices agree with others' (≥5 comparable prices, 90 days) |

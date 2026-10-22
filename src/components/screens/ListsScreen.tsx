@@ -29,6 +29,7 @@ import {
   SyncBadge,
 } from './listParts';
 import { categoryMeta, groupByCategory, groupByStore } from './listHelpers';
+import { splitStoreName } from './compareHelpers';
 import { AisleDnd } from './listDrag';
 import { useGroupDrop, useRowDrag } from './listDragHooks';
 import { ItemSheet, ListSwitcherSheet } from './listSheets';
@@ -44,6 +45,8 @@ const ItemChoiceSheet = lazy(() => import('./compareSheets').then((m) => ({ defa
 // Price checks while shopping: also only when used.
 const PriceCheckSheet = lazy(() => import('./priceCheck').then((m) => ({ default: m.PriceCheckSheet })));
 const StoreDoneSheet = lazy(() => import('./priceCheck').then((m) => ({ default: m.StoreDoneSheet })));
+// "Where to buy eggs": one planned item to another store, or out of the plan.
+const PlanStoreSheet = lazy(() => import('./planStoreSheet').then((m) => ({ default: m.PlanStoreSheet })));
 
 const TOAST_MS = 4500;
 /** A tick toast that asks "Was it Rs 210?" stays longer. */
@@ -96,9 +99,10 @@ export default function ListsScreen() {
   const compare = useCompare();
   const uid = useAuth().user?.id ?? null;
   const [choiceFor, setChoiceFor] = useState<string | null>(null);
+  const [planStoreFor, setPlanStoreFor] = useState<string | null>(null);
   const [checks, setChecks] = useState<CheckState>({});
   useEffect(() => setChecks(uid ? loadChecks(uid) : {}), [uid]);
-  const [differentFor, setDifferentFor] = useState<PriceAsk | null>(null);
+  const [paidFor, setPaidFor] = useState<PriceAsk | null>(null);
   const [summary, setSummary] = useState<StoreSummary | null>(null);
   const [view, setView] = useState<'stores' | 'aisles'>('stores');
   const [focusStore, setFocusStore] = useState<string | null>(null);
@@ -197,6 +201,12 @@ export default function ListsScreen() {
     showToast(message, [prev], sum ? undefined : ask ?? undefined);
   };
 
+  /** Packs the plan has for the item asked about (its line total over the pack price). */
+  const packsFor = (ask: PriceAsk) => {
+    const line = lists.items.find((i) => i.id === ask.itemId)?.planPrice;
+    return line && ask.price > 0 ? Math.max(1, Math.round(line / ask.price)) : 1;
+  };
+
   const answered = (itemIds: string[]) => {
     if (uid && listId) setChecks(markAnswered(uid, listId, itemIds));
   };
@@ -210,6 +220,13 @@ export default function ListsScreen() {
 
   const saveSummary = async (rows: PriceCheck[]) => {
     if (!summary) return false;
+    if (!rows.length) {
+      // Every item was bought elsewhere: nothing to save for this store.
+      answered(summary.asks.map((a) => a.itemId));
+      setSummary(null);
+      showToast(`Got it — nothing saved for ${splitStoreName(summary.storeName)[0]}`);
+      return true;
+    }
     const r = await compare.checkPrices(rows, 'summary');
     if (!r) return false;
     answered(summary.asks.map((a) => a.itemId));
@@ -262,6 +279,11 @@ export default function ListsScreen() {
     setOpenId(null);
     setChoiceFor(id);
   };
+  const changeItemStore = () => {
+    const id = openId;
+    setOpenId(null);
+    setPlanStoreFor(id);
+  };
   const openPlan = () => {
     markHintSeen('whereToBuy');
     app.go('plan', { listId: lists.activeList?.id });
@@ -313,6 +335,9 @@ export default function ListsScreen() {
     (a, sec) => a + sec.subtotal + (sec.store?.kind === 'online' ? deliveryFeeFor(sec.store.deliveryRule, sec.subtotal) : 0),
     0,
   );
+  /** Items planned at a store and ticked during this trip ("3 of 4 done"). */
+  const doneHere = (storeId: string | undefined) =>
+    storeId ? lists.done.filter((i) => planStoreOf(compare, i) === storeId && doneLately(i)).length : 0;
   const visibleSections = focusStore ? storeSections.filter((sec) => sec.store?.id === focusStore) : storeSections;
   const plannedLine = (item: ListItem) => {
     const product = item.planProductId ? compare.productById(item.planProductId) : undefined;
@@ -333,6 +358,17 @@ export default function ListsScreen() {
     return Math.round((Math.max(...times) - Math.min(...times)) / 60000);
   }, [lists.done]);
   const openItem = lists.items.find((i) => i.id === openId) || null;
+  // "Buying at Imtiaz" in the item's details, while it's planned and not yet bought.
+  const openPlanStore = featureOn && openItem && !openItem.done ? compare.storeById(planStoreOf(compare, openItem) ?? '') : undefined;
+  const openPlanLine = openItem && openPlanStore ? plannedLine(openItem) : undefined;
+  const itemPlan =
+    openPlanStore && openPlanLine
+      ? {
+          store: openPlanStore,
+          detail: [splitStoreName(openPlanStore.name)[1], openPlanLine.product, openPlanLine.price].filter(Boolean).join(' · '),
+          onChange: changeItemStore,
+        }
+      : undefined;
   const offline = lists.syncStatus === 'offline';
   const listName = lists.activeList?.name || 'Groceries';
 
@@ -421,6 +457,7 @@ export default function ListsScreen() {
             <PlanBanner
               total={compare.fmt(planTotal)}
               stores={storeSections.filter((sec) => sec.store).length}
+              left={doneCount > 0 ? lists.todo.length : undefined}
               onChange={openPlan}
               onClear={() => {
                 if (lists.activeList) lists.clearPlan(lists.activeList.id);
@@ -510,8 +547,8 @@ export default function ListsScreen() {
         <section key={sec.store?.id ?? 'anywhere'} aria-label={sec.store?.name ?? 'Anywhere'} className="flex flex-col gap-2">
           <StoreSectionHeader
             store={sec.store}
-            count={sec.items.length}
-            done={0}
+            count={sec.items.length + doneHere(sec.store?.id)}
+            done={doneHere(sec.store?.id)}
             subtotal={sec.subtotal}
             fmt={compare.fmt}
             focused={focusStore === sec.store?.id}
@@ -616,8 +653,8 @@ export default function ListsScreen() {
         fmt={compare.fmt}
         onUndo={toast.undo ? undo : undefined}
         onYes={() => void confirmPrice(toast.ask!)}
-        onDifferent={() => {
-          setDifferentFor(toast.ask!);
+        onNo={() => {
+          setPaidFor(toast.ask!);
           setToast(null);
         }}
       />
@@ -627,21 +664,36 @@ export default function ListsScreen() {
 
   const sheets = (
     <>
-      <ItemSheet item={openItem} onClose={() => setOpenId(null)} onDelete={remove} onCompare={featureOn ? compareItem : undefined} />
+      <ItemSheet item={openItem} onClose={() => setOpenId(null)} onDelete={remove} onCompare={featureOn ? compareItem : undefined} plan={itemPlan} />
+      {planStoreFor && (
+        <Suspense fallback={null}>
+          <PlanStoreSheet
+            item={lists.items.find((i) => i.id === planStoreFor) ?? null}
+            onClose={() => setPlanStoreFor(null)}
+            onDone={(m) => {
+              setPlanStoreFor(null);
+              showToast(m);
+            }}
+          />
+        </Suspense>
+      )}
       {choiceFor && (
         <Suspense fallback={null}>
           <ItemChoiceSheet item={lists.items.find((i) => i.id === choiceFor) ?? null} onClose={() => setChoiceFor(null)} onDone={(m) => showToast(m)} />
         </Suspense>
       )}
       <ListSwitcherSheet open={switcherOpen} startCreating={!!app.params.newList} onClose={() => setSwitcherOpen(false)} />
-      {differentFor && (
+      {paidFor && (
         <Suspense fallback={null}>
           <PriceCheckSheet
-            ask={differentFor}
-            onClose={() => setDifferentFor(null)}
-            onDone={(message, ok) => {
-              if (ok) answered([differentFor.itemId]);
-              setDifferentFor(null);
+            ask={paidFor}
+            packs={packsFor(paidFor)}
+            onClose={() => setPaidFor(null)}
+            onDone={(message, ok, moved) => {
+              if (ok) answered([paidFor.itemId]);
+              // Bought somewhere else: the item's plan follows it there.
+              if (moved) lists.setItemPlan(paidFor.itemId, moved);
+              setPaidFor(null);
               showToast(message);
             }}
           />

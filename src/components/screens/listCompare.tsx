@@ -51,28 +51,57 @@ export function WhereToBuyChip({
   );
 }
 
-/** Shown on a list with a plan applied. */
-export function PlanBanner({ total, stores, onChange, onClear }: { total: string; stores: number; onChange: () => void; onClear: () => void }) {
+/**
+ * Shown on a list with a plan applied. `left`: once something is ticked, how many items
+ * are still to buy, and Change becomes Re-plan (Where to buy plans only what's left).
+ */
+export function PlanBanner({
+  total,
+  stores,
+  left,
+  onChange,
+  onClear,
+}: {
+  total: string;
+  stores: number;
+  left?: number;
+  onChange: () => void;
+  onClear: () => void;
+}) {
+  const replan = left != null;
   return (
     <div className="flex items-center gap-2 rounded-[16px] bg-accent-wash" style={{ padding: '6px 6px 6px 14px' }}>
       <span className="flex-1 min-w-0 text-[14px] leading-snug">
         <strong>Plan · {total}</strong>
         <span className="text-accent-ink">
           {' '}
-          · {stores} {stores === 1 ? 'store' : 'stores'}
+          <span className="whitespace-nowrap">
+            · {stores} {stores === 1 ? 'store' : 'stores'}
+          </span>
+          {replan && (
+            <>
+              {' '}
+              <span className="whitespace-nowrap">· {left} left</span>
+            </>
+          )}
         </span>
       </span>
-      <button type="button" onClick={onChange} className="rounded-[12px] font-extrabold text-[13.5px] text-accent-ink" style={{ minHeight: 40, padding: '0 10px' }}>
-        Change
+      <button
+        type="button"
+        onClick={onChange}
+        className={`shrink-0 rounded-[12px] font-extrabold text-[13.5px] ${replan ? 'bg-accent text-accent-on' : 'text-accent-ink'}`}
+        style={{ minHeight: 40, padding: replan ? '0 12px' : '0 10px' }}
+      >
+        {replan ? 'Re-plan' : 'Change'}
       </button>
-      <button type="button" onClick={onClear} className="rounded-[12px] font-bold text-[13.5px] text-ink-soft" style={{ minHeight: 40, padding: '0 10px' }}>
+      <button type="button" onClick={onClear} className="shrink-0 rounded-[12px] font-bold text-[13.5px] text-ink-soft" style={{ minHeight: 40, padding: '0 10px' }}>
         Clear
       </button>
     </div>
   );
 }
 
-/** Header of one store's part of the list. */
+/** Header of one store's part of the list (`count` includes the `done` ones ticked this trip). */
 export function StoreSectionHeader({
   store,
   count,
@@ -96,7 +125,7 @@ export function StoreSectionHeader({
         <span aria-hidden className="rounded-full bg-[var(--ink-faint)]" style={{ width: 11, height: 11 }} />
         <span className="flex-1 min-w-0">
           <span className="block font-display font-extrabold text-[17px]">Anywhere</span>
-          <span className="block text-[12.5px] text-ink-soft">No prices at your stores yet</span>
+          <span className="block text-[12.5px] text-ink-soft">Not part of the plan</span>
         </span>
       </div>
     );
@@ -114,6 +143,7 @@ export function StoreSectionHeader({
         {storeArea && <span className="block text-[13.5px] text-ink-soft leading-snug break-words">{storeArea}</span>}
         <span className="block text-[12.5px] text-ink-soft leading-snug">
           {what} · {done ? `${done} of ${count} done` : `${count} ${count === 1 ? 'item' : 'items'}`} · ~{fmt(subtotal + delivery)}
+          {done ? ' left' : ''}
         </span>
       </span>
       {link && (
@@ -139,8 +169,8 @@ export function StoreSectionHeader({
 
 /**
  * The tick toast with a price question under it: "Bread is in your cart · Undo", then
- * "Was it Rs 210?" with Different and Yes (Profile → Compare prices → Ask for prices
- * while I shop).
+ * "Was it Rs 210 at Imtiaz?" with No and Yes (Profile → Compare prices → Ask for prices
+ * while I shop). No covers a different price, another store and "they didn't have it".
  */
 export function PriceCheckToast({
   message,
@@ -149,7 +179,7 @@ export function PriceCheckToast({
   fmt,
   onUndo,
   onYes,
-  onDifferent,
+  onNo,
 }: {
   message: string;
   ask: PriceAsk;
@@ -157,8 +187,9 @@ export function PriceCheckToast({
   fmt: (n: number) => string;
   onUndo?: () => void;
   onYes: () => void;
-  onDifferent: () => void;
+  onNo: () => void;
 }) {
+  const [storeTitle, storeArea] = splitStoreName(ask.storeName);
   return (
     <div role="status" aria-live="polite" className="bg-ink text-paper rounded-[18px] overflow-hidden animate-sl-pop shadow-[0_10px_30px_rgba(41,33,24,0.25)]">
       <div className="flex items-center gap-2.5" style={{ padding: '6px 6px 6px 16px', minHeight: 48 }}>
@@ -181,21 +212,22 @@ export function PriceCheckToast({
         <span className="min-w-0">
           <span className="block text-[15.5px] font-extrabold">
             Was it <span className="font-mono">{fmt(ask.price)}</span>
-            {ask.each ? ' each' : ''}?
+            {ask.each ? ' each' : ''} at {storeTitle}?
           </span>
           <span className="block line-clamp-2 break-words text-[12.5px]" style={{ color: 'var(--coach-muted)' }}>
-            {ask.storeName} · {ask.productName}
+            {ask.productName}
+            {storeArea ? ` · ${storeArea}` : ''}
           </span>
         </span>
         <span className="flex gap-2">
           <button
             type="button"
-            onClick={onDifferent}
+            onClick={onNo}
             disabled={busy}
             className="flex-1 rounded-[12px] font-extrabold text-[14px] disabled:opacity-60"
             style={{ minHeight: 44, boxShadow: 'inset 0 0 0 1.5px var(--coach-chip)' }}
           >
-            Different
+            No
           </button>
           <button
             type="button"
