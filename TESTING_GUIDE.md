@@ -221,6 +221,15 @@ service worker.
       ("Haleeb Asli Milk 1000ml" / "1 Ltr") is one row; saving it as *Exactly this one*
       finds it at both stores. "eggs" lists eggs only: no egg noodles, egg pudding,
       dog food or chocolate surprise eggs, and Omega-3 eggs show as 6 or 12, not 3.
+- [ ] Edit a plan: tap an item in a store card → "Where to buy <item>" (its price at the
+      plan's stores, "our pick" ticked, *Change the product*). Another store moves only
+      that item: a toast gives the new total, "Edited · 1 change" with *Back to our pick*
+      appears, the item gets *Your pick* ("Rs 15 more than <store>"), both stores' totals
+      and delivery fees change and the hero says "Rs 15 more than our pick". Switching
+      Cheapest / One stop keeps the edit. *Anywhere* lists it under "You'll buy
+      anywhere". Moving an item to an online store below its minimum order shows the
+      warning; *Use this plan* still works. *Back to our pick* restores everything.
+      *Use this plan* after edits: the list's store sections and banner total match.
 - [ ] **Use this plan** returns to the list split by store, with a plan banner
       (Change / Clear), a Stores/Aisles switch and *Shop here* on each store.
       *Open* on an online store opens its website in a new tab.

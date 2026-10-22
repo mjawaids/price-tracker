@@ -38,6 +38,9 @@ The app has two sections: **Lists** (the default) and **Compare**.
   **Fewer stops**, with what you save compared with the best single store
 - Write "bread" and we pick a sensible product (and say which); tap an item to choose
   the brand and size (or a few brands you're happy with) — just this time, or as your usual
+- Make the plan yours: tap an item in a store to buy it somewhere else or leave it out;
+  only that item moves, the totals and delivery fees update, a store that falls short of
+  its minimum order gets a warning, and *Back to our pick* undoes it
 - **Use this plan** splits the same list into one section per store; *Shop here*
   shows just that store's part. Change where one item comes from (or take it out of the
   plan) from the item's details; once you've ticked a few, *Re-plan* works out the rest

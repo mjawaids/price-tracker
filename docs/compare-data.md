@@ -231,7 +231,7 @@ plans, remembered receipt lines, product pages) and loads the products merges le
 | `productName.ts` | Name → brand, item type, variant, size, pack ("Olper's Milk Full Cream 1Ltr x 12" → Olper's · milk · Full Cream · 12 × 1000 ml; "Shan Shami Kabab Masala 50g+50g" → Shan · kebab · Shami Masala · 2 × 50 g; "Omega 3 Eggs 12 Pieces" → 12 eggs, not 3); `learnBrands()` for imports |
 | `units.ts` | Size labels, unit prices (per 100 g / kg / L / piece / dozen), "similar size" (±15%), packs needed for "atta 10 kg" |
 | `resolve.ts` | `sameProductKey()`: brand id + type + total size + variant key, the key the item choice sheet groups one product's copies at different stores by. Brands compare by `brandId()` everywhere ("Day Fresh" = "Dayfresh" = "DayFresh"), so a brand typed or picked in one spelling also finds the others; `variantKey()` drops words that don't tell products apart ("Flv", "Flavour", "Tetra", "Capped", pack words; "liquid" for milk) and writes synonyms one way ("full fat" = "full cream", "lowfat" = "low fat"). List item → acceptable products + priced options (a `brand_size` usual allows each of its brands, `usualBrands()`). Order: pinned product → the user's usual → brand/words named in the text → item type with an *assumed* default (last bought, else the product most of your stores carry) → not compared |
-| `optimizer.ts` | Tries every set of 1–4 stores (best 12 candidates), assigns each item to its cheapest store in the set, then moves items while it lowers the total (crossing "free over X", meeting minimum orders). Returns *cheapest*, *fewer stops* (2+ stores, fewer than cheapest), *one stop*, *delivered* (online stores only; hidden when it's the same stores as another choice), and a "buy it all at X" baseline for savings (the best single store other than the cheapest plan's only store) |
+| `optimizer.ts` | Tries every set of 1–4 stores (best 12 candidates), assigns each item to its cheapest store in the set, then moves items while it lowers the total (crossing "free over X", meeting minimum orders). Returns *cheapest*, *fewer stops* (2+ stores, fewer than cheapest), *one stop*, *delivered* (online stores only; hidden when it's the same stores as another choice), and a "buy it all at X" baseline for savings (the best single store other than the cheapest plan's only store) `applyMoves` re-prices a plan with a person's own picks (only those lines move). |
 | `describe.ts` | Wording for the app: how an item was matched, how old a price is, delivery rules and notes |
 
 ## In the app
@@ -268,8 +268,12 @@ plans, remembered receipt lines, product pages) and loads the products merges le
   `manual` report, which may be held), "They don't sell it any more" (out of stock),
   or "It's wrong, I don't know the price" (a `dispute` report with the shown price).
   The user's own held report shows as theirs with "Only you for now".
+- Before using a plan, a person can move single lines to another of the plan's stores
+  or out of it (`optimizer.applyMoves`: nothing else is re-optimized; delivery is redone;
+  a store below its minimum order is only warned about).
 - *Use this plan* writes `plan_store_id` / `plan_product_id` / `plan_price` on each
-  open item (through the offline Lists outbox) and inserts a `plans` row.
+  open item (through the offline Lists outbox) and inserts a `plans` row (with the
+  edited totals when the plan was edited).
 - The old Compare cart (`shopping_lists`) is turned into a list called "From Compare
   cart" once per user (flag `spendless-cart-migrated:<userId>` in localStorage), after
   the user's lists have synced and only if no list with that name exists.
