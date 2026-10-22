@@ -37,7 +37,7 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Four choices: **Cheapest**, **One stop**, **Delivered** (online stores only) and
   **Fewer stops**, with what you save compared with the best single store
 - Write "bread" and we pick a sensible product (and say which); tap an item to choose
-  the brand and size — just this time, or as your usual
+  the brand and size (or a few brands you're happy with) — just this time, or as your usual
 - **Use this plan** splits the same list into one section per store; *Shop here*
   shows just that store's part
 - Works offline from the prices saved on the device

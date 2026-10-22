@@ -40,12 +40,15 @@ export function ItemChoiceSheet({
   );
   const [refId, setRefId] = useState<string | null>(null);
   const [mode, setMode] = useState<PreferenceMode>('any_size');
+  /** Brands picked for "<brand>, similar size" (brandId keys); the reference's is always in. */
+  const [brands, setBrands] = useState<Set<string>>(new Set());
   const [q, setQ] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setRefId(resolved?.reference?.product.id ?? null);
     setMode(resolved?.status === 'pinned' ? 'exact' : resolved?.mode ?? 'any_size');
+    setBrands(new Set(resolved?.brands.map((b) => b.key) ?? []));
     setQ('');
     // Reset only when a different item opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,12 +103,50 @@ export function ItemChoiceSheet({
 
   /** The chosen product and its copies at other stores. */
   const refGroup = useMemo(() => (ref ? groupOf.get(ref.product.id) ?? [ref] : []), [groupOf, ref]);
+  const refBrand = ref?.brandKey ?? null;
+  /** The brands allowed: the picked ones, always with the chosen product's. */
+  const allowedBrands = useMemo(() => new Set([...brands, ...(refBrand ? [refBrand] : [])]), [brands, refBrand]);
+
+  // Brands to offer for "<brand>, similar size": each brand with a product around the
+  // chosen one's size (plus any already picked), led by one product that stands for it
+  // in the saved usual. The chosen product's brand first, then carried and cheapest.
+  const brandChoices = useMemo(() => {
+    if (!ref || !refBrand) return [];
+    const byBrand = new Map<string, { key: string; name: string; rep: ProductProfile; stores: number; price: number }>();
+    for (const g of groups) {
+      for (const p of g) {
+        if (!p.brandKey || !p.brand) continue;
+        if (p.brandKey !== refBrand && !allowedBrands.has(p.brandKey) && !similarSize(p.size, ref.size)) continue;
+        const at = priced(p.product.id);
+        const price = at[0]?.price.price ?? Infinity;
+        const cur = byBrand.get(p.brandKey);
+        const fits = p.brandKey === refBrand ? p === ref : similarSize(p.size, ref.size);
+        const curFits = cur ? (cur.key === refBrand ? cur.rep === ref : similarSize(cur.rep.size, ref.size)) : false;
+        if (!cur || (fits && !curFits) || (fits === curFits && at.length > cur.stores)) {
+          byBrand.set(p.brandKey, { key: p.brandKey, name: cur?.name ?? p.brand, rep: p, stores: at.length, price: Math.min(price, cur?.price ?? Infinity) });
+        } else {
+          cur.price = Math.min(cur.price, price);
+        }
+      }
+    }
+    return [...byBrand.values()].sort(
+      (a, b) => Number(b.key === refBrand) - Number(a.key === refBrand) || Number(b.stores > 0) - Number(a.stores > 0) || a.price - b.price,
+    );
+    // priced reads the latest prices through the context.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, ref, refBrand, allowedBrands, ctx]);
+  const pickedBrands = brandChoices.filter((b) => allowedBrands.has(b.key));
+
   const acceptable = useMemo(
     () =>
       ref
-        ? new Set([...expand(ctx, ref, mode), ...(mode === 'exact' ? refGroup : [])].map((p) => p.product.id))
+        ? new Set(
+            [...expand(ctx, ref, mode, mode === 'brand_size' ? allowedBrands : undefined), ...(mode === 'exact' ? refGroup : [])].map(
+              (p) => p.product.id,
+            ),
+          )
         : new Set<string>(),
-    [ctx, ref, mode, refGroup],
+    [ctx, ref, mode, refGroup, allowedBrands],
   );
   const cheapestId = useMemo(() => {
     let best: string | null = null;
@@ -135,8 +176,13 @@ export function ItemChoiceSheet({
   const saveUsual = async () => {
     if (!ref || saving) return;
     setSaving(true);
-    // "Exactly this one" covers its copies at other stores too.
-    const ok = await compare.setUsual(item.name, mode, ref.product.id, mode === 'exact' ? refGroup.map((p) => p.product.id) : [ref.product.id]);
+    // "Exactly this one" covers its copies at other stores too; "<brands>, similar size"
+    // keeps one product for each brand picked besides the chosen one's.
+    const productIds =
+      mode === 'exact'
+        ? refGroup.map((p) => p.product.id)
+        : [ref.product.id, ...(mode === 'brand_size' ? pickedBrands.filter((b) => b.key !== refBrand).map((b) => b.rep.product.id) : [])];
+    const ok = await compare.setUsual(item.name, mode, ref.product.id, productIds);
     setSaving(false);
     if (!ok) {
       onDone?.('Couldn’t save — check your connection and try again');
@@ -148,11 +194,40 @@ export function ItemChoiceSheet({
   };
 
   const brand = ref?.brand ?? null;
+  const brandNames = pickedBrands.length ? pickedBrands.map((b) => b.name) : brand ? [brand] : [];
   const modes: { id: PreferenceMode; label: string; hint: string }[] = [
-    { id: 'exact', label: modeLabel('exact', brand), hint: ref ? ref.product.name : 'Only the product you pick' },
-    { id: 'brand_size', label: modeLabel('brand_size', brand), hint: brand ? `Any ${brand} around this size` : 'Same brand, around this size' },
-    { id: 'any_size', label: modeLabel('any_size', brand), hint: 'The cheapest one around this size — saves the most' },
+    { id: 'exact', label: modeLabel('exact', []), hint: ref ? ref.product.name : 'Only the product you pick' },
+    {
+      id: 'brand_size',
+      label: modeLabel('brand_size', brandNames),
+      hint:
+        brandNames.length > 1
+          ? 'The cheapest of these brands around this size'
+          : brand
+            ? `Any ${brand} around this size`
+            : 'Same brand, around this size',
+    },
+    { id: 'any_size', label: modeLabel('any_size', []), hint: 'The cheapest one around this size — saves the most' },
   ];
+
+  const pickProduct = (p: ProductProfile) => {
+    setRefId(p.product.id);
+    // Picking a product while choosing brands adds its brand; otherwise it starts the list.
+    const key = p.brandKey;
+    if (mode !== 'brand_size') setBrands(new Set(key ? [key] : []));
+    else if (key) setBrands((cur) => (cur.has(key) ? cur : new Set([...cur, key])));
+  };
+  const toggleBrand = (key: string) => {
+    if (!allowedBrands.has(key)) {
+      setBrands(new Set([...allowedBrands, key]));
+      return;
+    }
+    const rest = pickedBrands.filter((b) => b.key !== key);
+    if (!rest.length) return; // At least one brand stays.
+    // Leaving out the chosen product's brand moves the choice to the next brand's product.
+    if (key === refBrand) setRefId(rest[0].rep.product.id);
+    setBrands(new Set(rest.map((b) => b.key)));
+  };
 
   return (
     <Sheet
@@ -220,6 +295,26 @@ export function ItemChoiceSheet({
         })}
       </div>
 
+      {mode === 'brand_size' && brandChoices.length > 1 && (
+        <div className="mb-5 -mt-2">
+          <div id="choice-brands" className={`${sectionLabel} mb-2`}>
+            Brands you’re happy with
+          </div>
+          <div role="group" aria-labelledby="choice-brands" className="flex flex-wrap gap-2">
+            {brandChoices.map((b) => {
+              const on = allowedBrands.has(b.key);
+              return (
+                <Chip key={b.key} active={on} onClick={() => toggleBrand(b.key)} className="inline-flex items-center gap-1.5 min-h-[48px]">
+                  {on && <Icon name="check" size={15} stroke={2.6} />}
+                  {b.name}
+                </Chip>
+              );
+            })}
+          </div>
+          <p className="m-0 mt-2 text-[13px] text-ink-soft leading-snug">We’ll pick the cheapest of these at your stores.</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-2">
         <span className={sectionLabel}>
           {matched || !typeId ? `Products matching “${item.name}”` : (ITEM_TYPE_BY_ID.get(typeId)?.name ?? 'Products')}
@@ -259,7 +354,7 @@ export function ItemChoiceSheet({
                 plain
                 selected={!!refId && ids.has(refId)}
                 dim={!similar || !carried}
-                onClick={() => setRefId(lead.product.id)}
+                onClick={() => pickProduct(lead)}
                 sub={carried ? undefined : 'Not at your stores yet'}
                 trailing={
                   (cheapest || usual) && (

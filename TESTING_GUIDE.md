@@ -208,6 +208,13 @@ service worker.
 - [ ] "We picked these" lists assumed items; tapping one opens the item choice sheet
       (Exactly this one / *Brand*, similar size / Any brand, similar size). *Just this
       time* changes only this item; *Save as my usual* applies to every list.
+- [ ] *Brand, similar size* shows "Brands you're happy with" chips (brands with a product
+      around that size, the chosen product's first). Tick Olper's, Dayfresh and Pakola,
+      save as usual: the option and the plan read "Olper's, Dayfresh or Pakola, …", the
+      plan picks the cheapest of the three and never a cheaper unticked brand (Dairy
+      Omung). Unticking the chosen product's brand moves the choice to the next brand;
+      the last brand can't be unticked. Reopening the sheet shows the same brands.
+      An older usual (one brand) still means that brand only.
 - [ ] The item choice sheet ("Which eggs?") shows each product once, with no prices or
       store names (CHEAPEST / USUAL tags only; "Not at your stores yet" when no store you
       compare has it). The same product at two stores under slightly different names

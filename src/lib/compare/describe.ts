@@ -47,10 +47,17 @@ export function freshness(observedAt: string | null | undefined, now = Date.now(
 }
 
 /** "Exactly this one" / "Dawn, similar size" / "Any brand, similar size". */
-export function modeLabel(mode: PreferenceMode, brand: string | null): string {
+export function modeLabel(mode: PreferenceMode, brands: string[]): string {
   if (mode === 'exact') return 'Exactly this one';
-  if (mode === 'brand_size') return `${brand || 'Same brand'}, similar size`;
+  if (mode === 'brand_size') return `${brands.length ? brandList(brands) : 'Same brand'}, similar size`;
   return 'Any brand, similar size';
+}
+
+/** "Olper's", "Olper's or Dayfresh", "Olper's, Dayfresh or Pakola", "Olper's, Dayfresh or 2 more". */
+export function brandList(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  if (names.length > 3) return `${names.slice(0, 2).join(', ')} or ${names.length - 2} more`;
+  return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
 }
 
 /** Short text under an item in the plan: how we matched it. */
@@ -63,7 +70,9 @@ export function choiceLabel(r: ResolvedItem): string {
     case 'pinned':
       return `Just this time · ${name}`;
     case 'usual':
-      return r.mode === 'exact' ? `Your usual · ${name}` : `Your usual · ${r.mode === 'brand_size' ? `${ref?.brand ?? 'same brand'}, ${about}` : `any brand, ${about}`}`;
+      return r.mode === 'exact'
+        ? `Your usual · ${name}`
+        : `Your usual · ${r.mode === 'brand_size' ? `${r.brands.length ? brandList(r.brands.map((b) => b.name)) : 'same brand'}, ${about}` : `any brand, ${about}`}`;
     case 'named':
       return r.mode === 'exact' ? name : `${ref?.brand ? `${ref.brand}, ` : ''}${about}`;
     case 'assumed':
