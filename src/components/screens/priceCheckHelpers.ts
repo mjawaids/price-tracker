@@ -69,13 +69,20 @@ export const doneLately = (item: ListItem, now = Date.now()) =>
 const QUEUED = 'Saved on this device. It’s sent when you’re back online.';
 const FAILED = 'Couldn’t save — check your connection and try again.';
 
-/** After one answer from the tick toast or "What did it cost?". */
-export function checkMessage(r: CheckResult | null, ask: PriceAsk, kind: 'yes' | 'changed' | 'gone', fmt: (n: number) => string): string {
+/**
+ * After one answer from the tick toast or "What did you pay?" (`elsewhere`: bought at
+ * another store; `ask` then carries that store and the price paid).
+ */
+export function checkMessage(r: CheckResult | null, ask: PriceAsk, kind: 'yes' | 'changed' | 'gone' | 'elsewhere', fmt: (n: number) => string): string {
   if (!r) return FAILED;
   if (r.queued) return QUEUED;
   if (r.held) return HELD_MESSAGE;
   if (kind === 'yes') return `Thanks — ${fmt(ask.price)} confirmed at ${ask.storeName}`;
   if (kind === 'gone') return 'Thanks — marked as out of stock there';
+  if (kind === 'elsewhere') {
+    const at = ask.storeName.split(' · ')[0];
+    return ask.shared ? `Thanks — ${fmt(ask.price)} at ${at} saved and shared` : `Price saved at ${at}`;
+  }
   return ask.shared ? 'Thanks — price saved and shared' : 'Price saved';
 }
 

@@ -276,13 +276,16 @@ plans, remembered receipt lines, product pages) and loads the products merges le
 - **Price checks while shopping** (Profile → Compare prices → *Ask for prices while
   I shop*, `features.askPrices`, on by default). Ticking an item that has a plan
   (`plan_store_id` + `plan_product_id`, an open store, a current price) shows "Was it
-  Rs 210?" under the tick toast (`PriceCheckToast`, 8 s): **Yes** sends a `confirm`
-  report at the shown price; **Different** opens "What did it cost?"
+  Rs 210 at <store>?" under the tick toast (`PriceCheckToast`, 8 s): **Yes** sends a
+  `confirm` report at the shown price; **No** opens "What did you pay?"
   (`PriceCheckSheet`) for a `trip` report (a price, or "They didn't have it" = no price,
-  unavailable). It doesn't ask about the user's own price from today. When a tick
+  unavailable). Bought at another store (*Where you bought it*): the `trip` report goes
+  to that store, never the planned one, which gets an out-of-stock report only when the
+  user says it didn't have it; the item's plan moves to that store. It doesn't ask about
+  the user's own price from today. When a tick
   leaves no open items for a store and two or more ticked ones there (last 12 hours)
   are unanswered, "Done at <store>" (`StoreDoneSheet`) lists them: right (`confirm`),
-  changed or "wasn't there" (`trip`), one statement (`api.insertReports`, one row per
+  changed or "wasn't there" (`trip`), "bought elsewhere" (nothing sent), one statement (`api.insertReports`, one row per
   store and product). *Not now* (with edits: "Discard your answers?" first) stops the
   questions for that store on that list for 12 hours. Answered items and *Not now* live
   in `spendless-price-checks:<uid>` (localStorage, 12 h). Both paths go through

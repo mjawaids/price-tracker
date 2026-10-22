@@ -39,11 +39,14 @@ The app has two sections: **Lists** (the default) and **Compare**.
 - Write "bread" and we pick a sensible product (and say which); tap an item to choose
   the brand and size (or a few brands you're happy with) — just this time, or as your usual
 - **Use this plan** splits the same list into one section per store; *Shop here*
-  shows just that store's part
+  shows just that store's part. Change where one item comes from (or take it out of the
+  plan) from the item's details; once you've ticked a few, *Re-plan* works out the rest
 - Works offline from the prices saved on the device
-- **While you shop**: tick an item and SpendLess asks if the price was right — tap Yes,
-  or Different to add what you paid; when a store's part is done, the rest come up in
-  one go. Answers given offline are sent later. Off in Profile → Compare prices
+- **While you shop**: tick an item and SpendLess asks if the price was right at the
+  planned store — tap Yes, or No to add what you paid, where you bought it (the item
+  moves there) or that they didn't have it; when a store's part is done, the rest come
+  up in one go, and anything you got elsewhere is left out. Answers given offline are
+  sent later. Off in Profile → Compare prices
 
 ### 🏷️ Prices, stores and contributing
 - Shared prices for your city where they're live (Karachi first); anywhere else,

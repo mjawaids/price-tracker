@@ -68,6 +68,8 @@ interface ListsApi {
   /** Apply a plan to a list's open items; items left out lose any earlier plan. */
   applyPlan: (listId: string, assignments: PlanAssignment[]) => void;
   clearPlan: (listId: string) => void;
+  /** Move one item within its list's plan (another store), or out of it with null ("Anywhere"). */
+  setItemPlan: (itemId: string, a: Omit<PlanAssignment, 'itemId'> | null) => void;
   /** Pin (or unpin with null) a product on an item. */
   pinProduct: (itemId: string, productId: string | null) => void;
   deleteList: (id: string) => void;
@@ -481,6 +483,20 @@ export const ListsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [commitItems],
   );
 
+  const setItemPlan = useCallback(
+    (itemId: string, a: Omit<PlanAssignment, 'itemId'> | null) => {
+      const prev = findItem(itemId);
+      if (!prev) return;
+      const next = a
+        ? { planStoreId: a.storeId, planProductId: a.productId, planPrice: Math.round(a.price * 100) / 100 }
+        : { planStoreId: null, planProductId: null, planPrice: null };
+      if (prev.planStoreId !== next.planStoreId || prev.planProductId !== next.planProductId || prev.planPrice !== next.planPrice) {
+        commitItems([{ ...prev, ...next }]);
+      }
+    },
+    [commitItems, findItem],
+  );
+
   const pinProduct = useCallback(
     (itemId: string, productId: string | null) => {
       const prev = findItem(itemId);
@@ -599,6 +615,7 @@ export const ListsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     itemsForList,
     applyPlan,
     clearPlan,
+    setItemPlan,
     pinProduct,
     deleteList,
     suggestions,

@@ -4,7 +4,7 @@ import { useLists } from '../../contexts/ListsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { trackUserAction } from '../../utils/analytics';
 import { UNIT_CHOICES, clampQuantity, parseQuantity, stepFor } from '../../utils/quickAdd';
-import { Btn, Icon, Sheet, ToggleTrack } from '../ui';
+import { Btn, Icon, Sheet, StoreDot, ToggleTrack } from '../ui';
 import { CATEGORY_ORDER, categoryMeta } from './listHelpers';
 
 const fieldLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-ink-soft';
@@ -17,12 +17,15 @@ export function ItemSheet({
   onClose,
   onDelete,
   onCompare,
+  plan,
 }: {
   item: ListItem | null;
   onClose: () => void;
   onDelete: (item: ListItem) => void;
   /** Opens "Which product?" (hidden when Where to buy is turned off). */
   onCompare?: () => void;
+  /** The item's place in an applied plan ("Buying at Imtiaz"); Change opens "Where to buy". */
+  plan?: { store: { id: string; kind?: string; name: string }; detail: string; onChange: () => void };
 }) {
   const lists = useLists();
   const [name, setName] = useState('');
@@ -181,6 +184,30 @@ export function ItemSheet({
             })}
           </div>
         </div>
+
+        {plan && (
+          <div className="flex flex-col gap-2">
+            <span className={fieldLabel}>Where to buy</span>
+            <button
+              type="button"
+              onClick={() => {
+                saveText();
+                plan.onChange();
+              }}
+              className="flex items-center gap-3 rounded-btn bg-accent-wash text-left text-ink shadow-[inset_0_0_0_1.5px_var(--accent)]"
+              style={{ padding: '12px 14px' }}
+            >
+              <span className="shrink-0 grid place-items-center rounded-[11px] bg-surface" style={{ width: 36, height: 36 }}>
+                <StoreDot store={plan.store} size={12} />
+              </span>
+              <span className="flex-1 min-w-0 flex flex-col gap-px">
+                <span className="font-bold text-[15px] break-words">Buying at {plan.store.name.split(' · ')[0]}</span>
+                <span className="text-[13px] text-ink-soft line-clamp-2 break-words">{plan.detail}</span>
+              </span>
+              <span className="shrink-0 font-extrabold text-[13.5px] text-accent-ink">Change</span>
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <span className={fieldLabel}>Aisle</span>

@@ -36,6 +36,8 @@ export const HELP_TOPICS: HelpTopic[] = [
       'You get up to four choices: Cheapest; One stop (everything at one store); Delivered (online stores only); and Fewer stops (fewer stores than Cheapest, for a little more). A choice is hidden when it’s the same as another.',
       '“You save” compares the plan with buying everything at the best single store.',
       'Use this plan splits your list into one section per store. Tap Shop here on a store to see just its part. Items we have no price for go under Anywhere.',
+      'To buy one item somewhere else, open it and tap Change next to Buying at: pick another store, or Anywhere to take it out of the plan. Once you’ve ticked a few things, Re-plan works out the best stores for what’s left.',
+      'Bought something at a different store than planned? When we ask whether the price was right, tap No and pick where you bought it. Your price goes to that store, not the planned one.',
     ],
   },
   {

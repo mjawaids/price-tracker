@@ -489,12 +489,24 @@ Use generic test accounts. Against a local copy of the schema unless noted.
 Use generic test accounts, on a list with a plan applied (Where to buy → Use this plan).
 
 - [ ] Tick a planned item: the toast says "<item> is in your cart · Undo" and "Was it
-      Rs 210?" with the product and store (" each" for several packs). **Yes** → "Thanks —
-      Rs 210 confirmed at <store>" (a `confirm` report). **Different** → "What did it
-      cost?": a price far from the usual one gets "Saved for you…"; "They didn't have it"
+      Rs 210 at <store>?" with the product and area (" each" for several packs). **Yes** →
+      "Thanks — Rs 210 confirmed at <store>" (a `confirm` report). **No** → "What did you
+      pay?": a price far from the usual one gets "Saved for you…"; "They didn't have it"
       marks it out of stock (`trip` reports).
+- [ ] **No** → *Where you bought it* → *Change* → another store → a price → *Save price*:
+      one report at that store only, the toast names it, and the item's plan moves there.
+      With "<planned store> didn't have it" on, the planned store also gets an
+      out-of-stock report (and nothing else).
+- [ ] Item details on a planned item: "Buying at <store> · Change" → "Where to buy
+      <item>" lists its price at each store, cheapest first, the current one ticked.
+      Another store moves just that item (section, subtotals and banner total update);
+      *Anywhere* puts it in the "Anywhere" section. Works offline.
+- [ ] After ticking something on a planned list the banner says "· N left" and
+      **Re-plan**; Where to buy then plans only what's left. Store headers read
+      "x of y done · ~Rs … left".
 - [ ] Tick a store's last open item with two or more unanswered: "Done at <store>" lists
-      them with prices and age chips. Change one, mark one "Wasn't there", then *Not now*
+      them with prices and age chips. Change one, mark one "Wasn't there" and one "Bought
+      elsewhere" (no report for it; all bought elsewhere → *Done*, nothing saved), then *Not now*
       → "Discard your answers?" (*Keep editing* keeps them) → *Save N answers* → "Thanks —
       N answers saved." *Not now* without edits: no more questions there on that list today.
 - [ ] Profile → Compare prices → *Ask for prices while I shop* off: ticking asks
@@ -515,7 +527,8 @@ Use generic test accounts, on a list with a plan applied (Where to buy → Use t
 - [ ] `spendless.my_contributions` as two accounts (local copy of the schema): each sees
       only their own counts, the parts add up to the total, `anon` can't run it.
 - [ ] Deleting your own store or product asks first ("Delete <name>? … can't be undone").
-- [ ] At 375×667 and 360×640 no sheet scrolls inside: item details, What did it cost,
+- [ ] At 375×667 and 360×640 no sheet scrolls inside: item details, What did you pay,
+      Where to buy <item>,
       Done at <store> (also while editing), Wrong price, Remove and the confirmations.
 
 ## Upgrading an existing account
