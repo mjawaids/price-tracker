@@ -1,19 +1,25 @@
 -- Shared products whose stored item type the name parser (src/lib/compare/productName.ts,
--- itemTypes.ts) now reads differently, set to what the importer reads for them today:
+-- itemTypes.ts) now reads differently, set to what the importer reads for them today
+-- (except five rows no store lists, set by hand: noted where they are):
 --
 -- 1. Misread types (180 rows). A type word after the pack size is usually the flavour
 --    ("Shan Masala 50gm Shami Kabab" is a spice mix, not kebabs; "Toblerone Chocolate
 --    100gm Fruit&Nut" is chocolate; "Safari Potato Grills 60gm Salt" is chips, not salt);
 --    "Potato Slims" / "Potato Stix" / "Potato Crisps" are chips, not potatoes, and
---    "Crispy Potato Nuggets" are nuggets; Bisconni Cocomo "Milk" pouches are biscuits.
+--    "Crispy Potato Nuggets" are nuggets; Bisconni Cocomo "Milk" pouches are biscuits
+--    (milk is their flavour; the parser can't tell from "Milk Family Pouch", so these two
+--    are set by hand, like the potato slims and the wafers no store lists).
 -- 2. Missing types (692 rows). The importer left these untyped when the type it read
 --    didn't fit the store's aisle; it now reads every category an aisle names ("Biscuits &
 --    Cakes" is bakery and snacks), so a biscuit there is biscuits. The app no longer
 --    guesses a type that doesn't fit a product's category, so without this they'd drop
 --    out of "Which biscuits?".
 --
--- The importer rewrites a product's type only when its listing's key changes or is blank (never
--- for a product no store lists), so these are fixed here. Each update is guarded by the
+-- The importer rewrites a product's type only when its listing's key changes or is blank
+-- (never for a product no store lists), so these are fixed here. Their keys change with
+-- the new reading too: the next import re-keys a product one store lists in place, and
+-- moves the listings of one that several stores list (or people priced elsewhere) to a
+-- new product, which the nightly merge then joins. Each update is guarded by the
 -- old value, so it does nothing if the row has changed since (or on a second run). The
 -- category follows the type, as the importer sets it. No prices are touched.
 
@@ -81,7 +87,7 @@ WHERE owner_id IS NULL AND item_type = 'chocolate' AND id IN (
   '09824ae8-0b7f-4a09-8fad-5b1ef07fe21a', -- Peek Freans Sooper Biscuit Classic Chocolate 16s Snack Packs 25.2Gm
   '58c0756e-3446-4192-9328-589d66d5a0cc', -- Snakitos Wafer Roll Dark Chocolate Can 80gm
   '49abfa6b-0fb4-4496-836f-523901a0bb9a', -- Tiffany Cream Wafers 150G Chocolate
-  '79a56e7a-40a8-4c38-8bce-bf879a1460be', -- Tiffany Wafers 150Gm Chocolate
+  '79a56e7a-40a8-4c38-8bce-bf879a1460be', -- Tiffany Wafers 150Gm Chocolate (by hand: no store lists it)
   '74f9318b-dba4-40f3-a4aa-b0039fd1dc04', -- TRESORDORE WAFER CHOCOLATE 100GM HAZELNUT CREAM
   'bd9a58c6-d4cc-4726-9cd5-ef92b6b06e6a', -- TRESORDORE WAFER CHOCOLATE 125GM HAZELNUT CREAM
   '912e228c-f746-4253-a6a8-2dd240c76183', -- TRESORDORE WAFER CHOCOLATE TRUFFLES 200GM HAZELNUT CREAM
@@ -239,8 +245,8 @@ WHERE owner_id IS NULL AND item_type = 'ice-cream' AND id IN (
 -- milk → biscuits
 UPDATE spendless.catalog_products SET item_type = 'biscuits', category = 'snacks'
 WHERE owner_id IS NULL AND item_type = 'milk' AND id IN (
-  '19cfdc29-a4fe-4e89-98fa-f55380fc382d', -- Bisconni Cocomo Milk Family Pouch
-  '6b604355-965b-4850-952c-a93d330dc037'); -- Bisconni Cocomo Milk Small Pouch
+  '19cfdc29-a4fe-4e89-98fa-f55380fc382d', -- Bisconni Cocomo Milk Family Pouch (by hand: no store lists it)
+  '6b604355-965b-4850-952c-a93d330dc037'); -- Bisconni Cocomo Milk Small Pouch (by hand: no store lists it)
 
 -- olive-oil → conditioner
 UPDATE spendless.catalog_products SET item_type = 'conditioner', category = 'personal-care'
@@ -251,8 +257,8 @@ WHERE owner_id IS NULL AND item_type = 'olive-oil' AND id IN (
 -- potato → chips
 UPDATE spendless.catalog_products SET item_type = 'chips', category = 'snacks'
 WHERE owner_id IS NULL AND item_type = 'potato' AND id IN (
-  '0e7ad0d5-f6aa-416e-93e9-6207ad395516', -- Chipsino Paprika Potato Slims Pocket Pack 1 Unit
-  '906f38cb-7a19-4bc0-b48a-1e090babae5e'); -- Kababjees Potato Slims Spicy 50g
+  '0e7ad0d5-f6aa-416e-93e9-6207ad395516', -- Chipsino Paprika Potato Slims Pocket Pack 1 Unit (by hand: no store lists it)
+  '906f38cb-7a19-4bc0-b48a-1e090babae5e'); -- Kababjees Potato Slims Spicy 50g (by hand: no store lists it)
 
 -- salt → chips
 UPDATE spendless.catalog_products SET item_type = 'chips', category = 'snacks'

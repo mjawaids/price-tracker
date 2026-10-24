@@ -348,14 +348,33 @@ export function modifierWords(typeId: string, words: string[]): string[] {
 }
 
 /** Phrases that look like an item but describe something else ("sugar free", "full cream milk"). */
-const NOT_ITEMS = [
-  ['sugar', 'free'], ['fat', 'free'], ['gluten', 'free'], ['full', 'cream'],
-  // Cookies and muffins, not chips; pastry, not cheese puffs; a chocolate's flavour, not cookies.
-  ['chocolate', 'chip'], ['choco', 'chip'], ['choc', 'chip'], ['puff', 'pastry'],
-  ...['cookie', 'cooky'].flatMap((c) => [
-    [c, 'and', 'cream'], [c, 'and', 'creme'], [c, 'n', 'cream'], [c, 'n'], [c, 'dough'],
-  ]),
-];
+const NOT_ITEMS = [['sugar', 'free'], ['fat', 'free'], ['gluten', 'free'], ['full', 'cream']];
+
+// Cookies 'n' cream can be cookies: read from the phrase alone, the type counts when the
+// store's aisle agrees ("Oreo Cookies n Creme" under Biscuits, not Hershey's under Chocolates).
+const COOKIE_PHRASES = ['cookie', 'cooky'].flatMap((c) => [
+  [c, 'and', 'cream'], [c, 'and', 'creme'], [c, 'n', 'cream'], [c, 'n'], [c, 'dough'],
+]);
+const AISLE_DECIDES = new Set(COOKIE_PHRASES.map((p) => p.join(' ')));
+
+/**
+ * Phrases that usually describe another item ("Chocolate Chip Cookies", "Puff Pastry
+ * Sheets", "Hershey's Cookies 'n' Creme Chocolate"). A type inside one is set aside when
+ * the rest of the name names a type; a longer keyword starting inside one still counts
+ * ("Puff Pastry Patti" is samosa patti). Read from the phrase alone, the type is kept but
+ * isn't confident ("Bisconni Chocolate Chip" isn't chips), cookies 'n' cream aside.
+ */
+const FLAVOUR_PHRASES = [['chocolate', 'chip'], ['choco', 'chip'], ['choc', 'chip'], ['puff', 'pastry'], ...COOKIE_PHRASES];
+
+/** Where each phrase of `list` sits in `w`, as [first, last] token indexes and the phrase. */
+const spansOf = (w: string[], list: string[][]) => {
+  const out: [number, number, string][] = [];
+  for (let i = 0; i < w.length - 1; i++) for (const p of list) if (p.every((x, j) => w[i + j] === x)) out.push([i, i + p.length - 1, p.join(' ')]);
+  return out;
+};
+
+/** Whether `text` holds one of the phrases that usually describe another item (for brand learning). */
+export const hasFlavourPhrase = (text: string) => spansOf(tokens(text), FLAVOUR_PHRASES).length > 0;
 
 /**
  * Types that, named after one of these, are its flavour: "Prince Biscuit Chocolate",
@@ -382,6 +401,12 @@ export interface TypeMatch {
    * "Oreo Cookies 110.4gm Chocolate Creme", "Safari Potato Grills 60gm Salt".
    */
   afterSize: boolean;
+  /**
+   * Read only from inside a phrase that usually describes another item: `aisle` = confident
+   * only when the category hint agrees (cookies 'n' cream), `never` = never confident
+   * (chocolate chip, puff pastry).
+   */
+  inFlavour?: 'aisle' | 'never';
 }
 
 // A weight or volume token ("60gm", "1", "litre" after it): where the name proper ends.
@@ -394,11 +419,10 @@ const sizeIndex = (w: string[]) =>
 export function findTypes(text: string, skipTokens = 0): TypeMatch[] {
   const w = tokens(text);
   const skip = new Set<number>();
-  for (let i = 0; i < w.length - 1; i++) {
-    for (const p of NOT_ITEMS) if (p.every((x, j) => w[i + j] === x)) p.forEach((_, j) => skip.add(i + j));
-  }
-  const found: TypeMatch[] = [];
+  for (const [a, b] of spansOf(w, NOT_ITEMS)) for (let j = a; j <= b; j++) skip.add(j);
+  const flavours = spansOf(w, FLAVOUR_PHRASES);
   const size = sizeIndex(w);
+  const all: (TypeMatch & { start: number })[] = [];
   for (let i = 0; i < w.length; i++) {
     if (skip.has(i)) continue;
     for (const k of BY_FIRST_WORD.get(w[i]) || []) {
@@ -406,11 +430,18 @@ export function findTypes(text: string, skipTokens = 0): TypeMatch[] {
       // A phrase wholly inside the brand ("Lemon Max") says nothing about the item.
       if (end < skipTokens) continue;
       if (k.words.every((word, j) => w[i + j] === word && !skip.has(i + j))) {
-        found.push({ type: k.type, words: k.words, specificity: k.words.length, end, afterSize: size >= 0 && i > size });
+        all.push({ type: k.type, words: k.words, specificity: k.words.length, end, afterSize: size >= 0 && i > size, start: i });
       }
     }
   }
-  return found;
+  const around = (m: { start: number; end: number }) => flavours.filter(([a, b]) => a <= m.start && m.end <= b);
+  const outside = all.filter((m) => !around(m).length);
+  if (outside.length) return outside.map(({ start: _start, ...m }) => m);
+  return all.map(({ start, ...m }) => {
+    const spans = around({ start, end: m.end });
+    if (!spans.length) return m;
+    return { ...m, inFlavour: spans.every(([, , p]) => AISLE_DECIDES.has(p)) ? ('aisle' as const) : ('never' as const) };
+  });
 }
 
 /**
@@ -444,7 +475,10 @@ export function matchItemType(
     m.specificity * 100 + m.end + (hinted(m.type) ? 50 : 0) - (m.afterSize ? (hinted(m.type) ? 25 : 75) : 0);
   found.sort((a, b) => score(b) - score(a));
   const best = found[0];
-  const confident = !hints.length || hinted(best.type) || best.specificity > 1;
+  const confident =
+    best.inFlavour === 'never' ? false
+    : best.inFlavour === 'aisle' ? hinted(best.type)
+    : !hints.length || hinted(best.type) || best.specificity > 1;
   return { type: best.type, words: best.words, confident };
 }
 

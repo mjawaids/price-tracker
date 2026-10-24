@@ -70,23 +70,26 @@ console.log(`Store: ${read.store.name} (${read.store.kind}) → public in ${regi
 console.log(`Products priced there: ${read.products.length}`);
 
 // ── Parse ────────────────────────────────────────────────────────────────────
-// The store's own category names → our canonical category ids (hints for parsing).
-const STORE_CATEGORY: Record<string, string> = {
-  'fruits & vegetables': 'fruits-veg', 'meat & seafood': 'meat', 'dairy products': 'dairy',
-  'bakery & breakfast': 'bakery', 'everyday grocery': 'grains', 'oil & ghee': 'cooking-oil',
-  'spices & dressings': 'spices', 'noodles & pasta': 'grains', 'ice cream & frozen': 'frozen',
-  'ready to cook & eat': 'frozen', 'snacks & confectionery': 'snacks', 'chocolate & desserts': 'snacks',
-  'tea & coffee': 'beverages', 'beverages': 'beverages', 'mother & baby': 'baby', 'pharmacy': 'pharmacy',
-  'health & pharmacy': 'pharmacy', 'personal care': 'personal-care', 'cosmetics & fragrances': 'personal-care',
-  'cleaning & laundry': 'household', 'household essentials': 'household',
+// The store's own category names → our canonical category ids (hints for parsing; the
+// first is where an untyped product goes). One that spans several of ours lists them all,
+// so a type in any of them is kept (sugar or tea under Everyday Grocery, jam under Breakfast).
+const STORE_CATEGORY: Record<string, string[]> = {
+  'fruits & vegetables': ['fruits-veg'], 'meat & seafood': ['meat'], 'dairy products': ['dairy'],
+  'bakery & breakfast': ['bakery', 'pantry', 'grains', 'dairy'],
+  'everyday grocery': ['grains', 'pantry', 'spices', 'beverages', 'cooking-oil'], 'oil & ghee': ['cooking-oil'],
+  'spices & dressings': ['spices', 'pantry'], 'noodles & pasta': ['grains'], 'ice cream & frozen': ['frozen'],
+  'ready to cook & eat': ['frozen', 'pantry'], 'snacks & confectionery': ['snacks'], 'chocolate & desserts': ['snacks', 'pantry'],
+  'tea & coffee': ['beverages'], 'beverages': ['beverages'], 'mother & baby': ['baby'], 'pharmacy': ['pharmacy'],
+  'health & pharmacy': ['pharmacy'], 'personal care': ['personal-care'], 'cosmetics & fragrances': ['personal-care'],
+  'cleaning & laundry': ['household'], 'household essentials': ['household'],
 };
 const canonical = new Set(CATEGORIES.map((c) => c.id));
-const hintFor = (category: string | null) => {
-  if (!category) return null;
+const hintFor = (category: string | null): string[] => {
+  if (!category) return [];
   const mapped = STORE_CATEGORY[category.trim().toLowerCase()];
   if (mapped) return mapped;
   const r = resolveCategory(category);
-  return canonical.has(r.id) ? r.id : null;
+  return canonical.has(r.id) ? [r.id] : [];
 };
 
 const brands = learnBrands(read.products.map((p) => p.name));
@@ -104,7 +107,7 @@ const out = read.products.map((p) => {
       brand: (p.brand?.trim() || parsed.brand)?.slice(0, 60) ?? null,
       variant: parsed.variant,
       item_type: itemType?.id ?? null,
-      category: itemType?.category ?? hint ?? p.category,
+      category: itemType?.category ?? hint[0] ?? p.category,
       size_value: parsed.size?.value ?? null,
       size_unit: parsed.size?.unit ?? null,
       pack_count: parsed.size?.pack ?? 1,

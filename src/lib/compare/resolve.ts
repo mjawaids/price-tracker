@@ -3,6 +3,7 @@
 // Precedence: a product pinned on the item → the user's "usual" for that name →
 // a brand/size/words named in the text → the item type with an assumed default
 // (the user's last buy, else the product most stores carry) → not compared.
+import { categoryId } from '../categories.ts';
 import { normalizeName } from '../groceryDictionary.ts';
 import { ITEM_TYPE_BY_ID, matchItemType, tokens, typeFamily } from './itemTypes.ts';
 import type { ItemType } from './itemTypes.ts';
@@ -65,10 +66,11 @@ const MAX_ACCEPTABLE = 40;
 
 export function profileProduct(p: CatalogProduct): ProductProfile {
   const needsParse = !p.itemType || !p.sizeUnit || !p.brand;
-  const parsed = needsParse ? parseProductName(p.name, { categoryHint: p.category }) : null;
+  const parsed = needsParse ? parseProductName(p.name, { categoryHint: categoryId(p.category) }) : null;
   const brand = p.brand ?? parsed?.brand ?? null;
   // A type read from the name only when it fits the product's category: the importer
   // leaves "Cocomo Biscuit Milk" (a biscuit aisle) untyped on purpose, so it isn't milk here.
+  // A category that isn't one of ours ("Groceries") gives no hint, so it rules nothing out.
   const itemType = p.itemType ?? (parsed?.typeConfident ? parsed.itemType?.id : null) ?? null;
   return {
     product: p,

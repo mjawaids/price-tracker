@@ -4,7 +4,7 @@
 // Used when importing a store catalogue and, on the fly, for products typed in
 // by hand. Plain TS with no app imports so scripts can use it too.
 
-import { matchItemType, modifierWords, tokens } from './itemTypes.ts';
+import { findTypes, hasFlavourPhrase, matchItemType, modifierWords, tokens } from './itemTypes.ts';
 import type { CategoryHint, ItemType } from './itemTypes.ts';
 
 export type SizeUnit = 'g' | 'ml' | 'pc';
@@ -166,7 +166,8 @@ export function learnBrands(names: string[], min = 3): string[] {
   const known = new Set(KNOWN_BRANDS.map(brandKey));
   const ok = (label: string) => {
     const first = brandKey(label).split(' ')[0];
-    return !!first && !NOT_BRAND.has(first) && !/^\d/.test(first) && !matchItemType(label);
+    // Not a phrase that describes the item either ("Chocolate Chip" Cookies, "Puff Pastry").
+    return !!first && !NOT_BRAND.has(first) && !/^\d/.test(first) && !matchItemType(label) && !hasFlavourPhrase(label);
   };
   const out: string[] = [];
   for (const v of two.values()) {
@@ -368,12 +369,8 @@ export function parseProductName(
   // Match on the whole name so a phrase that starts inside the brand still counts
   // ("Cadbury Dairy Milk" → chocolate), but not one that's only the brand ("Lemon Max").
   // Skip the name's own brand words: "OLPERS" is one token where "Olper's" is two.
-  const typeMatch = matchItemType(
-    name,
-    opts.categoryHint,
-    brand ? tokens(name.split(' ').slice(0, brandWords).join(' ')).length : 0,
-    (t) => sizeFitsType(t, size),
-  );
+  const skip = brand ? tokens(name.split(' ').slice(0, brandWords).join(' ')).length : 0;
+  const typeMatch = matchItemType(name, opts.categoryHint, skip, (t) => sizeFitsType(t, size));
   const itemType = typeMatch?.type ?? null;
 
   // Variant: what's left once brand, item words, sizes, prices and packaging are gone.
@@ -392,9 +389,12 @@ export function parseProductName(
     });
   const variant = variantWords.length ? variantWords.join(' ').slice(0, 80) : null;
 
-  // A count that meets the type's minimum settles it whatever the aisle ("Egg 12Pcs
-  // Classic" under Breakfast).
-  const typeConfident = !!typeMatch?.confident || (!!itemType?.minUnits && !!size && sizeFitsType(itemType, size));
+  // A count of pieces that meets the type's minimum settles it whatever the aisle ("Egg
+  // 12Pcs Classic" under Breakfast), when the name names nothing else ("Chicken Egg Roll
+  // 6 Pcs" isn't eggs; "Easter Egg 6 x 25g" is no count of eggs).
+  const onlyType = !!itemType && findTypes(name, skip).every((m) => m.type.id === itemType.id);
+  const counted = !!itemType?.minUnits && size?.unit === 'pc' && sizeFitsType(itemType, size) && onlyType;
+  const typeConfident = !!typeMatch?.confident || counted;
   const confidence =
     (brand ? 0.3 : 0) + (itemType ? (typeConfident ? 0.4 : 0.2) : 0) + (size ? 0.3 : 0);
   return { name, brand, itemType, variant, size, pricePoint, confidence: round(confidence), typeConfident };

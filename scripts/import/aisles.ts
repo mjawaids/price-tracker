@@ -7,7 +7,7 @@
  * out. Listings left out before this date are looked at again on the next runs rather
  * than after the usual 60 days (scripts/import/adapters/blink-pages.ts).
  */
-export const RULES_CHANGED_AT = '2026-10-06T00:00:00Z';
+export const RULES_CHANGED_AT = '2026-10-23T00:00:00Z';
 
 /** Aisles that are never imported. Checked first. */
 const LEAVE_OUT =
@@ -74,7 +74,7 @@ export const leftOut = (names: (string | null | undefined)[]) =>
   names.some((n) => !!n && leaveOutName(mixOf(n)?.name ?? n));
 
 const AISLES: [RegExp, string][] = [
-  [/frozen|ice ?cream|\bwall'?s\b/i, 'frozen'],
+  [/frozen|ice ?cream|\bwall['’]?s\b/i, 'frozen'],
   [/fruit|vegetable|fresh produce/i, 'fruits-veg'],
   [/meat|poultry|chicken|mutton|beef|fish|seafood/i, 'meat'],
   [/dairy|\bmilk\b|\beggs?\b|yogh?urt|cheese|butter/i, 'dairy'],
