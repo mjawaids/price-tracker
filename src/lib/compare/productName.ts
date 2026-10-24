@@ -4,8 +4,8 @@
 // Used when importing a store catalogue and, on the fly, for products typed in
 // by hand. Plain TS with no app imports so scripts can use it too.
 
-import { matchItemType, modifierWords, tokens } from './itemTypes.ts';
-import type { ItemType } from './itemTypes.ts';
+import { findTypes, hasFlavourPhrase, matchItemType, modifierWords, tokens } from './itemTypes.ts';
+import type { CategoryHint, ItemType } from './itemTypes.ts';
 
 export type SizeUnit = 'g' | 'ml' | 'pc';
 
@@ -30,6 +30,12 @@ export interface ParsedProduct {
   pricePoint: number | null;
   /** 0–1: how much of the name we understood. */
   confidence: number;
+  /**
+   * The item type fits the category hint (or there was none, a phrase of 2+ words named
+   * it, or the count meets the type's `minUnits`). A doubtful one ("Cocomo Biscuit Milk"
+   * in a biscuit aisle → milk) is a misreading to drop, not a type to fill in.
+   */
+  typeConfident: boolean;
 }
 
 // ── Brands ───────────────────────────────────────────────────────────────────
@@ -160,7 +166,8 @@ export function learnBrands(names: string[], min = 3): string[] {
   const known = new Set(KNOWN_BRANDS.map(brandKey));
   const ok = (label: string) => {
     const first = brandKey(label).split(' ')[0];
-    return !!first && !NOT_BRAND.has(first) && !/^\d/.test(first) && !matchItemType(label);
+    // Not a phrase that describes the item either ("Chocolate Chip" Cookies, "Puff Pastry").
+    return !!first && !NOT_BRAND.has(first) && !/^\d/.test(first) && !matchItemType(label) && !hasFlavourPhrase(label);
   };
   const out: string[] = [];
   for (const v of two.values()) {
@@ -349,7 +356,7 @@ function findBrand(name: string, extraBrands: string[] = []): string | null {
 /** Everything we can read from a product name. */
 export function parseProductName(
   raw: string,
-  opts: { categoryHint?: string | null; brands?: string[] } = {},
+  opts: { categoryHint?: CategoryHint; brands?: string[] } = {},
 ): ParsedProduct {
   const name = tidyName(raw);
   const size = parseSize(name);
@@ -362,12 +369,8 @@ export function parseProductName(
   // Match on the whole name so a phrase that starts inside the brand still counts
   // ("Cadbury Dairy Milk" → chocolate), but not one that's only the brand ("Lemon Max").
   // Skip the name's own brand words: "OLPERS" is one token where "Olper's" is two.
-  const typeMatch = matchItemType(
-    name,
-    opts.categoryHint,
-    brand ? tokens(name.split(' ').slice(0, brandWords).join(' ')).length : 0,
-    (t) => sizeFitsType(t, size),
-  );
+  const skip = brand ? tokens(name.split(' ').slice(0, brandWords).join(' ')).length : 0;
+  const typeMatch = matchItemType(name, opts.categoryHint, skip, (t) => sizeFitsType(t, size));
   const itemType = typeMatch?.type ?? null;
 
   // Variant: what's left once brand, item words, sizes, prices and packaging are gone.
@@ -386,7 +389,13 @@ export function parseProductName(
     });
   const variant = variantWords.length ? variantWords.join(' ').slice(0, 80) : null;
 
+  // A count of pieces that meets the type's minimum settles it whatever the aisle ("Egg
+  // 12Pcs Classic" under Breakfast), when the name names nothing else ("Chicken Egg Roll
+  // 6 Pcs" isn't eggs; "Easter Egg 6 x 25g" is no count of eggs).
+  const onlyType = !!itemType && findTypes(name, skip).every((m) => m.type.id === itemType.id);
+  const counted = !!itemType?.minUnits && size?.unit === 'pc' && sizeFitsType(itemType, size) && onlyType;
+  const typeConfident = !!typeMatch?.confident || counted;
   const confidence =
-    (brand ? 0.3 : 0) + (itemType ? (typeMatch?.confident ? 0.4 : 0.2) : 0) + (size ? 0.3 : 0);
-  return { name, brand, itemType, variant, size, pricePoint, confidence: round(confidence) };
+    (brand ? 0.3 : 0) + (itemType ? (typeConfident ? 0.4 : 0.2) : 0) + (size ? 0.3 : 0);
+  return { name, brand, itemType, variant, size, pricePoint, confidence: round(confidence), typeConfident };
 }

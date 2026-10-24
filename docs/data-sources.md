@@ -135,15 +135,22 @@ doesn't affect SpendLess. Worth telling Diamond if we're in touch.
    `match_key` yet, and the ones sold at a public store we don't import (the promoted
    Panda Mart rows), are read again from the name with the current parser and the
    catalogue's brands, as imported listings are, so their keys match:
-   - a missing brand or item type (and then category) is filled from the name; a
-     stored one stays (the parser misreads some flavours as the item, e.g. "Rani
-     Juice … Orange" as an orange);
+   - a missing brand or item type (and then category) is filled from the name, a type
+     only when it fits the product's category (as `normalize.ts` does); a stored one
+     stays (the parser misreads some flavours as the item, e.g. "Rani Juice … Orange"
+     as an orange);
    - variant, size and pack follow the name when it reads as the product's type;
    - nothing is written unless it changed.
 2. Each store runs side by side (different sites), and each is independent:
    - read robots.txt;
    - the adapter (`scripts/import/adapters/`) reads listings;
-   - `normalize.ts` parses each name (`src/lib/compare/productName.ts`) and decides the aisle;
+   - `normalize.ts` parses each name (`src/lib/compare/productName.ts`) and decides the aisle.
+     The store's aisle is the hint for the item type: every category its name points
+     to ("Biscuits & Cakes" → bakery and snacks, `decideAisle` `hints`). A type outside
+     them, read from one word, is a misreading and isn't stored ("Cocomo Biscuit Milk"
+     in a biscuit aisle isn't milk); a type word after the pack size is usually the
+     flavour ("Oreo Cookies 110.4gm Chocolate Creme" → biscuits, "Safari Potato Grills
+     60gm Salt" → chips), as is chocolate after a biscuit word ("Prince Biscuit Chocolate");
    - `write.sql` writes it in **one transaction**.
 3. **Matching a listing to a catalogue product**, checked every time it's read, in order:
    - the product this listing mapped to before, while it still fits: the same

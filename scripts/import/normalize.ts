@@ -106,19 +106,19 @@ export function normalize(raw: RawListing, brands: string[]): Normalized | null 
   const priced = raw.price > 0 && raw.price < 10_000_000;
   if (!name || !raw.externalId || (!priced && !raw.exclude)) return null;
   const storeBrand = raw.brand?.replace(/\s+/g, ' ').trim() || null;
-  // The store's aisle is a hint for reading the name; the item type read from the name then has the last word.
-  const storeAisle = raw.exclude ? null : decideAisle(raw.aisles, null, name).aisle;
-  const parsed = parseProductName(name, { categoryHint: storeAisle, brands: storeBrand ? [...brands, storeBrand] : brands });
+  // The store's aisle (every category its name points to) is a hint for reading the
+  // name; the item type read from the name then has the last word.
+  const storeAisles = raw.exclude ? [] : decideAisle(raw.aisles, null, name).hints;
+  const parsed = parseProductName(name, { categoryHint: storeAisles, brands: storeBrand ? [...brands, storeBrand] : brands });
   // A type that contradicts the store's aisle, read from one loose word ("Apple Orchard"
   // car gel → apple), is a misreading: drop it and keep the store's aisle.
-  const typeWeight = parsed.confidence - (parsed.brand ? 0.3 : 0) - (parsed.size ? 0.3 : 0);
   const lookalike = !!parsed.itemType && pharmacyLookalike(parsed.itemType.id, name, raw.aisles);
-  const itemType = parsed.itemType && !lookalike && typeWeight > 0.35 ? parsed.itemType : null;
+  const itemType = parsed.itemType && !lookalike && parsed.typeConfident ? parsed.itemType : null;
   // A pharmacy item stays out even when we'd otherwise doubt the type ("Panadol Extra"
   // filed under "Personal Care"): leaving one out by mistake is the safe direction.
   const pharmacy = parsed.itemType?.category === 'pharmacy' && !lookalike;
   const typeAisle = pharmacy ? 'pharmacy' : (itemType?.category ?? null);
-  const decision = raw.exclude || placeholderName(name) ? { aisle: null, include: false } : decideAisle(raw.aisles, typeAisle, name);
+  const decision = raw.exclude || placeholderName(name) ? { aisle: null, include: false, hints: [] } : decideAisle(raw.aisles, typeAisle, name);
   const base = {
     external_id: raw.externalId.slice(0, 120),
     url: httpsOnly(raw.url),

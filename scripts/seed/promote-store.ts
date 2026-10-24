@@ -70,29 +70,34 @@ console.log(`Store: ${read.store.name} (${read.store.kind}) → public in ${regi
 console.log(`Products priced there: ${read.products.length}`);
 
 // ── Parse ────────────────────────────────────────────────────────────────────
-// The store's own category names → our canonical category ids (hints for parsing).
-const STORE_CATEGORY: Record<string, string> = {
-  'fruits & vegetables': 'fruits-veg', 'meat & seafood': 'meat', 'dairy products': 'dairy',
-  'bakery & breakfast': 'bakery', 'everyday grocery': 'grains', 'oil & ghee': 'cooking-oil',
-  'spices & dressings': 'spices', 'noodles & pasta': 'grains', 'ice cream & frozen': 'frozen',
-  'ready to cook & eat': 'frozen', 'snacks & confectionery': 'snacks', 'chocolate & desserts': 'snacks',
-  'tea & coffee': 'beverages', 'beverages': 'beverages', 'mother & baby': 'baby', 'pharmacy': 'pharmacy',
-  'health & pharmacy': 'pharmacy', 'personal care': 'personal-care', 'cosmetics & fragrances': 'personal-care',
-  'cleaning & laundry': 'household', 'household essentials': 'household',
+// The store's own category names → our canonical category ids (hints for parsing; the
+// first is where an untyped product goes). One that spans several of ours lists them all,
+// so a type in any of them is kept (sugar or tea under Everyday Grocery, jam under Breakfast).
+const STORE_CATEGORY: Record<string, string[]> = {
+  'fruits & vegetables': ['fruits-veg'], 'meat & seafood': ['meat'], 'dairy products': ['dairy'],
+  'bakery & breakfast': ['bakery', 'pantry', 'grains', 'dairy'],
+  'everyday grocery': ['grains', 'pantry', 'spices', 'beverages', 'cooking-oil'], 'oil & ghee': ['cooking-oil'],
+  'spices & dressings': ['spices', 'pantry'], 'noodles & pasta': ['grains'], 'ice cream & frozen': ['frozen'],
+  'ready to cook & eat': ['frozen', 'pantry'], 'snacks & confectionery': ['snacks'], 'chocolate & desserts': ['snacks', 'pantry'],
+  'tea & coffee': ['beverages'], 'beverages': ['beverages'], 'mother & baby': ['baby'], 'pharmacy': ['pharmacy'],
+  'health & pharmacy': ['pharmacy'], 'personal care': ['personal-care'], 'cosmetics & fragrances': ['personal-care'],
+  'cleaning & laundry': ['household'], 'household essentials': ['household'],
 };
 const canonical = new Set(CATEGORIES.map((c) => c.id));
-const hintFor = (category: string | null) => {
-  if (!category) return null;
+const hintFor = (category: string | null): string[] => {
+  if (!category) return [];
   const mapped = STORE_CATEGORY[category.trim().toLowerCase()];
   if (mapped) return mapped;
   const r = resolveCategory(category);
-  return canonical.has(r.id) ? r.id : null;
+  return canonical.has(r.id) ? [r.id] : [];
 };
 
 const brands = learnBrands(read.products.map((p) => p.name));
 const out = read.products.map((p) => {
   const hint = hintFor(p.category);
   const parsed = parseProductName(p.name, { categoryHint: hint, brands });
+  // A type that doesn't fit the store's category, read from one word, is a misreading.
+  const itemType = parsed.typeConfident ? parsed.itemType : null;
   return {
     row: p,
     parsed,
@@ -101,8 +106,8 @@ const out = read.products.map((p) => {
       name: parsed.name.slice(0, 160),
       brand: (p.brand?.trim() || parsed.brand)?.slice(0, 60) ?? null,
       variant: parsed.variant,
-      item_type: parsed.itemType?.id ?? null,
-      category: parsed.itemType?.category ?? hint ?? p.category,
+      item_type: itemType?.id ?? null,
+      category: itemType?.category ?? hint[0] ?? p.category,
       size_value: parsed.size?.value ?? null,
       size_unit: parsed.size?.unit ?? null,
       pack_count: parsed.size?.pack ?? 1,
@@ -111,7 +116,7 @@ const out = read.products.map((p) => {
 });
 
 const pct = (n: number) => `${Math.round((n / Math.max(1, out.length)) * 100)}%`;
-const typed = out.filter((o) => o.parsed.itemType).length;
+const typed = out.filter((o) => o.data.item_type).length;
 const sized = out.filter((o) => o.parsed.size).length;
 const branded = out.filter((o) => o.data.brand).length;
 const high = out.filter((o) => o.parsed.confidence >= 0.7).length;
@@ -119,7 +124,7 @@ console.log(`Learned brands: ${brands.length}`);
 console.log(`Item type found: ${typed} (${pct(typed)}) · size: ${sized} (${pct(sized)}) · brand: ${branded} (${pct(branded)})`);
 console.log(`High confidence (≥ 0.7): ${high} (${pct(high)})`);
 console.log('Sample without an item type:');
-for (const o of out.filter((x) => !x.parsed.itemType).slice(0, 15)) console.log(`  - ${o.row.name} [${o.row.category ?? ''}]`);
+for (const o of out.filter((x) => !x.data.item_type).slice(0, 15)) console.log(`  - ${o.row.name} [${o.row.category ?? ''}]`);
 
 if (!apply) {
   console.log('\nDry run — nothing written. Re-run with --apply to make it public.');
