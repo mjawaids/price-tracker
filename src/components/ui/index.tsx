@@ -3,6 +3,7 @@ import { storeHue } from '../../lib/categories';
 export { Icon, GoogleIcon } from './Icon';
 export type { IconName } from './Icon';
 export { Thumb, Chip, Btn, Stepper, EmptyState, Toggle, ToggleTrack } from './primitives';
+export { ProductArt } from './ProductArt';
 export { Sheet } from './Sheet';
 export { ConfirmSheet } from './ConfirmSheet';
 export { AgeChip } from './AgeChip';

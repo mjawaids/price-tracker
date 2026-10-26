@@ -1,27 +1,22 @@
 import React from 'react';
 import { resolveCategory, catTint, catInk } from '../../lib/categories';
 import { Icon, IconName } from './Icon';
+import { ProductArt } from './ProductArt';
+import { artForProduct } from '../../lib/productArt';
 
-// ── Product thumbnail: honest striped category-tinted placeholder ────────────
+// ── Product thumbnail: its photo, else a line drawing of what it is on its aisle's tint ──
 export function Thumb({
   product,
   size = 64,
   radius = 16,
-  label = true,
   fill = false,
 }: {
-  product: { id: string; name: string; category?: string | null; imageUrl?: string | null };
+  product: { id: string; name: string; category?: string | null; itemType?: string | null; imageUrl?: string | null };
   size?: number;
   radius?: number;
-  label?: boolean;
   fill?: boolean;
 }) {
   const cat = resolveCategory(product.category ?? undefined);
-  const bg = catTint(cat.hue, 0.94, 0.04);
-  const stripe = catTint(cat.hue, 0.89, 0.06);
-  const ink = catInk(cat.hue);
-  const fs = fill ? 13 : Math.max(8, size * 0.13);
-  const shortId = (product.id || '').slice(0, 6);
 
   const containerStyle: React.CSSProperties = {
     width: fill ? '100%' : size,
@@ -44,31 +39,18 @@ export function Thumb({
     );
   }
 
+  // Bigger pictures get a finer line, so they read as a drawing rather than a bold icon.
+  const art = Math.round(size * 0.56);
   return (
     <div
       className="flex items-center justify-center relative shrink-0"
-      style={{
-        ...containerStyle,
-        background: `repeating-linear-gradient(135deg, ${bg} 0 9px, ${stripe} 9px 18px)`,
-      }}
+      style={{ ...containerStyle, background: catTint(cat.hue, 0.95, 0.035), color: catInk(cat.hue) }}
     >
-      {label && (
-        <span
-          className="font-mono lowercase text-center"
-          style={{
-            fontSize: fs,
-            color: ink,
-            letterSpacing: '-0.02em',
-            padding: '2px 5px',
-            borderRadius: 5,
-            background: 'rgba(255,255,255,0.62)',
-            maxWidth: '86%',
-            lineHeight: 1.05,
-          }}
-        >
-          {product.name ? product.name.split(' ')[0].toLowerCase() : shortId}
-        </span>
-      )}
+      <ProductArt
+        id={artForProduct(product)}
+        size={fill ? '56%' : art}
+        stroke={fill || art >= 64 ? 1.25 : art >= 36 ? 1.5 : 1.75}
+      />
     </div>
   );
 }

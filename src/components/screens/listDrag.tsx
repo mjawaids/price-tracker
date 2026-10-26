@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/core';
 import { ListItem } from '../../types';
 import { Icon } from '../ui';
+import { ItemArt } from './listParts';
 
 const reducedMotion = () =>
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -68,6 +69,7 @@ export function AisleDnd({
             }}
           >
             <span aria-hidden className="block shrink-0 rounded-full shadow-[inset_0_0_0_2px_var(--ink-faint)]" style={{ width: 24, height: 24 }} />
+            <ItemArt name={active.name} category={active.category} />
             <span className="flex-1 min-w-0 font-bold text-[16.5px] line-clamp-2 break-words">{active.name}</span>
             <Icon name="grip" size={20} color="var(--ink-faint)" />
           </div>
