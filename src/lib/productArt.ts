@@ -924,6 +924,13 @@ export const CATEGORY_ART: Record<string, string> = {
 
 const FALLBACK = 'basket';
 
+/** Aisles whose items are often filed under each other's (frozen peas, tissues with cleaning). */
+const NEAR_AISLES: Record<string, string[]> = {
+  frozen: ['fruits-veg', 'meat', 'bakery'],
+  household: ['personal-care'],
+  'personal-care': ['household'],
+};
+
 /** The picture for an item type id, or null when there's none (its parent's, if drawn). */
 export function artForType(id: string | null | undefined): string | null {
   if (!id) return null;
@@ -964,10 +971,18 @@ export function artForItem(name: string, category?: string | null): string {
   const key = `${category ?? ''}|${name}`;
   const hit = itemCache.get(key);
   if (hit) return hit;
-  const match = name ? matchItemType(name, categoryId(category)) : null;
-  // The list's aisle can disagree with the type's ("tissue" sits in Cleaning, a moved
-  // "milk" in Pantry): what was typed still names the thing when it names one type only.
-  const sure = match && (match.confident || new Set(findTypes(name).map((m) => m.type.id)).size === 1);
+  const aisle = categoryId(category);
+  const match = name ? matchItemType(name, aisle) : null;
+  const found = match ? findTypes(name) : [];
+  // A type read only from a flavour phrase ("puff pastry", "choco chip") isn't the item.
+  const flavour = found.some((m) => m.type.id === match?.type.id && m.inFlavour === 'never');
+  // The list's aisle can disagree with the type's ("tissue" sits in Cleaning, "frozen
+  // peas" in Frozen): the typed name wins when it names one type only and the two aisles
+  // are neighbours. Otherwise the aisle, often one the person chose, says what it is
+  // ("cream" moved to Personal care, "dhania" in Spices).
+  const single = found.length > 0 && found.every((m) => m.type.id === match?.type.id);
+  const near = !!aisle && !!match && (NEAR_AISLES[aisle] ?? []).includes(match.type.category);
+  const sure = match && !flavour && (match.confident || (single && near));
   const out = (sure ? artForType(match.type.id) : null) ?? byCategory(category);
   itemCache.set(key, out);
   return out;
