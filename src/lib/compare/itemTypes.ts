@@ -462,7 +462,16 @@ export function matchItemType(
 ): { type: ItemType; words: string[]; confident: boolean } | null {
   const all = findTypes(text, skipTokens).filter((m) => !accept || accept(m.type));
   const start = (m: TypeMatch) => m.end - m.specificity + 1;
-  const found = all.filter((m) => !(FLAVOUR_OF[m.type.id] ?? []).some((id) => all.some((o) => o.type.id === id && o.end < start(m))));
+  // A flavour named after what it flavours ("Prince Biscuit Chocolate") is set aside, and
+  // so is a milk or fruit word naming that flavour, just before it or inside it ("Fox
+  // Cookies 175gm Milk Chocolate" isn't milk, "Torku Biscuits with Orange Jelly" isn't
+  // oranges, "Biscuit Milk & Honey" isn't milk).
+  const isFlavour = (m: TypeMatch) => (FLAVOUR_OF[m.type.id] ?? []).some((id) => all.some((o) => o.type.id === id && o.end < start(m)));
+  const flavours = all.filter(isFlavour);
+  const namesFlavour = (m: TypeMatch) =>
+    (m.type.id === 'milk' || m.type.category === 'fruits-veg') &&
+    flavours.some((f) => f !== m && start(m) >= start(f) - 2 && start(m) <= f.end);
+  const found = all.filter((m) => !isFlavour(m) && !namesFlavour(m));
   if (!found.length) return null;
   const hints: readonly string[] = !categoryHint ? [] : typeof categoryHint === 'string' ? [categoryHint] : categoryHint;
   const hinted = (t: ItemType) => hints.includes(t.category);

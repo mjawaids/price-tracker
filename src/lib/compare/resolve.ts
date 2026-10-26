@@ -69,7 +69,7 @@ export function profileProduct(p: CatalogProduct): ProductProfile {
   const parsed = needsParse ? parseProductName(p.name, { categoryHint: categoryId(p.category) }) : null;
   const brand = p.brand ?? parsed?.brand ?? null;
   // A type read from the name only when it fits the product's category: the importer
-  // leaves "Cocomo Biscuit Milk" (a biscuit aisle) untyped on purpose, so it isn't milk here.
+  // leaves "Bisconni Cocomo Milk 24s Box" (a biscuit aisle) untyped on purpose, so it isn't milk here.
   // A category that isn't one of ours ("Groceries") gives no hint, so it rules nothing out.
   const itemType = p.itemType ?? (parsed?.typeConfident ? parsed.itemType?.id : null) ?? null;
   return {

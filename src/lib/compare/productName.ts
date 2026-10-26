@@ -32,8 +32,8 @@ export interface ParsedProduct {
   confidence: number;
   /**
    * The item type fits the category hint (or there was none, a phrase of 2+ words named
-   * it, or the count meets the type's `minUnits`). A doubtful one ("Cocomo Biscuit Milk"
-   * in a biscuit aisle → milk) is a misreading to drop, not a type to fill in.
+   * it, or the count meets the type's `minUnits`). A doubtful one ("Bisconni Cocomo Milk
+   * 24s Box" in a biscuit aisle → milk) is a misreading to drop, not a type to fill in.
    */
   typeConfident: boolean;
 }

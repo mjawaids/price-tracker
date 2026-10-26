@@ -147,11 +147,12 @@ doesn't affect SpendLess. Worth telling Diamond if we're in touch.
    - `normalize.ts` parses each name (`src/lib/compare/productName.ts`) and decides the aisle.
      The store's aisle is the hint for the item type: every category its name points
      to ("Biscuits & Cakes" → bakery and snacks, `decideAisle` `hints`). A type outside
-     them, read from one word, is a misreading and isn't stored ("Cocomo Biscuit Milk"
+     them, read from one word, is a misreading and isn't stored ("Bisconni Cocomo Milk 24s Box"
      in a biscuit aisle isn't milk); in a recognised aisle a type word after the pack
      size is usually the flavour ("Oreo Cookies 110.4gm Chocolate Creme" → biscuits,
      "Safari Potato Grills 60gm Salt" → chips), as is chocolate after a biscuit word
-     ("Prince Biscuit Chocolate"); in an aisle we don't recognise, names read as before;
+     ("Prince Biscuit Chocolate"); in an aisle we don't recognise, the after-size and flavour-phrase
+     rules don't apply and the type read is trusted, as before;
    - `write.sql` writes it in **one transaction**.
 3. **Matching a listing to a catalogue product**, checked every time it's read, in order:
    - the product this listing mapped to before, while it still fits: the same

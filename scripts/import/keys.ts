@@ -22,8 +22,9 @@ interface Row {
  * store we don't import (the promoted Panda Mart rows). They're read again from the
  * name with the current parser and the catalogue's brands (as imported listings are),
  * so their keys match listings read the same way:
- * - a missing brand or item type (and then category) is filled from the name; a stored
- *   one stays (the parser misreads some flavours as the item: "Rani Juice … Orange");
+ * - a missing brand, or a missing item type that fits the product's category (and then
+ *   category), is filled from the name; a stored one stays (the parser misreads some
+ *   flavours as the item: "Rani Juice … Orange");
  * - variant, size and pack follow the name when it reads as the product's type, else
  *   the stored ones stay;
  * - the key is worked out from those fields.
