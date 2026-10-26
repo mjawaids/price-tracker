@@ -218,37 +218,37 @@ export function ItemRow({
             <span className="block rounded-full shadow-[inset_0_0_0_2px_var(--ink-faint)]" style={{ width: 24, height: 24 }} />
           )}
         </button>
-        <span className="mr-2.5">
-          <ItemArt name={item.name} category={item.category} done={item.done} />
-        </span>
         <button
           type="button"
           onClick={() => !swiping.current && onOpen()}
           aria-label={aisle ? `Edit ${item.name}, ${aisle.name}` : `Edit ${item.name}`}
-          className="flex-1 min-w-0 text-left bg-transparent flex flex-col justify-center gap-0.5"
+          className="flex-1 min-w-0 text-left bg-transparent flex items-center gap-2.5"
           style={{ minHeight: 48, padding: '8px 0' }}
         >
-          <span
-            className={`line-clamp-2 break-words ${item.done ? 'text-[16px] font-medium text-ink-soft line-through decoration-[var(--ink-faint)]' : 'text-[16.5px] font-semibold tracking-[-0.01em] text-ink'}`}
-          >
-            {item.name}
-          </span>
-          {planned ? (
-            <span className="line-clamp-2 break-words text-[13px] text-ink-soft">
-              {planned.product}
-              {item.note && ` · ${item.note}`}
+          <ItemArt name={item.name} category={item.category} done={item.done} />
+          <span className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+            <span
+              className={`line-clamp-2 break-words ${item.done ? 'text-[16px] font-medium text-ink-soft line-through decoration-[var(--ink-faint)]' : 'text-[16.5px] font-semibold tracking-[-0.01em] text-ink'}`}
+            >
+              {item.name}
             </span>
-          ) : aisle ? (
-            <span className="flex items-center gap-1.5 min-w-0 text-[13px] text-ink-soft">
-              <span aria-hidden className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: aisle.dot }} />
-              <span className="line-clamp-2 break-words">
-                {aisle.name}
+            {planned ? (
+              <span className="line-clamp-2 break-words text-[13px] text-ink-soft">
+                {planned.product}
                 {item.note && ` · ${item.note}`}
               </span>
-            </span>
-          ) : (
-            item.note && !item.done && <span className="line-clamp-2 break-words text-[13px] text-ink-soft">{item.note}</span>
-          )}
+            ) : aisle ? (
+              <span className="flex items-center gap-1.5 min-w-0 text-[13px] text-ink-soft">
+                <span aria-hidden className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: aisle.dot }} />
+                <span className="line-clamp-2 break-words">
+                  {aisle.name}
+                  {item.note && ` · ${item.note}`}
+                </span>
+              </span>
+            ) : (
+              item.note && !item.done && <span className="line-clamp-2 break-words text-[13px] text-ink-soft">{item.note}</span>
+            )}
+          </span>
         </button>
         {planned && (
           <span className="shrink-0 flex flex-col items-end gap-[3px] ml-2">

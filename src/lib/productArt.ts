@@ -3,7 +3,7 @@
 // Drawn for SpendLess on a 24×24 grid: strokes only (round caps and joins), ~2px
 // padding, a hand-drawn feel, readable at 20px. Plain TS so scripts can use it too.
 
-import { ITEM_TYPE_BY_ID, matchItemType } from './compare/itemTypes.ts';
+import { ITEM_TYPE_BY_ID, findTypes, matchItemType } from './compare/itemTypes.ts';
 import { parseProductName } from './compare/productName.ts';
 import { categoryId } from './categories.ts';
 
@@ -600,6 +600,11 @@ export const ART: Record<string, string[]> = {
     'M13.4 7 15 2.6h2.4',
     'M4.6 7a2.8 2.8 0 0 0 5.6 0z',
   ],
+  drink: [
+    'M6.4 7h11.2l-1.6 12.4c-.1.9-.9 1.6-1.8 1.6H9.8c-.9 0-1.7-.7-1.8-1.6z',
+    'M7 11.4h10',
+    'M13.4 7 15 2.6h2.4',
+  ],
   water: [
     'M10 2.8h4v2l1.6 2.4c.6.8.8 1.6.8 2.6V19c0 1.1-.9 2-2 2H9.6c-1.1 0-2-.9-2-2V9.8c0-1 .2-1.8.8-2.6L10 4.8z',
     'M7.6 10.6h8.8', 'M7.6 17.6h8.8',
@@ -912,9 +917,9 @@ export const TYPE_ART: Record<string, string> = {
 
 /** Aisle (canonical category id) → picture id. */
 export const CATEGORY_ART: Record<string, string> = {
-  'fruits-veg': 'leafy-bunch', meat: 'beef', dairy: 'milk', bakery: 'bread', grains: 'flour-sack',
+  'fruits-veg': 'leafy-bunch', meat: 'mince', dairy: 'milk', bakery: 'bread', grains: 'flour-sack',
   'cooking-oil': 'oil-bottle', spices: 'mortar', pantry: 'jar', frozen: 'snowflake', snacks: 'chips',
-  beverages: 'juice', baby: 'baby-bottle', pharmacy: 'pill', 'personal-care': 'pump-bottle', household: 'spray',
+  beverages: 'drink', baby: 'baby-bottle', pharmacy: 'pill', 'personal-care': 'pump-bottle', household: 'spray',
 };
 
 const FALLBACK = 'basket';
@@ -960,7 +965,10 @@ export function artForItem(name: string, category?: string | null): string {
   const hit = itemCache.get(key);
   if (hit) return hit;
   const match = name ? matchItemType(name, categoryId(category)) : null;
-  const out = (match?.confident ? artForType(match.type.id) : null) ?? byCategory(category);
+  // The list's aisle can disagree with the type's ("tissue" sits in Cleaning, a moved
+  // "milk" in Pantry): what was typed still names the thing when it names one type only.
+  const sure = match && (match.confident || new Set(findTypes(name).map((m) => m.type.id)).size === 1);
+  const out = (sure ? artForType(match.type.id) : null) ?? byCategory(category);
   itemCache.set(key, out);
   return out;
 }
