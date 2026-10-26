@@ -18,6 +18,7 @@ The app has two sections: **Lists** (the default) and **Compare**.
   suit the unit: 50 g, ½ kg, 1), unit and notes
 - Hold an item and drag it to another aisle; next time that item goes there by itself
 - Long names wrap instead of being cut off
+- Each item and product shows a small line drawing of what it is (bread, milk, pyaz → onion), until products have photos
 - Friendly one-at-a-time tips that teach the app as you use it
 - **Still-to-buy reminders** (optional): when things have waited on your lists for 2 days,
   one push between 10 am and 8 pm your time ("You still have 5 things to buy", or "… on 2 lists"), then

@@ -56,7 +56,7 @@ export function ProductRow({
       }}
       aria-pressed={selected}
     >
-      <Thumb product={product} size={44} radius={12} label={false} />
+      <Thumb product={product} size={44} radius={12} />
       <span className="flex-1 min-w-0 flex flex-col gap-0.5">
         <span className="font-bold text-[15px] leading-snug line-clamp-2">
           {product.name}
@@ -92,7 +92,7 @@ export function PriceRow({ product, onClick }: { product: CatalogProduct; onClic
       className="w-full flex items-center gap-3 text-left rounded-[16px] bg-surface shadow-[inset_0_0_0_1.5px_var(--line)]"
       style={{ padding: 12, minHeight: 64 }}
     >
-      <Thumb product={product} size={44} radius={12} label={false} />
+      <Thumb product={product} size={44} radius={12} />
       <span className="flex-1 min-w-0 flex flex-col gap-0.5">
         <span className="font-bold text-[15px] leading-snug line-clamp-2">
           {product.name}

@@ -2,11 +2,26 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ListItem } from '../../types';
 import { formatQty } from '../../utils/quickAdd';
 import { SyncStatus } from '../../lib/offline/sync';
-import { AgeChip, Icon } from '../ui';
+import { AgeChip, Icon, ProductArt } from '../ui';
+import { artForItem } from '../../lib/productArt';
 import { buzz, categoryMeta } from './listHelpers';
 import type { GroupDrop, RowDrag } from './listDragHooks';
 
 const sectionLabel = 'font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-ink-soft';
+
+// ── Item picture: a line drawing of what was typed, on its aisle's tint ─────
+export function ItemArt({ name, category, done }: { name: string; category?: string | null; done?: boolean }) {
+  const aisle = categoryMeta(category);
+  return (
+    <span
+      aria-hidden
+      className={`shrink-0 grid place-items-center rounded-[10px] transition-opacity ${done ? 'opacity-50' : ''}`}
+      style={{ width: 34, height: 34, background: aisle.tint, color: done ? 'var(--ink-soft)' : aisle.ink }}
+    >
+      <ProductArt id={artForItem(name, category)} size={20} stroke={1.9} />
+    </span>
+  );
+}
 
 // ── Sync badge ───────────────────────────────────────────────────────────────
 export function SyncBadge({ status, pending }: { status: SyncStatus; pending: number }) {
@@ -203,6 +218,9 @@ export function ItemRow({
             <span className="block rounded-full shadow-[inset_0_0_0_2px_var(--ink-faint)]" style={{ width: 24, height: 24 }} />
           )}
         </button>
+        <span className="mr-2.5">
+          <ItemArt name={item.name} category={item.category} done={item.done} />
+        </span>
         <button
           type="button"
           onClick={() => !swiping.current && onOpen()}

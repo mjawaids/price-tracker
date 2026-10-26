@@ -120,6 +120,9 @@ On desktop:
 - [ ] Typing shows suggestions (your history first, then common items) with their aisle.
 - [ ] Pasting several lines (`- milk`, `1. bread`) adds them all.
 - [ ] Items are grouped by aisle; unknown items go under **Other**.
+- [ ] Each row shows a drawing of the item on its aisle's colour between the tick and the name: `bread` → loaf,
+      `pyaz` → onion, `anday` → eggs, `masoor` → daal bowl; an item we can't place shows its aisle's drawing,
+      or a basket under **Other**. A ticked item's drawing fades. Dragging an item shows the same drawing.
 - [ ] List options (⋯) → turning off **Group by aisle** shows one list in the order items were added
       (no aisle headings, one column on desktop), each item showing its aisle (dot + name) under its
       name with any note after a "·"; it stays off after a reload and offline, and turning
@@ -248,6 +251,9 @@ service worker.
       shows the cheapest price in the city in large figures ("from" when 2+ stores), where, how many
       stores have it, and how old the price is; search results use the same rows. A product page shows
       prices at your stores and other stores with unit prices and how old each price is.
+- [ ] Products without a photo show a line drawing of what they are on their aisle's colour (Prices, search,
+      the product page, "Which eggs?", Your products); one with no type gets its aisle's drawing, else a basket;
+      a product's own photo still wins.
 - [ ] Product page → **Add to list** adds it to the active list with that product pinned;
       adding it again bumps the quantity.
 - [ ] Stores: choose your city; *Choose* picks the stores to compare (left as it is = the

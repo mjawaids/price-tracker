@@ -538,6 +538,7 @@ post-deploy migration drops them.
 | `scripts/seed/add-branches.ts` (+ `add-branches-read.sql`, `add-branches-write.sql`, `branches/<city>.json`) | A city's public in-store branches from a reviewed list (fixed ids; validates, dry run, one transaction; never deletes or touches private/online stores); job `add-branches` in `catalog-jobs.yml` |
 | `src/utils/currency.ts` | 50+ currencies, formatting, default currency from the browser locale |
 | `src/lib/categories.ts` | 15 canonical categories (tuned for Pakistan market) |
+| `src/lib/productArt.ts` | Line drawings that stand in for product photos (24×24 stroke paths, drawn for SpendLess): one per item type (`TYPE_ART` when types share one), one per aisle (`CATEGORY_ART`), else `basket`; `artForProduct` (its `itemType`, else a type read from the name when it fits the category, like `resolve.ts`) and `artForItem` (`matchItemType` on what was typed), both cached. Shown by `Thumb` (Compare) and `ItemArt` (`listParts.tsx`: list rows and the drag preview) |
 | `src/components/shell/Shell.tsx` | Adaptive layout shell + screen routing (+ scroll kept per stack depth) |
 | `src/lib/backStack.ts`, `src/components/shell/EdgeBack.tsx` | Back like an app: layers (sheets, screens, a tab root) ↔ history entries; the left-edge swipe in the installed iOS app |
 | `src/components/shell/UpdatePrompt.tsx` | Service worker registration + "new version" prompt |
@@ -702,7 +703,7 @@ and feel like it came from a strong product design team, not a default template.
   `rounded-btn`, `shadow-card`, `font-display`, `animate-slide-up`, …)
 - **Typography**: `font-display` (Bricolage Grotesque) for headings, `font-sans`
   (Hanken Grotesk) for body, `font-mono` (Space Mono) for figures where it helps
-- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack`, `Sheet.tsx` (a labelled `role="dialog"`; optional pinned `footer` for actions), `ConfirmSheet.tsx` (danger confirm), `AgeChip.tsx` (how old a price is: fresh / recent / old, wording from `describe.ageChip`), `Icon.tsx`)
+- **Primitives**: reuse `src/components/ui/` (`primitives.tsx` incl. `Toggle`/`ToggleTrack` and `Thumb` (a product's photo, else its line drawing on its aisle's tint), `ProductArt.tsx` (draws a picture from `src/lib/productArt.ts`), `Sheet.tsx` (a labelled `role="dialog"`; optional pinned `footer` for actions), `ConfirmSheet.tsx` (danger confirm), `AgeChip.tsx` (how old a price is: fresh / recent / old, wording from `describe.ageChip`), `Icon.tsx`)
   before creating new components; put new shared pieces there
 
 ### Using Claude Design
