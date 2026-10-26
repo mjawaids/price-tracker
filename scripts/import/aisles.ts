@@ -7,7 +7,7 @@
  * out. Listings left out before this date are looked at again on the next runs rather
  * than after the usual 60 days (scripts/import/adapters/blink-pages.ts).
  */
-export const RULES_CHANGED_AT = '2026-10-06T00:00:00Z';
+export const RULES_CHANGED_AT = '2026-10-27T00:00:00Z';
 
 /** Aisles that are never imported. Checked first. */
 const LEAVE_OUT =
@@ -74,7 +74,7 @@ export const leftOut = (names: (string | null | undefined)[]) =>
   names.some((n) => !!n && leaveOutName(mixOf(n)?.name ?? n));
 
 const AISLES: [RegExp, string][] = [
-  [/frozen|ice ?cream/i, 'frozen'],
+  [/frozen|ice ?cream|\bwall['’]?s\b/i, 'frozen'],
   [/fruit|vegetable|fresh produce/i, 'fruits-veg'],
   [/meat|poultry|chicken|mutton|beef|fish|seafood/i, 'meat'],
   [/dairy|\bmilk\b|\beggs?\b|yogh?urt|cheese|butter/i, 'dairy'],
@@ -94,6 +94,12 @@ export interface AisleDecision {
   /** Canonical category id, when we could place it. */
   aisle: string | null;
   include: boolean;
+  /**
+   * Every category the deciding aisle name points to, `aisle`'s first: "Biscuits &
+   * Cakes" is bakery and snacks, so a biscuit there reads as biscuits and a cake as cake.
+   * A hint for reading the name, not where the product goes.
+   */
+  hints: string[];
 }
 
 /**
@@ -110,16 +116,16 @@ export function decideAisle(
   typeAisle: string | null,
   productName = '',
 ): AisleDecision {
-  if (typeAisle === 'pharmacy') return { aisle: null, include: false };
+  if (typeAisle === 'pharmacy') return { aisle: null, include: false, hints: [] };
   const raw = names.map((n) => (n || '').trim()).filter(Boolean);
   const mixes = raw.map(mixOf);
-  if (mixes.some((m) => m?.excludes(productName))) return { aisle: null, include: false };
+  if (mixes.some((m) => m?.excludes(productName))) return { aisle: null, include: false, hints: [] };
   const clean = raw.map((n, i) => mixes[i]?.name.replace(/\s+/g, ' ').trim() || n);
-  if (leftOut(clean)) return { aisle: null, include: false };
+  if (leftOut(clean)) return { aisle: null, include: false, hints: [] };
   for (const n of clean) {
-    const hit = AISLES.find(([re]) => re.test(n));
-    if (hit) return { aisle: typeAisle ?? hit[1], include: true };
+    const hits = [...new Set(AISLES.filter(([re]) => re.test(n)).map(([, c]) => c))];
+    if (hits.length) return { aisle: typeAisle ?? hits[0], include: true, hints: hits };
   }
-  if (typeAisle) return { aisle: typeAisle, include: true };
-  return { aisle: null, include: false };
+  if (typeAisle) return { aisle: typeAisle, include: true, hints: [typeAisle] };
+  return { aisle: null, include: false, hints: [] };
 }

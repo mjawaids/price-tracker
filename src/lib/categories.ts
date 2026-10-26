@@ -53,6 +53,18 @@ export const resolveCategory = (name: string | undefined): Category => {
   return { id: s || 'other', name: raw, hue: hashHue(raw) };
 };
 
+/**
+ * The canonical category id a stored category stands for, or null when it isn't one of
+ * ours: shared products store the id ("dairy"), people's own products the name
+ * ("Dairy & Eggs"), older ones free text ("Groceries", "Meat & Dairy" → null). Exact
+ * matches only: a loose one would give a wrong hint ("Meat & Dairy" isn't meat).
+ */
+export const categoryId = (name: string | null | undefined): string | null => {
+  if (!name) return null;
+  const s = slug(name);
+  return CATEGORIES.find((c) => c.id === s || slug(c.name) === s)?.id ?? null;
+};
+
 /** Stable hue for a store, derived from its id (no schema column needed). */
 export const storeHue = (store: { id: string }): number => hashHue(store.id);
 

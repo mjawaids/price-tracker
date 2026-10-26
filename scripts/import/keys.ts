@@ -22,8 +22,9 @@ interface Row {
  * store we don't import (the promoted Panda Mart rows). They're read again from the
  * name with the current parser and the catalogue's brands (as imported listings are),
  * so their keys match listings read the same way:
- * - a missing brand or item type (and then category) is filled from the name; a stored
- *   one stays (the parser misreads some flavours as the item: "Rani Juice … Orange");
+ * - a missing brand, or a missing item type that fits the product's category (and then
+ *   category), is filled from the name; a stored one stays (the parser misreads some
+ *   flavours as the item: "Rani Juice … Orange");
  * - variant, size and pack follow the name when it reads as the product's type, else
  *   the stored ones stay;
  * - the key is worked out from those fields.
@@ -37,7 +38,11 @@ export async function refreshMatchKeys(dbUrl: string): Promise<string> {
     const parsed = parseProductName(r.name, { categoryHint: r.category, brands: r.brand ? [...brands, r.brand] : brands });
     const found = r.brand ?? parsed.brand;
     const brand = (found ? spelling(found) : null)?.slice(0, 60) || null;
-    const itemType = r.item_type ?? parsed.itemType?.id ?? null;
+    // The type as read keys the product either way (a misreading is the same at every
+    // store); it's stored only when it fits the product's category, as the importer does.
+    const readType = parsed.itemType?.id ?? null;
+    const keyType = r.item_type ?? readType;
+    const itemType = r.item_type ?? (parsed.typeConfident ? readType : null);
     const category = r.category ?? (itemType ? (ITEM_TYPE_BY_ID.get(itemType)?.category ?? null) : null);
     const confidence = parsed.confidence + (!parsed.brand && brand ? 0.3 : 0);
     const stored = {
@@ -46,12 +51,12 @@ export async function refreshMatchKeys(dbUrl: string): Promise<string> {
       size_unit: r.size_unit,
       pack_count: r.pack_count ?? 1,
     };
-    const sameType = (parsed.itemType?.id ?? null) === itemType;
+    const sameType = readType === keyType;
     const fields = !sameType
       ? stored
       : { variant: parsed.variant?.slice(0, 80) || null, ...(parsed.size ? sizeFields(parsed.size) : stored) };
     const key = matchKey(
-      { brand, item_type: itemType, ...fields, size_value: sameType && parsed.size?.mixed ? null : fields.size_value },
+      { brand, item_type: keyType, ...fields, size_value: sameType && parsed.size?.mixed ? null : fields.size_value },
       confidence,
       r.name,
     );
