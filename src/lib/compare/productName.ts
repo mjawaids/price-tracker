@@ -4,7 +4,7 @@
 // Used when importing a store catalogue and, on the fly, for products typed in
 // by hand. Plain TS with no app imports so scripts can use it too.
 
-import { findTypes, hasFlavourPhrase, matchItemType, modifierWords, tokens } from './itemTypes.ts';
+import { findTypes, matchItemType, modifierWords, tokens } from './itemTypes.ts';
 import type { CategoryHint, ItemType } from './itemTypes.ts';
 
 export type SizeUnit = 'g' | 'ml' | 'pc';
@@ -166,8 +166,7 @@ export function learnBrands(names: string[], min = 3): string[] {
   const known = new Set(KNOWN_BRANDS.map(brandKey));
   const ok = (label: string) => {
     const first = brandKey(label).split(' ')[0];
-    // Not a phrase that describes the item either ("Chocolate Chip" Cookies, "Puff Pastry").
-    return !!first && !NOT_BRAND.has(first) && !/^\d/.test(first) && !matchItemType(label) && !hasFlavourPhrase(label);
+    return !!first && !NOT_BRAND.has(first) && !/^\d/.test(first) && !matchItemType(label);
   };
   const out: string[] = [];
   for (const v of two.values()) {
@@ -389,11 +388,15 @@ export function parseProductName(
     });
   const variant = variantWords.length ? variantWords.join(' ').slice(0, 80) : null;
 
-  // A count of pieces that meets the type's minimum settles it whatever the aisle ("Egg
+  // A count of pieces that meets the type's minimum settles it in another aisle ("Egg
   // 12Pcs Classic" under Breakfast), when the name names nothing else ("Chicken Egg Roll
-  // 6 Pcs" isn't eggs; "Easter Egg 6 x 25g" is no count of eggs).
+  // 6 Pcs" isn't eggs; "Easter Egg 6 x 25g" is no count of eggs) and the aisle isn't
+  // snacks or frozen food ("Easter Eggs 6 Pcs" under Chocolates, egg rolls).
+  const hints = !opts.categoryHint ? [] : typeof opts.categoryHint === 'string' ? [opts.categoryHint] : opts.categoryHint;
   const onlyType = !!itemType && findTypes(name, skip).every((m) => m.type.id === itemType.id);
-  const counted = !!itemType?.minUnits && size?.unit === 'pc' && sizeFitsType(itemType, size) && onlyType;
+  const counted =
+    !!itemType?.minUnits && size?.unit === 'pc' && sizeFitsType(itemType, size) && onlyType &&
+    !hints.some((h) => h === 'snacks' || h === 'frozen');
   const typeConfident = !!typeMatch?.confident || counted;
   const confidence =
     (brand ? 0.3 : 0) + (itemType ? (typeConfident ? 0.4 : 0.2) : 0) + (size ? 0.3 : 0);

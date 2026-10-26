@@ -351,7 +351,8 @@ export function modifierWords(typeId: string, words: string[]): string[] {
 const NOT_ITEMS = [['sugar', 'free'], ['fat', 'free'], ['gluten', 'free'], ['full', 'cream']];
 
 // Cookies 'n' cream can be cookies: read from the phrase alone, the type counts when the
-// store's aisle agrees ("Oreo Cookies n Creme" under Biscuits, not Hershey's under Chocolates).
+// store's aisle agrees ("Oreo Cookies n Creme" under Biscuits is biscuits; a cookies 'n'
+// cream milkshake under Beverages isn't).
 const COOKIE_PHRASES = ['cookie', 'cooky'].flatMap((c) => [
   [c, 'and', 'cream'], [c, 'and', 'creme'], [c, 'n', 'cream'], [c, 'n'], [c, 'dough'],
 ]);
@@ -373,13 +374,10 @@ const spansOf = (w: string[], list: string[][]) => {
   return out;
 };
 
-/** Whether `text` holds one of the phrases that usually describe another item (for brand learning). */
-export const hasFlavourPhrase = (text: string) => spansOf(tokens(text), FLAVOUR_PHRASES).length > 0;
-
 /**
  * Types that, named after one of these, are its flavour: "Prince Biscuit Chocolate",
- * "Torku Biscuits with Orange Jelly", "Century Chocolate Bar Choco Nuts". Named first
- * they're the thing itself ("Galaxy Chocolate Minis Cookie Crumble" is chocolate).
+ * "Torku Biscuits with Orange Jelly", "Century Chocolate Bar Choco Nuts". Named before
+ * it, the usual rules decide.
  */
 const FLAVOUR_OF: Record<string, string[]> = {
   chocolate: ['biscuits', 'cake'],
@@ -468,17 +466,21 @@ export function matchItemType(
   if (!found.length) return null;
   const hints: readonly string[] = !categoryHint ? [] : typeof categoryHint === 'string' ? [categoryHint] : categoryHint;
   const hinted = (t: ItemType) => hints.includes(t.category);
-  // A flavour after the size loses to the name's own type word; one that fits the
-  // store's aisle still beats a type word from elsewhere ("Milk Powder … 400gm Infant
-  // Formula" in a baby aisle is formula).
+  // With an aisle to go by, a flavour after the size loses to the name's own type word;
+  // one that fits the aisle still beats a type word from elsewhere ("Milk Powder … 400gm
+  // Infant Formula" in a baby aisle is formula). Without one, the name is read as it
+  // always was: "Nestle Mango 1L Juice" (a receipt line, a typed name) is juice.
   const score = (m: TypeMatch) =>
-    m.specificity * 100 + m.end + (hinted(m.type) ? 50 : 0) - (m.afterSize ? (hinted(m.type) ? 25 : 75) : 0);
+    m.specificity * 100 + m.end + (hinted(m.type) ? 50 : 0) -
+    (m.afterSize && hints.length ? (hinted(m.type) ? 25 : 75) : 0);
   found.sort((a, b) => score(b) - score(a));
   const best = found[0];
+  // No hint rules nothing out; with one, a type read from a flavour phrase alone needs it.
   const confident =
-    best.inFlavour === 'never' ? false
+    !hints.length ||
+    (best.inFlavour === 'never' ? false
     : best.inFlavour === 'aisle' ? hinted(best.type)
-    : !hints.length || hinted(best.type) || best.specificity > 1;
+    : hinted(best.type) || best.specificity > 1);
   return { type: best.type, words: best.words, confident };
 }
 

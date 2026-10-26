@@ -148,9 +148,10 @@ doesn't affect SpendLess. Worth telling Diamond if we're in touch.
      The store's aisle is the hint for the item type: every category its name points
      to ("Biscuits & Cakes" → bakery and snacks, `decideAisle` `hints`). A type outside
      them, read from one word, is a misreading and isn't stored ("Cocomo Biscuit Milk"
-     in a biscuit aisle isn't milk); a type word after the pack size is usually the
-     flavour ("Oreo Cookies 110.4gm Chocolate Creme" → biscuits, "Safari Potato Grills
-     60gm Salt" → chips), as is chocolate after a biscuit word ("Prince Biscuit Chocolate");
+     in a biscuit aisle isn't milk); in a recognised aisle a type word after the pack
+     size is usually the flavour ("Oreo Cookies 110.4gm Chocolate Creme" → biscuits,
+     "Safari Potato Grills 60gm Salt" → chips), as is chocolate after a biscuit word
+     ("Prince Biscuit Chocolate"); in an aisle we don't recognise, names read as before;
    - `write.sql` writes it in **one transaction**.
 3. **Matching a listing to a catalogue product**, checked every time it's read, in order:
    - the product this listing mapped to before, while it still fits: the same

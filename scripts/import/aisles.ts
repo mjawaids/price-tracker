@@ -7,7 +7,7 @@
  * out. Listings left out before this date are looked at again on the next runs rather
  * than after the usual 60 days (scripts/import/adapters/blink-pages.ts).
  */
-export const RULES_CHANGED_AT = '2026-10-23T00:00:00Z';
+export const RULES_CHANGED_AT = '2026-10-27T00:00:00Z';
 
 /** Aisles that are never imported. Checked first. */
 const LEAVE_OUT =
